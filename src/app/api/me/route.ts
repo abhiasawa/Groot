@@ -1,46 +1,17 @@
 import { NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { getAuthenticatedPortalUser, PortalAuthError } from "@/lib/auth/portal-user";
 
 /**
- * GET /api/me — Returns the current user.
- * Picks the user with the most recent message activity (skips test/stale users).
- * Will be replaced with proper Supabase Auth when wired.
+ * GET /api/me — Returns the authenticated portal user's linked WhatsApp user.
  */
 export async function GET() {
-  const supabase = getSupabaseAdmin();
-
-  // Find the user who most recently sent a message (the active user)
-  const { data: recentMessage } = await supabase
-    .from("messages")
-    .select("user_id")
-    .eq("direction", "inbound")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .single();
-
-  if (recentMessage) {
-    const { data: user } = await supabase
-      .from("users")
-      .select("id, whatsapp_number, display_name, onboarding_step, onboarding_completed_at, created_at")
-      .eq("id", recentMessage.user_id)
-      .single();
-
-    if (user) {
-      return NextResponse.json({ user });
+  try {
+    const user = await getAuthenticatedPortalUser();
+    return NextResponse.json({ user });
+  } catch (error) {
+    if (error instanceof PortalAuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
     }
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
-
-  // Fallback: return most recently created user
-  const { data: user } = await supabase
-    .from("users")
-    .select("id, whatsapp_number, display_name, onboarding_step, onboarding_completed_at, created_at")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .single();
-
-  if (!user) {
-    return NextResponse.json({ error: "No user found" }, { status: 404 });
-  }
-
-  return NextResponse.json({ user });
 }

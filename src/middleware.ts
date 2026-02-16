@@ -45,9 +45,18 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Auth guard for The Garden portal (open access — auth to be added)
+  // Auth guard for The Garden portal
   if (pathname.startsWith("/garden")) {
-    // pass through
+    const hasSupabaseSessionCookie = request.cookies
+      .getAll()
+      .some((cookie) => cookie.name.includes("-auth-token"));
+
+    if (!hasSupabaseSessionCookie) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = "/login";
+      loginUrl.searchParams.set("next", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
   }
 
   return NextResponse.next();

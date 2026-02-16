@@ -33,7 +33,7 @@ export default function MemoriesPage() {
     if (!user) return;
     setLoading(true);
 
-    const params = new URLSearchParams({ userId: user.id, limit: "50" });
+    const params = new URLSearchParams({ limit: "50" });
     if (searchQuery) params.set("q", searchQuery);
     if (activeFilter !== "All" && TYPE_MAP[activeFilter]) {
       params.set("type", TYPE_MAP[activeFilter]!);

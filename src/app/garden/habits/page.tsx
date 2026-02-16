@@ -21,7 +21,7 @@ export default function HabitsPage() {
   useEffect(() => {
     if (!user) return;
 
-    fetch(`/api/habits?userId=${user.id}`)
+    fetch("/api/habits")
       .then((r) => r.json())
       .then((data) => setHabits(data.habits ?? []))
       .catch(() => {})

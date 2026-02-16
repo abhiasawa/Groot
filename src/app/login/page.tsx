@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import { useSearchParams } from "next/navigation";
 
 function getSupabase() {
   return createBrowserClient(
@@ -11,6 +12,7 @@ function getSupabase() {
 }
 
 export default function LoginPage() {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
@@ -22,10 +24,11 @@ export default function LoginPage() {
     setError("");
 
     const supabase = getSupabase();
+    const next = searchParams.get("next") ?? "/garden";
     const { error: authError } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
       },
     });
 

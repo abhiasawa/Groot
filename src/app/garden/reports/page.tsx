@@ -21,7 +21,7 @@ export default function ReportsPage() {
   useEffect(() => {
     if (!user) return;
 
-    fetch(`/api/reports?userId=${user.id}`)
+    fetch("/api/reports")
       .then((r) => r.json())
       .then((data) => setReports(data.reports ?? []))
       .catch(() => {})

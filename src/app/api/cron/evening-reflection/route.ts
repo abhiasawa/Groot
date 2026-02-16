@@ -9,11 +9,13 @@ import { logger } from "@/lib/logger";
  * Protected by CRON_SECRET Bearer token.
  */
 export async function GET(request: NextRequest) {
+  if (!process.env.CRON_SECRET) {
+    logger.error("CRON_SECRET is missing");
+    return NextResponse.json({ error: "Cron not configured" }, { status: 500 });
+  }
+
   const authHeader = request.headers.get("authorization");
-  if (
-    process.env.CRON_SECRET &&
-    authHeader !== `Bearer ${process.env.CRON_SECRET}`
-  ) {
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

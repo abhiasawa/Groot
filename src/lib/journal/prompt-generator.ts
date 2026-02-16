@@ -1,5 +1,4 @@
 import { getRecentMessages } from "@/lib/memory/short-term";
-import { getUserProfileSummary } from "@/lib/memory/profile-builder";
 import { getLLMProvider } from "@/lib/providers/llm";
 import { logger } from "@/lib/logger";
 

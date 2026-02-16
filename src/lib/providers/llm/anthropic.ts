@@ -23,6 +23,16 @@ export class AnthropicProvider implements LLMProvider {
       jsonMode?: boolean;
     },
   ): Promise<LLMResponse> {
+    const contextualSystemPromptParts = [systemPrompt];
+    const additionalSystemMessages = messages
+      .filter((m) => m.role === "system")
+      .map((m) => m.content)
+      .filter(Boolean);
+
+    if (additionalSystemMessages.length > 0) {
+      contextualSystemPromptParts.push(additionalSystemMessages.join("\n\n"));
+    }
+
     const anthropicMessages = messages
       .filter((m) => m.role !== "system")
       .map((m) => ({
@@ -35,7 +45,7 @@ export class AnthropicProvider implements LLMProvider {
         model: "claude-sonnet-4-5-20250514",
         max_tokens: options?.maxTokens ?? 1024,
         temperature: options?.temperature ?? 0.7,
-        system: systemPrompt,
+        system: contextualSystemPromptParts.join("\n\n"),
         messages: anthropicMessages,
       });
 

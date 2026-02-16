@@ -19,7 +19,7 @@ export default function TasksPage() {
   useEffect(() => {
     if (!user) return;
 
-    fetch(`/api/tasks?userId=${user.id}`)
+    fetch("/api/tasks")
       .then((r) => r.json())
       .then((data) => setTasks(data.tasks ?? []))
       .catch(() => {})

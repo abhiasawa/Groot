@@ -32,7 +32,7 @@ export default function GraphPage() {
   useEffect(() => {
     if (!user) return;
 
-    fetch(`/api/graph?userId=${user.id}`)
+    fetch("/api/graph")
       .then((r) => r.json())
       .then((data) => {
         setGraphData({

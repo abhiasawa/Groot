@@ -1,6 +1,6 @@
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { sendWhatsAppMessage } from "./client";
-import { sendWithDelay, sendButtonsWithDelay } from "./interactive";
+import { sendWithDelay } from "./interactive";
 import { processMedia } from "@/lib/media/media-handler";
 import { getLLMProvider } from "@/lib/providers/llm";
 import { logger } from "@/lib/logger";
@@ -102,7 +102,7 @@ export async function handleOnboarding(
 
   switch (step) {
     case 0:
-      await handleStep0(user, parsed);
+      await handleStep0(user);
       return true;
     case 1:
       await handleStep1(user, parsed);
@@ -122,7 +122,7 @@ export async function handleOnboarding(
  * Step 0: First ever message from this user.
  * Send personality intro, then ask for name.
  */
-async function handleStep0(user: UserRecord, parsed: ParsedMessage): Promise<void> {
+async function handleStep0(user: UserRecord): Promise<void> {
   const to = user.whatsapp_number;
 
   // Message 1: Introduction

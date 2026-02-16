@@ -1,20 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { searchMemories } from "@/lib/memory/supermemory-client";
+import { getAuthenticatedPortalUser, PortalAuthError } from "@/lib/auth/portal-user";
 
 /**
  * GET /api/memories — List memories with optional search.
  */
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-  const userId = searchParams.get("userId");
   const query = searchParams.get("q");
   const type = searchParams.get("type");
   const limit = parseInt(searchParams.get("limit") ?? "20");
   const offset = parseInt(searchParams.get("offset") ?? "0");
 
-  if (!userId) {
-    return NextResponse.json({ error: "userId required" }, { status: 400 });
+  let userId: string;
+  try {
+    const user = await getAuthenticatedPortalUser();
+    userId = user.id;
+  } catch (error) {
+    if (error instanceof PortalAuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 
   // Semantic search

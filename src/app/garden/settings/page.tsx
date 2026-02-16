@@ -25,7 +25,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!user) return;
 
-    fetch(`/api/settings?userId=${user.id}`)
+    fetch("/api/settings")
       .then((r) => r.json())
       .then((data) => {
         if (data.preferences) setPrefs(data.preferences);
@@ -42,7 +42,7 @@ export default function SettingsPage() {
       fetch("/api/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, key, value }),
+        body: JSON.stringify({ key, value }),
       }).catch(() => {
         // Revert on failure
         setPrefs((prev) => ({ ...prev, [key]: !value }));
@@ -55,7 +55,7 @@ export default function SettingsPage() {
     if (!user) return;
     setExporting(true);
     try {
-      const res = await fetch(`/api/export?userId=${user.id}`);
+      const res = await fetch("/api/export");
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -103,19 +103,19 @@ export default function SettingsPage() {
         <div className="space-y-4">
           <ToggleRow
             label="Morning check-in"
-            description="Daily at 8 AM IST"
+            description="Daily at 8 AM (your timezone)"
             value={prefs.morning_checkin}
             onChange={(v) => updatePref("morning_checkin", v)}
           />
           <ToggleRow
             label="Evening journal"
-            description="Daily at 9 PM IST"
+            description="Daily at 9 PM (your timezone)"
             value={prefs.evening_journal}
             onChange={(v) => updatePref("evening_journal", v)}
           />
           <ToggleRow
             label="Weekly report"
-            description="Sunday at 10 AM IST"
+            description="Sunday at 10 AM (your timezone)"
             value={prefs.weekly_report}
             onChange={(v) => updatePref("weekly_report", v)}
           />

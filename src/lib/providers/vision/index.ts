@@ -1,5 +1,7 @@
 import { logger } from "@/lib/logger";
 import type { VisionProvider } from "../types";
+import { AnthropicVisionProvider } from "./anthropic";
+import { OpenAIVisionProvider } from "./openai";
 
 let cached: VisionProvider | null = null;
 
@@ -10,12 +12,10 @@ export function getVisionProvider(): VisionProvider {
 
   switch (provider) {
     case "anthropic": {
-      const { AnthropicVisionProvider } = require("./anthropic");
       cached = new AnthropicVisionProvider() as VisionProvider;
       break;
     }
     case "openai": {
-      const { OpenAIVisionProvider } = require("./openai");
       cached = new OpenAIVisionProvider() as VisionProvider;
       break;
     }

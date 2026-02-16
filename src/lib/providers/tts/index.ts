@@ -1,5 +1,6 @@
 import { logger } from "@/lib/logger";
 import type { TTSProvider } from "../types";
+import { OpenAITTSProvider } from "./openai";
 
 let cached: TTSProvider | null = null;
 
@@ -10,7 +11,6 @@ export function getTTSProvider(): TTSProvider {
 
   switch (provider) {
     case "openai": {
-      const { OpenAITTSProvider } = require("./openai");
       cached = new OpenAITTSProvider() as TTSProvider;
       break;
     }

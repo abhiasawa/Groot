@@ -1,5 +1,3 @@
-import { logger } from "@/lib/logger";
-
 /**
  * Date/time detector — extracts temporal references from messages.
  *
@@ -96,17 +94,6 @@ export function parseReminderText(text: string): DetectedReminder | null {
       content,
       remindAt,
       rawTimeRef: dayMatch[2],
-    };
-  }
-
-  // Fallback: just save the content, remind in 1 hour
-  if (text.trim()) {
-    const remindAt = new Date(now);
-    remindAt.setHours(remindAt.getHours() + 1);
-    return {
-      content: text.trim(),
-      remindAt,
-      rawTimeRef: "in 1 hour (default)",
     };
   }
 

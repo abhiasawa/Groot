@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getEligibleUsers, getDeEscalationLevel, sendDeEscalationPrompt } from "@/lib/proactive/scheduler";
 import { getActiveHabits, getStreakInfo } from "@/lib/habits/tracker";
-import { sendWhatsAppMessage, sendWhatsAppButtons } from "@/lib/whatsapp/client";
+import { sendWhatsAppMessage } from "@/lib/whatsapp/client";
 import { logger } from "@/lib/logger";
 
 /**
@@ -15,12 +15,14 @@ import { logger } from "@/lib/logger";
  * 3+: Skip (or send preference prompt)
  */
 export async function GET(request: NextRequest) {
+  if (!process.env.CRON_SECRET) {
+    logger.error("CRON_SECRET is missing");
+    return NextResponse.json({ error: "Cron not configured" }, { status: 500 });
+  }
+
   // Verify cron secret
   const authHeader = request.headers.get("authorization");
-  if (
-    process.env.CRON_SECRET &&
-    authHeader !== `Bearer ${process.env.CRON_SECRET}`
-  ) {
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

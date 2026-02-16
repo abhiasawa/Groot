@@ -24,6 +24,7 @@ const envSchema = z.object({
   // App config
   CRON_SECRET: z.string().optional(),
   OWNER_WHATSAPP_NUMBER: z.string().optional(),
+  OWNER_EMAIL: z.string().email().optional(),
   AI_PROVIDER: z.enum(["anthropic", "openai", "gemini"]).default("anthropic"),
   VISION_PROVIDER: z
     .enum(["anthropic", "openai", "gemini"])

@@ -1,5 +1,7 @@
 import { downloadWhatsAppMedia } from "@/lib/whatsapp/client";
 import { logger } from "@/lib/logger";
+import { getTranscriptionProvider } from "@/lib/providers/transcription";
+import { getVisionProvider } from "@/lib/providers/vision";
 
 /**
  * Media handler — downloads WhatsApp media and routes to the correct processor.
@@ -62,9 +64,6 @@ async function processAudio(
   mimeType: string,
 ): Promise<MediaProcessingResult> {
   try {
-    const { getTranscriptionProvider } = require("@/lib/providers/transcription") as {
-      getTranscriptionProvider: () => import("@/lib/providers/types").TranscriptionProvider;
-    };
     const provider = getTranscriptionProvider();
     const result = await provider.transcribe(buffer, mimeType);
     return {
@@ -87,9 +86,6 @@ async function processImage(
   mimeType: string,
 ): Promise<MediaProcessingResult> {
   try {
-    const { getVisionProvider } = require("@/lib/providers/vision") as {
-      getVisionProvider: () => import("@/lib/providers/types").VisionProvider;
-    };
     const provider = getVisionProvider();
     const result = await provider.analyzeImage(
       buffer,

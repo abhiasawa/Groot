@@ -1,5 +1,9 @@
 import { sendWhatsAppMessage, sendWhatsAppButtons } from "./client";
-import { findContactByName, markContactMessaged } from "@/lib/contacts/manager";
+import {
+  addContact,
+  findContactByName,
+  markContactMessaged,
+} from "@/lib/contacts/manager";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 
@@ -19,58 +23,161 @@ export interface OutboundRequest {
   userPhone: string;
 }
 
+interface PendingQueueRow {
+  id: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+}
+
 /**
  * Handle a send-on-behalf request.
- * Returns true if the flow was handled (waiting for user action).
  */
-export async function handleSendRequest(
-  request: OutboundRequest,
-): Promise<void> {
+export async function handleSendRequest(request: OutboundRequest): Promise<void> {
   const contact = await findContactByName(request.userId, request.contactName);
 
   if (!contact) {
-    // Unknown contact — ask for number
     await sendWhatsAppMessage(
       request.userPhone,
       `I don't have *${request.contactName}*'s number. What's their WhatsApp number?\n\n_Include country code, e.g., 919876543210_`,
     );
-    // Store pending outbound in message_queue for follow-up
+
     await storePendingOutbound(request);
     return;
   }
 
-  // Known contact — show preview and ask for confirmation
+  const pendingSendId = await storePendingSend({
+    userId: request.userId,
+    userPhone: request.userPhone,
+    contactName: contact.name,
+    contactNumber: contact.whatsapp_number,
+    messageContent: request.messageContent,
+  });
+
   await showSendPreview(
     request.userPhone,
     contact.name,
-    contact.whatsapp_number,
     request.messageContent,
+    pendingSendId,
   );
 }
 
 /**
- * Show message preview with confirmation buttons.
+ * Handle follow-up text while waiting for contact number in pending_outbound flow.
  */
+export async function handlePendingOutboundReply(
+  userId: string,
+  userPhone: string,
+  text: string,
+): Promise<boolean> {
+  const pending = await getLatestPendingByType(userId, "pending_outbound");
+  if (!pending) return false;
+
+  const normalized = text.trim();
+
+  if (/^cancel$/i.test(normalized)) {
+    await updateQueueStatus(pending.id, "cancelled");
+    await sendWhatsAppMessage(userPhone, "Cancelled. I won't send that message.");
+    return true;
+  }
+
+  const cleanNumber = normalizePhoneNumber(normalized);
+  if (!isValidWhatsAppNumber(cleanNumber)) {
+    await sendWhatsAppMessage(
+      userPhone,
+      "That doesn't look like a valid WhatsApp number yet. Please include country code (digits only), or type *cancel*.",
+    );
+    return true;
+  }
+
+  const contactName = String(pending.payload.contactName ?? "Contact");
+  const messageContent = String(pending.payload.messageContent ?? "");
+
+  await addContact(userId, contactName, cleanNumber);
+  await updateQueueStatus(pending.id, "processed");
+
+  await handleSendRequest({
+    userId,
+    userPhone,
+    contactName,
+    messageContent,
+  });
+
+  return true;
+}
+
+/**
+ * Handle interactive send confirmation actions.
+ */
+export async function handleSendConfirmation(
+  userId: string,
+  userPhone: string,
+  buttonId: string,
+): Promise<boolean> {
+  const [action, queueId] = buttonId.split(":");
+  if (!action || !queueId) return false;
+
+  if (!["send_confirm", "send_edit", "send_cancel"].includes(action)) {
+    return false;
+  }
+
+  const pending = await getPendingById(queueId);
+  if (!pending) {
+    await sendWhatsAppMessage(
+      userPhone,
+      "That action expired. Please ask me to send the message again.",
+    );
+    return true;
+  }
+
+  const payloadType = String(pending.payload.type ?? "");
+  const payloadUserId = String(pending.payload.userId ?? "");
+  if (payloadType !== "pending_send" || payloadUserId !== userId) {
+    await sendWhatsAppMessage(userPhone, "That action is no longer valid.");
+    return true;
+  }
+
+  if (action === "send_cancel") {
+    await updateQueueStatus(queueId, "cancelled");
+    await sendWhatsAppMessage(userPhone, "Cancelled. I won't send it.");
+    return true;
+  }
+
+  if (action === "send_edit") {
+    await updateQueueStatus(queueId, "cancelled");
+    await sendWhatsAppMessage(
+      userPhone,
+      "Okay. Send your revised instruction and I'll prepare a new preview.",
+    );
+    return true;
+  }
+
+  const contactNumber = String(pending.payload.contactNumber ?? "");
+  const messageContent = String(pending.payload.messageContent ?? "");
+
+  await executeSend(userId, userPhone, contactNumber, messageContent);
+  await updateQueueStatus(queueId, "processed");
+  return true;
+}
+
 async function showSendPreview(
   userPhone: string,
   contactName: string,
-  contactNumber: string,
   messageContent: string,
+  pendingSendId: string,
 ): Promise<void> {
   await sendWhatsAppButtons(
     userPhone,
     `*Message to ${contactName}:*\n\n"${messageContent}"\n\n_Send this?_`,
     [
-      { id: `send_confirm_${contactNumber}`, title: "Send Now" },
-      { id: "send_edit", title: "Edit" },
-      { id: "send_cancel", title: "Cancel" },
+      { id: `send_confirm:${pendingSendId}`, title: "Send Now" },
+      { id: `send_edit:${pendingSendId}`, title: "Edit" },
+      { id: `send_cancel:${pendingSendId}`, title: "Cancel" },
     ],
   );
 }
 
 /**
  * Execute the actual send to a third party.
- * Called after user confirms via button.
  */
 export async function executeSend(
   userId: string,
@@ -79,10 +186,8 @@ export async function executeSend(
   messageContent: string,
 ): Promise<void> {
   try {
-    // Send the message
     await sendWhatsAppMessage(contactNumber, messageContent);
 
-    // Log as outbound_proxy
     const supabase = getSupabaseAdmin();
     await supabase.from("messages").insert({
       user_id: userId,
@@ -95,7 +200,6 @@ export async function executeSend(
       },
     });
 
-    // Update contact's last_messaged_at
     const { data: contactByNumber } = await supabase
       .from("contacts")
       .select("id")
@@ -122,10 +226,6 @@ export async function executeSend(
   }
 }
 
-/**
- * Store a pending outbound request for follow-up
- * (when we're waiting for the user to provide a contact number).
- */
 async function storePendingOutbound(request: OutboundRequest): Promise<void> {
   const supabase = getSupabaseAdmin();
   await supabase.from("message_queue").insert({
@@ -138,4 +238,105 @@ async function storePendingOutbound(request: OutboundRequest): Promise<void> {
     },
     status: "pending",
   });
+}
+
+async function storePendingSend(input: {
+  userId: string;
+  userPhone: string;
+  contactName: string;
+  contactNumber: string;
+  messageContent: string;
+}): Promise<string> {
+  const supabase = getSupabaseAdmin();
+
+  const { data, error } = await supabase
+    .from("message_queue")
+    .insert({
+      payload: {
+        type: "pending_send",
+        userId: input.userId,
+        userPhone: input.userPhone,
+        contactName: input.contactName,
+        contactNumber: input.contactNumber,
+        messageContent: input.messageContent,
+      },
+      status: "pending",
+    })
+    .select("id")
+    .single();
+
+  if (error || !data?.id) {
+    logger.error({ error, userId: input.userId }, "Failed to store pending send confirmation");
+    throw new Error("Failed to store pending send confirmation");
+  }
+
+  return data.id as string;
+}
+
+async function getPendingById(id: string): Promise<PendingQueueRow | null> {
+  const supabase = getSupabaseAdmin();
+
+  const { data } = await supabase
+    .from("message_queue")
+    .select("id, payload, created_at")
+    .eq("id", id)
+    .eq("status", "pending")
+    .maybeSingle();
+
+  if (!data) return null;
+
+  return {
+    id: data.id as string,
+    payload: (data.payload ?? {}) as Record<string, unknown>,
+    created_at: data.created_at as string,
+  };
+}
+
+async function getLatestPendingByType(
+  userId: string,
+  type: "pending_outbound" | "pending_send",
+): Promise<PendingQueueRow | null> {
+  const supabase = getSupabaseAdmin();
+
+  const { data } = await supabase
+    .from("message_queue")
+    .select("id, payload, created_at")
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  for (const row of data ?? []) {
+    const payload = (row.payload ?? {}) as Record<string, unknown>;
+    if (payload.type === type && payload.userId === userId) {
+      return {
+        id: row.id as string,
+        payload,
+        created_at: row.created_at as string,
+      };
+    }
+  }
+
+  return null;
+}
+
+async function updateQueueStatus(
+  queueId: string,
+  status: "pending" | "processed" | "cancelled" | "failed",
+): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  await supabase
+    .from("message_queue")
+    .update({
+      status,
+      processed_at: status === "processed" ? new Date().toISOString() : null,
+    })
+    .eq("id", queueId);
+}
+
+function normalizePhoneNumber(input: string): string {
+  return input.replace(/[\s\-\(\)\+]/g, "");
+}
+
+function isValidWhatsAppNumber(input: string): boolean {
+  return /^\d{8,15}$/.test(input);
 }

@@ -160,7 +160,7 @@ export async function recordCheckin(
         last_checkin_date: today,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: "habit_id" },
+      { onConflict: "habit_id,user_id" },
     );
 
   const streak: StreakInfo = {

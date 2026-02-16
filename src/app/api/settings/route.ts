@@ -1,13 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { getAuthenticatedPortalUser, PortalAuthError } from "@/lib/auth/portal-user";
 
 /**
  * GET /api/settings — Fetch notification preferences for a user.
  */
-export async function GET(request: NextRequest) {
-  const userId = request.nextUrl.searchParams.get("userId");
-  if (!userId) {
-    return NextResponse.json({ error: "userId required" }, { status: 400 });
+export async function GET() {
+  let userId: string;
+  try {
+    const user = await getAuthenticatedPortalUser();
+    userId = user.id;
+  } catch (error) {
+    if (error instanceof PortalAuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 
   const supabase = getSupabaseAdmin();
@@ -35,11 +42,22 @@ export async function GET(request: NextRequest) {
  * PATCH /api/settings — Update a notification preference.
  */
 export async function PATCH(request: NextRequest) {
-  const body = await request.json();
-  const { userId, key, value } = body;
+  let userId: string;
+  try {
+    const user = await getAuthenticatedPortalUser();
+    userId = user.id;
+  } catch (error) {
+    if (error instanceof PortalAuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
 
-  if (!userId || !key || typeof value !== "boolean") {
-    return NextResponse.json({ error: "userId, key, and value (boolean) required" }, { status: 400 });
+  const body = await request.json();
+  const { key, value } = body;
+
+  if (!key || typeof value !== "boolean") {
+    return NextResponse.json({ error: "key and value (boolean) required" }, { status: 400 });
   }
 
   const supabase = getSupabaseAdmin();

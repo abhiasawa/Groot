@@ -1,5 +1,3 @@
-import { logger } from "@/lib/logger";
-
 /**
  * Memory Router — classifies user intent to route to the correct handler.
  *

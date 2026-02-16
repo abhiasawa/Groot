@@ -26,8 +26,8 @@ export default function GardenHome() {
     if (hour >= 17) greeting = "Good evening";
 
     Promise.all([
-      fetch(`/api/memories?userId=${user.id}&limit=5`).then((r) => r.json()),
-      fetch(`/api/dashboard?userId=${user.id}`).then((r) => r.json()).catch(() => ({ tasks: 0, reminders: 0 })),
+      fetch("/api/memories?limit=5").then((r) => r.json()),
+      fetch("/api/dashboard").then((r) => r.json()).catch(() => ({ tasks: 0, reminders: 0 })),
     ]).then(([memoriesRes, dashRes]) => {
       setData({
         greeting,

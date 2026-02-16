@@ -1,5 +1,7 @@
 import { logger } from "@/lib/logger";
 import type { LLMProvider } from "../types";
+import { AnthropicProvider } from "./anthropic";
+import { OpenAIProvider } from "./openai";
 
 /**
  * LLM Provider Factory with circuit breaker and fallback chain.
@@ -63,11 +65,9 @@ function createProvider(name: string): LLMProvider | null {
   try {
     switch (name) {
       case "anthropic": {
-        const { AnthropicProvider } = require("./anthropic");
         return new AnthropicProvider() as LLMProvider;
       }
       case "openai": {
-        const { OpenAIProvider } = require("./openai");
         return new OpenAIProvider() as LLMProvider;
       }
       default:

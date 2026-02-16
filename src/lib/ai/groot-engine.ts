@@ -2,7 +2,6 @@ import { getLLMProvider } from "@/lib/providers/llm";
 import { getGrootSystemPrompt } from "./persona";
 import { buildContext } from "./context-builder";
 import { upsertProfileFacts } from "@/lib/memory/profile-builder";
-import { addMemory } from "@/lib/memory/supermemory-client";
 import { logger } from "@/lib/logger";
 import type { ProfileFact } from "@/lib/memory/profile-builder";
 
@@ -23,7 +22,7 @@ export interface GrootResponse {
  * 2. Assemble system prompt with persona + profile
  * 3. Call LLM provider (with circuit breaker fallback)
  * 4. Process metadata (profile updates, mood, dates)
- * 5. Store memory if flagged
+ * 5. Return metadata for caller-side actions (memory/reminders)
  */
 export async function generateGrootResponse(
   userId: string,
@@ -76,11 +75,6 @@ export async function generateGrootResponse(
   // Apply profile updates
   if (profileUpdates.length > 0) {
     await upsertProfileFacts(userId, profileUpdates);
-  }
-
-  // 5. Store in long-term memory if flagged
-  if (metadata?.shouldStoreMemory) {
-    await addMemory(currentMessage, userId, metadata.memoryTags ?? []);
   }
 
   return {

@@ -1,5 +1,6 @@
 import { logger } from "@/lib/logger";
 import type { TranscriptionProvider } from "../types";
+import { WhisperProvider } from "./openai-whisper";
 
 let cached: TranscriptionProvider | null = null;
 
@@ -10,7 +11,6 @@ export function getTranscriptionProvider(): TranscriptionProvider {
 
   switch (provider) {
     case "openai": {
-      const { WhisperProvider } = require("./openai-whisper");
       cached = new WhisperProvider() as TranscriptionProvider;
       break;
     }

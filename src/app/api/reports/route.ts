@@ -1,13 +1,20 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { getAuthenticatedPortalUser, PortalAuthError } from "@/lib/auth/portal-user";
 
 /**
  * GET /api/reports — List weekly reports for a user.
  */
-export async function GET(request: NextRequest) {
-  const userId = request.nextUrl.searchParams.get("userId");
-  if (!userId) {
-    return NextResponse.json({ error: "userId required" }, { status: 400 });
+export async function GET() {
+  let userId: string;
+  try {
+    const user = await getAuthenticatedPortalUser();
+    userId = user.id;
+  } catch (error) {
+    if (error instanceof PortalAuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 
   const supabase = getSupabaseAdmin();
