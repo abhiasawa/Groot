@@ -261,23 +261,23 @@ async function handleMedia(
       .eq("whatsapp_message_id", parsed.messageId);
 
     if (result.type === "transcription") {
-      // Process the transcribed voice note through Groot AI (not just echo it)
+      // Process the transcribed voice note through Groot AI
       try {
         const grootResponse = await generateGrootResponse(userId, result.text, displayName);
-        // Send text response
-        await sendWhatsAppMessage(parsed.from, grootResponse.text);
         await storeOutboundMessage(userId, grootResponse.text, {
           mood: grootResponse.detectedMood,
           source: "voice_note",
         });
 
-        // Also send a voice note reply (mirror the modality)
+        // Voice in → voice out (mirror the modality)
         try {
           const ttsProvider = getTTSProvider();
           const audioBuffer = await ttsProvider.synthesize(grootResponse.text);
           await sendVoiceNote(parsed.from, audioBuffer);
         } catch (ttsError) {
-          logger.warn({ error: ttsError }, "TTS voice reply failed, text reply already sent");
+          // TTS failed — fall back to text so user still gets a response
+          logger.warn({ error: ttsError }, "TTS failed, falling back to text reply");
+          await sendWhatsAppMessage(parsed.from, grootResponse.text);
         }
       } catch (error) {
         logger.error({ error, userId }, "Groot engine failed for voice note");
