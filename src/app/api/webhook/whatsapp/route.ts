@@ -8,6 +8,7 @@ import { classifyIntent, shouldStoreInLongTerm } from "@/lib/memory/memory-route
 import { extractProfileFacts, upsertProfileFacts } from "@/lib/memory/profile-builder";
 import { addMemory, searchMemories } from "@/lib/memory/supermemory-client";
 import { storeOutboundMessage } from "@/lib/memory/short-term";
+import { processMedia } from "@/lib/media/media-handler";
 import { logger } from "@/lib/logger";
 import type { WhatsAppWebhookPayload } from "@/types/whatsapp";
 
@@ -134,7 +135,41 @@ async function processMessage(
     if (handled) return;
   }
 
-  // Normal flow
+  // Handle media messages (audio, images)
+  if (parsed.mediaId && parsed.mediaMimeType) {
+    await sendWhatsAppMessage(parsed.from, "_Processing your media..._");
+    const mediaResult = await processMedia(parsed.mediaId, parsed.type, parsed.mediaMimeType);
+
+    if (mediaResult && mediaResult.text) {
+      // Store media description in the message record
+      const supabase = getSupabaseAdmin();
+      await supabase
+        .from("messages")
+        .update({ media_description: mediaResult.text })
+        .eq("user_id", user.id)
+        .eq("whatsapp_message_id", parsed.messageId);
+
+      // For transcriptions, treat the text as user's actual message
+      if (mediaResult.type === "transcription") {
+        const response = `_Voice note transcribed:_\n\n"${mediaResult.text}"`;
+        await sendWhatsAppMessage(parsed.from, response);
+        await storeOutboundMessage(user.id, response);
+      } else if (mediaResult.type === "vision") {
+        const desc = mediaResult.description || mediaResult.text;
+        const response = `_I see:_ ${desc}`;
+        await sendWhatsAppMessage(parsed.from, response);
+        await storeOutboundMessage(user.id, response);
+      }
+    } else {
+      await sendWhatsAppMessage(
+        parsed.from,
+        "_I received your media but couldn't process it right now. I've saved it for later._",
+      );
+    }
+    return;
+  }
+
+  // Normal text flow
   const text = parsed.text;
   if (!text) {
     await sendWhatsAppMessage(
