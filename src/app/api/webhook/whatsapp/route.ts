@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+
+export const maxDuration = 60;
+
 import { validateWebhookSignature } from "@/lib/whatsapp/validation";
 import { parseWebhookPayloads } from "@/lib/whatsapp/webhook-parser";
 import { sendWhatsAppMessage, markMessageAsRead } from "@/lib/whatsapp/client";
@@ -100,7 +103,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (acceptedMessages.length > 0) {
-      void Promise.allSettled(
+      await Promise.allSettled(
         acceptedMessages.map(async (parsed) => {
           try {
             await processMessage(parsed);
