@@ -141,29 +141,35 @@ export async function POST(request: NextRequest) {
 /**
  * Full message processing pipeline.
  * Order: mark read → user lookup → onboarding → media → interactive actions → shortcuts/links/habits/intents → Groot AI
+ *
+ * Optimized: non-critical DB writes run in parallel / fire-and-forget to reduce latency.
  */
 async function processMessage(parsed: ParsedMessage): Promise<void> {
-  await markMessageAsRead(parsed.messageId).catch(() => {});
+  // Fire-and-forget: mark as read doesn't block processing
+  markMessageAsRead(parsed.messageId).catch(() => {});
 
   const user = await getOrCreateUser(parsed.from, parsed.displayName);
 
-  // Track user activity for de-escalation
-  await markUserResponded(user.id);
-
-  // Store inbound message
+  // Run non-critical early writes in parallel (don't block the pipeline)
+  const earlyWrites: Promise<unknown>[] = [
+    markUserResponded(user.id),
+  ];
   if (user.onboarding_step > 0 || isOnboardingComplete(user)) {
-    await storeInboundMessage(user.id, parsed);
+    earlyWrites.push(storeInboundMessage(user.id, parsed));
   }
+  // Don't await — let these run while we continue processing
+  const earlyWritesPromise = Promise.allSettled(earlyWrites);
 
   // Onboarding
   if (!isOnboardingComplete(user)) {
     const handled = await handleOnboarding(user, parsed);
-    if (handled) return;
+    if (handled) { await earlyWritesPromise; return; }
   }
 
   // Media processing (audio/image)
   if (parsed.mediaId && parsed.mediaMimeType) {
     await handleMedia(user.id, parsed, user.display_name);
+    await earlyWritesPromise;
     return;
   }
 
@@ -174,7 +180,7 @@ async function processMessage(parsed: ParsedMessage): Promise<void> {
       parsed.from,
       parsed.interactiveReply.id,
     );
-    if (handled) return;
+    if (handled) { await earlyWritesPromise; return; }
   }
 
   const text = parsed.text;
@@ -183,11 +189,13 @@ async function processMessage(parsed: ParsedMessage): Promise<void> {
       parsed.from,
       "_I received your message but I can only handle text for now._",
     );
+    await earlyWritesPromise;
     return;
   }
 
   // Pending outbound follow-up (e.g., waiting for contact number)
   if (await handlePendingOutboundReply(user.id, parsed.from, text)) {
+    await earlyWritesPromise;
     return;
   }
 
@@ -219,59 +227,45 @@ async function processMessage(parsed: ParsedMessage): Promise<void> {
     return;
   }
 
-  // 4. Intent classification
+  // Ensure early writes have landed before we query DB further
+  await earlyWritesPromise;
+
+  // 4. Intent classification (regex — instant, no cost)
   const classified = classifyIntent(text);
   logger.info(
     { userId: user.id, intent: classified.intent, confidence: classified.confidence },
     "Intent classified",
   );
 
-  // Extract profile facts
+  // Extract profile facts in background (don't block response)
   const profileFacts = extractProfileFacts(text);
-  if (profileFacts.length > 0) {
-    await upsertProfileFacts(user.id, profileFacts);
-  }
+  const profilePromise = profileFacts.length > 0
+    ? upsertProfileFacts(user.id, profileFacts)
+    : Promise.resolve();
 
-  // Store in long-term memory if substantive (except explicit store_memory, handled below)
-  let storedInLongTerm = false;
-  if (classified.intent !== "store_memory" && shouldStoreInLongTerm(text, classified.intent)) {
-    await storeLongTermMemoryAndMark(
-      user.id,
-      parsed.messageId,
-      text,
-      [classified.intent],
-    );
-    storedInLongTerm = true;
-  }
+  // Determine if we should store in long-term memory (deferred until after response)
+  const shouldStore = classified.intent !== "store_memory" && shouldStoreInLongTerm(text, classified.intent);
 
   // Route by intent
   switch (classified.intent) {
     case "store_memory": {
-      await storeLongTermMemoryAndMark(
-        user.id,
-        parsed.messageId,
-        text,
-        ["explicit_memory"],
-      );
-      const response = "*Got it, I'll remember that.* 🌱";
+      // Store + reply in parallel
+      const [, response] = await Promise.all([
+        storeLongTermMemoryAndMark(user.id, parsed.messageId, text, ["explicit_memory"]),
+        Promise.resolve("*Got it, I'll remember that.* 🌱"),
+      ]);
       await sendWhatsAppMessage(parsed.from, response);
-      await storeOutboundMessage(user.id, response);
+      storeOutboundMessage(user.id, response).catch(() => {});
       break;
     }
 
     case "query_memory": {
       const results = await searchMemories(text, user.id, 3);
-      if (results.length > 0) {
-        const memories = results.map((r) => `• ${r.content}`).join("\n\n");
-        const response = `Here's what I remember:\n\n${memories}`;
-        await sendWhatsAppMessage(parsed.from, response);
-        await storeOutboundMessage(user.id, response);
-      } else {
-        const response =
-          "_I don't have anything stored about that yet. Tell me and I'll remember it._";
-        await sendWhatsAppMessage(parsed.from, response);
-        await storeOutboundMessage(user.id, response);
-      }
+      const response = results.length > 0
+        ? `Here's what I remember:\n\n${results.map((r) => `• ${r.content}`).join("\n\n")}`
+        : "_I don't have anything stored about that yet. Tell me and I'll remember it._";
+      await sendWhatsAppMessage(parsed.from, response);
+      storeOutboundMessage(user.id, response).catch(() => {});
       break;
     }
 
@@ -305,30 +299,42 @@ async function processMessage(parsed: ParsedMessage): Promise<void> {
           user.display_name,
         );
 
+        // Send reply immediately — don't wait for background writes
         await sendWhatsAppMessage(parsed.from, grootResponse.text);
-        await storeOutboundMessage(user.id, grootResponse.text, {
-          mood: grootResponse.detectedMood,
-          intent: classified.intent,
-        });
 
-        if (grootResponse.shouldStoreMemory && !storedInLongTerm) {
-          await storeLongTermMemoryAndMark(
-            user.id,
-            parsed.messageId,
-            text,
-            grootResponse.memoryTags,
+        // All post-response operations in parallel (non-blocking)
+        const postOps: Promise<unknown>[] = [
+          storeOutboundMessage(user.id, grootResponse.text, {
+            mood: grootResponse.detectedMood,
+            intent: classified.intent,
+          }),
+          createRemindersFromDetectedDates(user.id, grootResponse.detectedDates),
+        ];
+
+        // Defer long-term memory storage to after response is sent
+        if (shouldStore || grootResponse.shouldStoreMemory) {
+          postOps.push(
+            storeLongTermMemoryAndMark(
+              user.id,
+              parsed.messageId,
+              text,
+              grootResponse.memoryTags.length > 0 ? grootResponse.memoryTags : [classified.intent],
+            ),
           );
         }
 
-        await createRemindersFromDetectedDates(user.id, grootResponse.detectedDates);
+        await Promise.allSettled(postOps);
       } catch (error) {
         logger.error({ error, userId: user.id }, "Groot engine failed");
         const fallback = getErrorResponse();
         await sendWhatsAppMessage(parsed.from, fallback);
-        await storeOutboundMessage(user.id, fallback);
+        storeOutboundMessage(user.id, fallback).catch(() => {});
       }
     }
   }
+
+  // Ensure profile updates finish
+  await profilePromise.catch(() => {});
 }
 
 // ─── Handler functions ───

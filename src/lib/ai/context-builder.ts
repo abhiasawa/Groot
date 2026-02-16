@@ -26,10 +26,10 @@ export async function buildContext(
   currentMessage: string,
   userName: string | null,
 ): Promise<BuiltContext> {
-  // Fetch all context sources in parallel
+  // Fetch all context sources in parallel (10 messages keeps LLM fast + cheap)
   const [recentMessages, relevantMemories, profileSummary] = await Promise.all([
-    getRecentMessages(userId, 20),
-    searchMemories(currentMessage, userId, 5).catch((error) => {
+    getRecentMessages(userId, 10),
+    searchMemories(currentMessage, userId, 3).catch((error) => {
       logger.warn({ error }, "Supermemory search failed, continuing without long-term context");
       return [];
     }),
