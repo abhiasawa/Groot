@@ -3,6 +3,7 @@ import { validateWebhookSignature } from "@/lib/whatsapp/validation";
 import { parseWebhookPayload } from "@/lib/whatsapp/webhook-parser";
 import { sendWhatsAppMessage, markMessageAsRead } from "@/lib/whatsapp/client";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { getOrCreateUser, isOnboardingComplete, handleOnboarding } from "@/lib/whatsapp/onboarding";
 import { logger } from "@/lib/logger";
 import type { WhatsAppWebhookPayload } from "@/types/whatsapp";
 
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
 
 /**
  * Process an incoming WhatsApp message.
- * Phase 1: Simple echo. Later phases upgrade this to the full pipeline.
+ * Pipeline: mark read → get/create user → onboarding OR normal flow
  */
 async function processMessage(
   parsed: NonNullable<ReturnType<typeof parseWebhookPayload>>,
@@ -115,6 +116,21 @@ async function processMessage(
     // Non-critical, don't fail the pipeline
   });
 
+  // Get or create user
+  const user = await getOrCreateUser(parsed.from, parsed.displayName);
+
+  // Store inbound message (skip during onboarding step 0 — intro hasn't sent yet)
+  if (user.onboarding_step > 0 || isOnboardingComplete(user)) {
+    await storeInboundMessage(user.id, parsed);
+  }
+
+  // Onboarding flow — new users go through 5-message sequence
+  if (!isOnboardingComplete(user)) {
+    const handled = await handleOnboarding(user, parsed);
+    if (handled) return;
+  }
+
+  // Normal flow (Phase 3+ will add memory router, Groot engine, etc.)
   const text = parsed.text;
   if (!text) {
     await sendWhatsAppMessage(
@@ -124,9 +140,30 @@ async function processMessage(
     return;
   }
 
-  // Phase 1: Echo response with Groot personality teaser
+  // Phase 2: Personality teaser for post-onboarding users
   await sendWhatsAppMessage(
     parsed.from,
-    `I am Groot. 🌱\n\nYou said: "${text}"\n\n_I'm still growing. Full intelligence coming soon._`,
+    `I am Groot. 🌱\n\nYou said: "${text}"\n\n_I'm still growing my brain. Full intelligence coming in Phase 5._`,
   );
+}
+
+/**
+ * Store an inbound message in the messages table.
+ */
+async function storeInboundMessage(
+  userId: string,
+  parsed: NonNullable<ReturnType<typeof parseWebhookPayload>>,
+): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  await supabase.from("messages").insert({
+    user_id: userId,
+    direction: "inbound",
+    message_type: parsed.type,
+    content: parsed.text ?? parsed.caption,
+    media_url: parsed.mediaId ? `media:${parsed.mediaId}` : null,
+    whatsapp_message_id: parsed.messageId,
+    metadata: parsed.interactiveReply
+      ? { interactive_reply: parsed.interactiveReply }
+      : {},
+  });
 }
