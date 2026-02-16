@@ -2,6 +2,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { sendWhatsAppMessage } from "./client";
 import { sendWithDelay, sendButtonsWithDelay } from "./interactive";
 import { processMedia } from "@/lib/media/media-handler";
+import { getLLMProvider } from "@/lib/providers/llm";
 import { logger } from "@/lib/logger";
 import type { ParsedMessage } from "@/types/whatsapp";
 
@@ -87,8 +88,12 @@ export async function handleOnboarding(
   if (parsed.mediaId && parsed.mediaMimeType && parsed.type === "audio") {
     try {
       const result = await processMedia(parsed.mediaId, "audio", parsed.mediaMimeType);
-      if (result?.text) {
-        parsed = { ...parsed, text: result.text };
+      const transcribed = result?.text?.trim();
+      if (transcribed && transcribed.length > 1 && !/^[.\s…]+$/.test(transcribed)) {
+        parsed = { ...parsed, text: transcribed };
+      } else {
+        logger.info({ transcribed }, "Audio transcription was empty or meaningless");
+        // Leave parsed.text as null so the step handler asks again
       }
     } catch (error) {
       logger.warn({ error }, "Failed to transcribe audio during onboarding");
@@ -139,7 +144,7 @@ async function handleStep0(user: UserRecord, parsed: ParsedMessage): Promise<voi
  */
 async function handleStep1(user: UserRecord, parsed: ParsedMessage): Promise<void> {
   const to = user.whatsapp_number;
-  const name = extractName(parsed.text);
+  const name = await extractName(parsed.text);
 
   if (!name) {
     await sendWhatsAppMessage(to, "I didn't catch that — what's your name?");
@@ -165,20 +170,29 @@ async function handleStep1(user: UserRecord, parsed: ParsedMessage): Promise<voi
  */
 async function handleStep2(user: UserRecord, parsed: ParsedMessage): Promise<void> {
   const to = user.whatsapp_number;
-  const goal = parsed.text?.trim();
+  const rawText = parsed.text?.trim();
+
+  if (!rawText) {
+    await sendWhatsAppMessage(
+      to,
+      "I didn't catch that. What's one goal you're working toward? Could be anything — fitness, work, learning.",
+    );
+    return;
+  }
+
+  // Use LLM to extract a clean goal from natural speech
+  const goal = await extractGoal(rawText);
 
   if (!goal) {
     await sendWhatsAppMessage(
       to,
-      "What's one goal you're working toward? Could be anything — fitness, work, learning.",
+      "Hmm, I couldn't quite get a goal from that. Could you tell me *one thing you're working on right now*? Like fitness, a project, or learning something new.",
     );
     return;
   }
 
   // Store the goal in user_profile
   await storeGoal(user.id, goal);
-
-  const displayName = user.display_name ?? "friend";
 
   // Message 4: Acknowledge goal + teach shortcut
   await sendWhatsAppMessage(
@@ -223,23 +237,63 @@ async function handleStep3(user: UserRecord, parsed: ParsedMessage): Promise<voi
 
 // ─── Helper functions ───
 
-function extractName(text: string | null): string | null {
+async function extractName(text: string | null): Promise<string | null> {
   if (!text) return null;
 
-  const cleaned = text
-    .trim()
-    // Remove common prefixes people use
-    .replace(/^(my name is|i'm|i am|call me|it's|its)\s+/i, "")
-    .replace(/[.!?,]+$/, "")
-    .trim();
+  const trimmed = text.trim();
+  if (!trimmed) return null;
 
-  if (!cleaned || cleaned.length > 50) return null;
+  // If it's a single word (just the name), capitalize and return directly
+  if (/^\w+$/i.test(trimmed) && trimmed.length <= 50) {
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+  }
 
-  // Capitalize first letter of each word
-  return cleaned
-    .split(/\s+/)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(" ");
+  // Use LLM to extract the name from natural speech
+  try {
+    const provider = getLLMProvider();
+    const response = await provider.generateResponse(
+      `Extract ONLY the person's name from the message below. The user was asked "What should I call you?" and this is their reply. Return ONLY the name — no quotes, no punctuation, no explanation. If you cannot find a name, return "NONE".`,
+      [{ role: "user", content: trimmed }],
+      { maxTokens: 30, temperature: 0 },
+    );
+
+    const extracted = response.text.trim().replace(/[."']+/g, "").trim();
+
+    if (!extracted || extracted === "NONE" || extracted.length > 50) return null;
+
+    // Capitalize first letter of each word
+    return extracted
+      .split(/\s+/)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(" ");
+  } catch (error) {
+    logger.warn({ error, text: trimmed }, "LLM name extraction failed, falling back to regex");
+    // Fallback: basic regex extraction
+    const match = trimmed.match(/(?:call me|my name is|i'm|i am)\s+(\w+)/i);
+    if (match?.[1]) {
+      return match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
+    }
+    return null;
+  }
+}
+
+async function extractGoal(text: string): Promise<string | null> {
+  try {
+    const provider = getLLMProvider();
+    const response = await provider.generateResponse(
+      `The user was asked "What's one goal you're working on right now?" and replied with the message below. Extract and return ONLY the goal in a concise form (1 short sentence). If the message doesn't contain any meaningful goal or is just noise/greeting/empty content, return "NONE".`,
+      [{ role: "user", content: text }],
+      { maxTokens: 60, temperature: 0 },
+    );
+
+    const extracted = response.text.trim().replace(/^["']+|["']+$/g, "").trim();
+    if (!extracted || extracted === "NONE") return null;
+    return extracted;
+  } catch (error) {
+    logger.warn({ error }, "LLM goal extraction failed, using raw text");
+    // Fallback: use the raw text if it's at least a few meaningful words
+    return text.split(/\s+/).length >= 2 ? text : null;
+  }
 }
 
 async function updateOnboardingStep(userId: string, step: number): Promise<void> {
