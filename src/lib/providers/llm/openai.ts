@@ -33,7 +33,7 @@ export class OpenAIProvider implements LLMProvider {
 
     try {
       const response = await this.client.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-5-mini",
         messages: openaiMessages,
         max_tokens: options?.maxTokens ?? 1024,
         temperature: options?.temperature ?? 0.7,

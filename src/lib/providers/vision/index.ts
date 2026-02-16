@@ -14,6 +14,11 @@ export function getVisionProvider(): VisionProvider {
       cached = new AnthropicVisionProvider() as VisionProvider;
       break;
     }
+    case "openai": {
+      const { OpenAIVisionProvider } = require("./openai");
+      cached = new OpenAIVisionProvider() as VisionProvider;
+      break;
+    }
     default:
       throw new Error(`Unknown vision provider: ${provider}`);
   }
