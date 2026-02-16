@@ -9,6 +9,7 @@ import { extractProfileFacts, upsertProfileFacts } from "@/lib/memory/profile-bu
 import { addMemory, searchMemories } from "@/lib/memory/supermemory-client";
 import { storeOutboundMessage } from "@/lib/memory/short-term";
 import { processMedia } from "@/lib/media/media-handler";
+import { generateGrootResponse, getErrorResponse } from "@/lib/ai/groot-engine";
 import { logger } from "@/lib/logger";
 import type { WhatsAppWebhookPayload } from "@/types/whatsapp";
 
@@ -234,10 +235,24 @@ async function processMessage(
     }
 
     default: {
-      // Phase 5 will replace this with Groot AI engine
-      const response = `I am Groot. 🌱\n\nYou said: "${text}"\n\n_I'm still growing my brain. Full intelligence coming soon._`;
-      await sendWhatsAppMessage(parsed.from, response);
-      await storeOutboundMessage(user.id, response);
+      // Groot AI engine — full conversational intelligence
+      try {
+        const grootResponse = await generateGrootResponse(
+          user.id,
+          text,
+          user.display_name,
+        );
+        await sendWhatsAppMessage(parsed.from, grootResponse.text);
+        await storeOutboundMessage(user.id, grootResponse.text, {
+          mood: grootResponse.detectedMood,
+          intent: classified.intent,
+        });
+      } catch (error) {
+        logger.error({ error, userId: user.id }, "Groot engine failed");
+        const fallback = getErrorResponse();
+        await sendWhatsAppMessage(parsed.from, fallback);
+        await storeOutboundMessage(user.id, fallback);
+      }
     }
   }
 }

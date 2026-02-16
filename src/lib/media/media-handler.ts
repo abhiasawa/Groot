@@ -4,13 +4,9 @@ import { logger } from "@/lib/logger";
 /**
  * Media handler — downloads WhatsApp media and routes to the correct processor.
  *
- * Phase 4: Download + routing logic.
- * Phase 5: Actual transcription/vision providers plugged in.
- *
  * Supported media types:
  * - audio/* → TranscriptionProvider (Whisper by default)
  * - image/* → VisionProvider (Claude Vision by default)
- * - document/* → future PDF/document processing
  */
 
 export interface MediaProcessingResult {
@@ -61,60 +57,58 @@ export async function processMedia(
   }
 }
 
-/**
- * Transcription and vision functions.
- * These will be connected to actual providers in Phase 5.
- * The media handler stores the buffer and metadata so Phase 5
- * can wire in real providers without changing this file.
- */
-
-let transcribeFn: ((buffer: Buffer, mimeType: string) => Promise<MediaProcessingResult>) | null = null;
-let analyzeImageFn: ((buffer: Buffer, mimeType: string) => Promise<MediaProcessingResult>) | null = null;
-
-/**
- * Register a transcription handler (called by Phase 5 provider setup).
- */
-export function registerTranscriptionHandler(
-  fn: (buffer: Buffer, mimeType: string) => Promise<MediaProcessingResult>,
-): void {
-  transcribeFn = fn;
-}
-
-/**
- * Register a vision handler (called by Phase 5 provider setup).
- */
-export function registerVisionHandler(
-  fn: (buffer: Buffer, mimeType: string) => Promise<MediaProcessingResult>,
-): void {
-  analyzeImageFn = fn;
-}
-
 async function processAudio(
   buffer: Buffer,
   mimeType: string,
 ): Promise<MediaProcessingResult> {
-  if (transcribeFn) {
-    return transcribeFn(buffer, mimeType);
+  try {
+    const { getTranscriptionProvider } = require("@/lib/providers/transcription") as {
+      getTranscriptionProvider: () => import("@/lib/providers/types").TranscriptionProvider;
+    };
+    const provider = getTranscriptionProvider();
+    const result = await provider.transcribe(buffer, mimeType);
+    return {
+      type: "transcription",
+      text: result.text,
+      language: result.language,
+      duration: result.duration,
+    };
+  } catch (error) {
+    logger.warn({ error }, "Transcription failed, returning placeholder");
+    return {
+      type: "transcription",
+      text: "_Couldn't transcribe this voice note right now. Try again in a moment._",
+    };
   }
-  logger.info("Transcription provider not yet registered");
-  return {
-    type: "transcription",
-    text: "[Voice note received — transcription coming soon]",
-  };
 }
 
 async function processImage(
   buffer: Buffer,
   mimeType: string,
 ): Promise<MediaProcessingResult> {
-  if (analyzeImageFn) {
-    return analyzeImageFn(buffer, mimeType);
+  try {
+    const { getVisionProvider } = require("@/lib/providers/vision") as {
+      getVisionProvider: () => import("@/lib/providers/types").VisionProvider;
+    };
+    const provider = getVisionProvider();
+    const result = await provider.analyzeImage(
+      buffer,
+      mimeType,
+      "Describe this image and extract any text visible in it.",
+    );
+    return {
+      type: "vision",
+      text: result.extractedText ?? "",
+      description: result.description,
+      category: result.category,
+    };
+  } catch (error) {
+    logger.warn({ error }, "Vision analysis failed, returning placeholder");
+    return {
+      type: "vision",
+      text: "_Couldn't analyze this image right now. Try again in a moment._",
+    };
   }
-  logger.info("Vision provider not yet registered");
-  return {
-    type: "vision",
-    text: "[Image received — analysis coming soon]",
-  };
 }
 
 function isAudioType(mimeType: string): boolean {
