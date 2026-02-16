@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { sendWhatsAppMessage } from "./client";
 import { sendWithDelay, sendButtonsWithDelay } from "./interactive";
+import { processMedia } from "@/lib/media/media-handler";
 import { logger } from "@/lib/logger";
 import type { ParsedMessage } from "@/types/whatsapp";
 
@@ -81,6 +82,18 @@ export async function handleOnboarding(
   parsed: ParsedMessage,
 ): Promise<boolean> {
   const step = user.onboarding_step;
+
+  // If user sent audio during onboarding, transcribe it first
+  if (parsed.mediaId && parsed.mediaMimeType && parsed.type === "audio") {
+    try {
+      const result = await processMedia(parsed.mediaId, "audio", parsed.mediaMimeType);
+      if (result?.text) {
+        parsed = { ...parsed, text: result.text };
+      }
+    } catch (error) {
+      logger.warn({ error }, "Failed to transcribe audio during onboarding");
+    }
+  }
 
   switch (step) {
     case 0:
