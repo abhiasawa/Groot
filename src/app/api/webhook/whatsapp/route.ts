@@ -4,6 +4,10 @@ import { parseWebhookPayload } from "@/lib/whatsapp/webhook-parser";
 import { sendWhatsAppMessage, markMessageAsRead } from "@/lib/whatsapp/client";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { getOrCreateUser, isOnboardingComplete, handleOnboarding } from "@/lib/whatsapp/onboarding";
+import { classifyIntent, shouldStoreInLongTerm } from "@/lib/memory/memory-router";
+import { extractProfileFacts, upsertProfileFacts } from "@/lib/memory/profile-builder";
+import { addMemory, searchMemories } from "@/lib/memory/supermemory-client";
+import { storeOutboundMessage } from "@/lib/memory/short-term";
 import { logger } from "@/lib/logger";
 import type { WhatsAppWebhookPayload } from "@/types/whatsapp";
 
@@ -130,7 +134,7 @@ async function processMessage(
     if (handled) return;
   }
 
-  // Normal flow (Phase 3+ will add memory router, Groot engine, etc.)
+  // Normal flow
   const text = parsed.text;
   if (!text) {
     await sendWhatsAppMessage(
@@ -140,11 +144,67 @@ async function processMessage(
     return;
   }
 
-  // Phase 2: Personality teaser for post-onboarding users
-  await sendWhatsAppMessage(
-    parsed.from,
-    `I am Groot. 🌱\n\nYou said: "${text}"\n\n_I'm still growing my brain. Full intelligence coming in Phase 5._`,
+  // Phase 3: Memory Router — classify intent and extract profile facts
+  const classified = classifyIntent(text);
+  logger.info(
+    { userId: user.id, intent: classified.intent, confidence: classified.confidence },
+    "Intent classified",
   );
+
+  // Extract and store profile facts in parallel
+  const profileFacts = extractProfileFacts(text);
+  if (profileFacts.length > 0) {
+    await upsertProfileFacts(user.id, profileFacts);
+  }
+
+  // Store in long-term memory (Supermemory) if message is substantive
+  if (shouldStoreInLongTerm(text, classified.intent)) {
+    await addMemory(text, user.id, [classified.intent]);
+  }
+
+  // Handle based on intent
+  switch (classified.intent) {
+    case "store_memory": {
+      await addMemory(text, user.id, ["explicit_memory"]);
+      const response = "*Got it, I'll remember that.* 🌱";
+      await sendWhatsAppMessage(parsed.from, response);
+      await storeOutboundMessage(user.id, response);
+      break;
+    }
+
+    case "query_memory": {
+      const results = await searchMemories(text, user.id, 3);
+      if (results.length > 0) {
+        const memories = results
+          .map((r) => `• ${r.content}`)
+          .join("\n\n");
+        const response = `Here's what I remember:\n\n${memories}`;
+        await sendWhatsAppMessage(parsed.from, response);
+        await storeOutboundMessage(user.id, response);
+      } else {
+        const response = "_I don't have anything stored about that yet. Tell me and I'll remember it._";
+        await sendWhatsAppMessage(parsed.from, response);
+        await storeOutboundMessage(user.id, response);
+      }
+      break;
+    }
+
+    case "command": {
+      if (classified.extractedData?.command === "help") {
+        const helpText = `Here's what I can do:\n\n*Quick Capture*\n• *note:* _save a note_\n• *todo:* _add a task_\n• *idea:* _capture an idea_\n• *remind:* _set a reminder_\n\n*Memory*\n• Tell me facts — I'll remember them\n• Ask me anything you've told me\n\n*Coming Soon*\n• Habit tracking & streaks\n• Voice notes & image analysis\n• Link summaries\n• Smart reminders`;
+        await sendWhatsAppMessage(parsed.from, helpText);
+        await storeOutboundMessage(user.id, helpText);
+      }
+      break;
+    }
+
+    default: {
+      // Phase 5 will replace this with Groot AI engine
+      const response = `I am Groot. 🌱\n\nYou said: "${text}"\n\n_I'm still growing my brain. Full intelligence coming soon._`;
+      await sendWhatsAppMessage(parsed.from, response);
+      await storeOutboundMessage(user.id, response);
+    }
+  }
 }
 
 /**
