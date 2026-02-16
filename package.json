@@ -20,8 +20,11 @@
     "pino": "^10.3.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-force-graph-2d": "^1.29.1",
+    "recharts": "^3.7.0",
     "server-only": "^0.0.1",
     "supermemory": "^4.11.1",
+    "swr": "^2.4.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

@@ -1,0 +1,77 @@
+:root {
+  /* ─── Colors: Light Mode ─── */
+  --color-bg: #FAFAF7;
+  --color-surface: #F5F3EE;
+  --color-primary: #2D5F3B;
+  --color-primary-hover: #245032;
+  --color-secondary: #8BA98E;
+  --color-accent: #D4A843;
+  --color-text: #2C2C2C;
+  --color-text-secondary: #7A7A72;
+  --color-danger: #C45D4A;
+  --color-border: #E5E3DE;
+  --color-card: #FFFFFF;
+
+  /* ─── Colors: Dark Mode ─── */
+  --color-dark-bg: #1A2E1F;
+  --color-dark-surface: #223828;
+  --color-dark-primary: #4A9B62;
+  --color-dark-secondary: #6B8B6F;
+  --color-dark-accent: #D4A843;
+  --color-dark-text: #E8E8E0;
+  --color-dark-text-secondary: #A0A098;
+  --color-dark-border: #2F4A35;
+  --color-dark-card: #263E2C;
+
+  /* ─── Typography ─── */
+  --font-heading: 'Inter', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --text-xs: 0.8125rem;    /* 13px — minimum */
+  --text-sm: 0.875rem;     /* 14px */
+  --text-base: 0.9375rem;  /* 15px */
+  --text-lg: 1.125rem;     /* 18px */
+  --text-xl: 1.25rem;      /* 20px */
+  --text-2xl: 1.5rem;      /* 24px */
+  --text-3xl: 1.875rem;    /* 30px */
+
+  --leading-body: 1.6;
+  --tracking-heading: -0.02em;
+
+  /* ─── Spacing (8px grid) ─── */
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+
+  /* ─── Layout ─── */
+  --max-width-text: 720px;
+  --card-padding: var(--space-6);
+  --touch-target: 44px;
+  --sidebar-width: 260px;
+  --bottom-nav-height: 64px;
+
+  /* ─── Radius ─── */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-full: 9999px;
+}
+
+.dark {
+  --color-bg: var(--color-dark-bg);
+  --color-surface: var(--color-dark-surface);
+  --color-primary: var(--color-dark-primary);
+  --color-secondary: var(--color-dark-secondary);
+  --color-accent: var(--color-dark-accent);
+  --color-text: var(--color-dark-text);
+  --color-text-secondary: var(--color-dark-text-secondary);
+  --color-border: var(--color-dark-border);
+  --color-card: var(--color-dark-card);
+}
