@@ -45,10 +45,9 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Auth guard for The Garden portal
+  // Auth guard for The Garden portal (open access — auth to be added)
   if (pathname.startsWith("/garden")) {
-    // TODO Phase 13: Check Supabase Auth session
-    // For now, allow access (will be locked down in Phase 13)
+    // pass through
   }
 
   return NextResponse.next();

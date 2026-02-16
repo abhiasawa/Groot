@@ -1,5 +1,5 @@
 import { sendWhatsAppMessage, sendWhatsAppButtons } from "./client";
-import { findContactByName, addContact, markContactMessaged } from "@/lib/contacts/manager";
+import { findContactByName, markContactMessaged } from "@/lib/contacts/manager";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 
@@ -96,8 +96,6 @@ export async function executeSend(
     });
 
     // Update contact's last_messaged_at
-    const contact = await findContactByName(userId, "");
-    // We find by number instead
     const { data: contactByNumber } = await supabase
       .from("contacts")
       .select("id")

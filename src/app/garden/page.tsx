@@ -1,34 +1,57 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 interface DashboardData {
   greeting: string;
-  streaks: Array<{ name: string; streak: number }>;
-  recentMemories: Array<{ content: string; created_at: string }>;
+  userName: string;
+  memoriesCount: number;
+  recentMemories: Array<{ id: string; content: string; message_type: string; created_at: string }>;
   pendingTasks: number;
   upcomingReminders: number;
 }
 
 export default function GardenHome() {
+  const { user, loading: userLoading } = useCurrentUser();
   const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // In production, fetch from API with user session
   useEffect(() => {
+    if (!user) return;
+
     const hour = new Date().getHours();
     let greeting = "Good morning";
     if (hour >= 12 && hour < 17) greeting = "Good afternoon";
     if (hour >= 17) greeting = "Good evening";
 
-    setData({
-      greeting,
-      streaks: [],
-      recentMemories: [],
-      pendingTasks: 0,
-      upcomingReminders: 0,
+    Promise.all([
+      fetch(`/api/memories?userId=${user.id}&limit=5`).then((r) => r.json()),
+      fetch(`/api/dashboard?userId=${user.id}`).then((r) => r.json()).catch(() => ({ tasks: 0, reminders: 0 })),
+    ]).then(([memoriesRes, dashRes]) => {
+      setData({
+        greeting,
+        userName: user.display_name || "friend",
+        memoriesCount: memoriesRes.total ?? 0,
+        recentMemories: memoriesRes.memories ?? [],
+        pendingTasks: dashRes.tasks ?? 0,
+        upcomingReminders: dashRes.reminders ?? 0,
+      });
+      setLoading(false);
+    }).catch(() => {
+      setData({
+        greeting,
+        userName: user.display_name || "friend",
+        memoriesCount: 0,
+        recentMemories: [],
+        pendingTasks: 0,
+        upcomingReminders: 0,
+      });
+      setLoading(false);
     });
-  }, []);
+  }, [user]);
 
+  if (userLoading || loading) return <LoadingSkeleton />;
   if (!data) return <LoadingSkeleton />;
 
   return (
@@ -39,7 +62,7 @@ export default function GardenHome() {
           className="text-2xl md:text-3xl font-semibold"
           style={{ color: "var(--color-text)", letterSpacing: "-0.02em" }}
         >
-          {data.greeting} 🌱
+          {data.greeting}, {data.userName} 🌱
         </h1>
         <p className="text-sm mt-1" style={{ color: "var(--color-text-secondary)" }}>
           Welcome to The Garden — your second brain dashboard.
@@ -48,10 +71,10 @@ export default function GardenHome() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard label="Memories" value="-" icon="🧠" />
-        <StatCard label="Habits" value={`${data.streaks.length}`} icon="🔥" />
+        <StatCard label="Memories" value={`${data.memoriesCount}`} icon="🧠" />
         <StatCard label="Tasks" value={`${data.pendingTasks}`} icon="✅" />
         <StatCard label="Reminders" value={`${data.upcomingReminders}`} icon="⏰" />
+        <StatCard label="Since" value={user ? new Date(user.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "-"} icon="📅" />
       </div>
 
       {/* Recent Memories */}
@@ -67,54 +90,23 @@ export default function GardenHome() {
           />
         ) : (
           <div className="space-y-3">
-            {data.recentMemories.map((m, i) => (
+            {data.recentMemories.map((m) => (
               <div
-                key={i}
+                key={m.id}
                 className="p-4 rounded-xl border"
                 style={{
                   backgroundColor: "var(--color-card)",
                   borderColor: "var(--color-border)",
                 }}
               >
+                <div className="flex items-center gap-2 mb-1">
+                  <TypeBadge type={m.message_type} />
+                </div>
                 <p className="text-sm" style={{ color: "var(--color-text)" }}>
                   {m.content}
                 </p>
                 <p className="text-xs mt-2" style={{ color: "var(--color-text-secondary)" }}>
-                  {new Date(m.created_at).toLocaleDateString()}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Active Habits */}
-      <section>
-        <h2 className="text-lg font-semibold mb-3" style={{ color: "var(--color-text)" }}>
-          Habit Streaks
-        </h2>
-        {data.streaks.length === 0 ? (
-          <EmptyState
-            title="No habits tracked yet"
-            description="Tell Groot about a habit you want to track — 'Track my weight daily'."
-            icon="📊"
-          />
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {data.streaks.map((s, i) => (
-              <div
-                key={i}
-                className="p-4 rounded-xl border text-center"
-                style={{
-                  backgroundColor: "var(--color-card)",
-                  borderColor: "var(--color-border)",
-                }}
-              >
-                <p className="text-2xl font-bold" style={{ color: "var(--color-primary)" }}>
-                  {s.streak}
-                </p>
-                <p className="text-xs mt-1" style={{ color: "var(--color-text-secondary)" }}>
-                  {s.name}
+                  {new Date(m.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
                 </p>
               </div>
             ))}
@@ -122,6 +114,18 @@ export default function GardenHome() {
         )}
       </section>
     </div>
+  );
+}
+
+function TypeBadge({ type }: { type: string }) {
+  const labels: Record<string, string> = { text: "Note", audio: "Voice", image: "Image", interactive: "Action" };
+  return (
+    <span
+      className="text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wide"
+      style={{ backgroundColor: "var(--color-surface)", color: "var(--color-text-secondary)" }}
+    >
+      {labels[type] ?? type}
+    </span>
   );
 }
 

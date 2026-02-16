@@ -74,7 +74,7 @@ async function processAudio(
       duration: result.duration,
     };
   } catch (error) {
-    logger.warn({ error }, "Transcription failed, returning placeholder");
+    logger.warn({ error }, "Transcription failed");
     return {
       type: "transcription",
       text: "_Couldn't transcribe this voice note right now. Try again in a moment._",
@@ -103,7 +103,7 @@ async function processImage(
       category: result.category,
     };
   } catch (error) {
-    logger.warn({ error }, "Vision analysis failed, returning placeholder");
+    logger.warn({ error }, "Vision analysis failed");
     return {
       type: "vision",
       text: "_Couldn't analyze this image right now. Try again in a moment._",

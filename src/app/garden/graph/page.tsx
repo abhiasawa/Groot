@@ -1,23 +1,57 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
-// react-force-graph-2d needs to be client-side only (uses canvas)
 const ForceGraph = dynamic(() => import("react-force-graph-2d"), { ssr: false });
 
-export default function GraphPage() {
-  const [selectedNode, setSelectedNode] = useState<{
-    label: string;
-    content: string;
-    type: string;
-  } | null>(null);
+interface GraphNode {
+  id: string;
+  label: string;
+  type: string;
+  content: string;
+  size: number;
+}
 
-  // Placeholder data — in production, fetch from /api/graph
-  const graphData = {
-    nodes: [] as Array<{ id: string; label: string; type: string; content: string; size: number }>,
-    links: [] as Array<{ source: string; target: string; strength: number }>,
-  };
+interface GraphLink {
+  source: string;
+  target: string;
+  strength: number;
+}
+
+export default function GraphPage() {
+  const { user, loading: userLoading } = useCurrentUser();
+  const [graphData, setGraphData] = useState<{ nodes: GraphNode[]; links: GraphLink[] }>({
+    nodes: [],
+    links: [],
+  });
+  const [loading, setLoading] = useState(true);
+  const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+
+    fetch(`/api/graph?userId=${user.id}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setGraphData({
+          nodes: data.nodes ?? [],
+          links: data.links ?? [],
+        });
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [user]);
+
+  if (userLoading || loading) {
+    return (
+      <div className="space-y-4 animate-pulse">
+        <div className="h-8 w-40 rounded" style={{ backgroundColor: "var(--color-surface)" }} />
+        <div className="h-[60vh] rounded-xl" style={{ backgroundColor: "var(--color-surface)" }} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -46,7 +80,7 @@ export default function GraphPage() {
         </div>
       ) : (
         <div
-          className="rounded-xl border overflow-hidden"
+          className="rounded-xl border overflow-hidden relative"
           style={{
             backgroundColor: "var(--color-card)",
             borderColor: "var(--color-border)",
@@ -56,13 +90,14 @@ export default function GraphPage() {
           <ForceGraph
             graphData={graphData}
             nodeLabel="label"
-            nodeColor={() => "#2D5F3B"}
-            linkColor={() => "#8BA98E"}
-            onNodeClick={(node) => {
-              const n = node as { label: string; content: string; type: string };
-              setSelectedNode(n);
+            nodeColor={(node) => {
+              const n = node as GraphNode;
+              return n.type === "profile" ? "#D4A843" : "#2D5F3B";
             }}
-            width={typeof window !== "undefined" ? window.innerWidth - 300 : 800}
+            nodeVal={(node) => (node as GraphNode).size}
+            linkColor={() => "#8BA98E"}
+            onNodeClick={(node) => setSelectedNode(node as GraphNode)}
+            width={typeof window !== "undefined" ? Math.min(window.innerWidth - 40, 1100) : 800}
             height={500}
           />
         </div>
