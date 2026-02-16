@@ -36,7 +36,6 @@ export class OpenAIProvider implements LLMProvider {
         model: "gpt-5-mini",
         messages: openaiMessages,
         max_completion_tokens: options?.maxTokens ?? 1024,
-        temperature: options?.temperature ?? 0.7,
         ...(options?.jsonMode ? { response_format: { type: "json_object" as const } } : {}),
       });
 
