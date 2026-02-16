@@ -368,7 +368,10 @@ async function handleMedia(
   parsed: ParsedMessage,
   displayName: string | null,
 ): Promise<void> {
-  await sendWhatsAppMessage(parsed.from, "_Processing your media..._");
+  // Only show status for non-audio media (images, docs) — voice notes reply directly
+  if (parsed.type !== "audio") {
+    await sendWhatsAppMessage(parsed.from, "_Processing your media..._");
+  }
   const result = await processMedia(parsed.mediaId!, parsed.type, parsed.mediaMimeType!);
 
   if (result?.text) {
