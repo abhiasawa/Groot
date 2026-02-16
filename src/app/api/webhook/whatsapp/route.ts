@@ -19,8 +19,6 @@ import { recordCheckin, getStreakMessage } from "@/lib/habits/tracker";
 import { parseReminderText } from "@/lib/reminders/detector";
 import { createReminder, formatReminderTime } from "@/lib/reminders/scheduler";
 import { markUserResponded } from "@/lib/proactive/scheduler";
-import { getTTSProvider } from "@/lib/providers/tts";
-import { sendVoiceNote } from "@/lib/whatsapp/voice-reply";
 import { logger } from "@/lib/logger";
 import type { WhatsAppWebhookPayload } from "@/types/whatsapp";
 
@@ -261,24 +259,14 @@ async function handleMedia(
       .eq("whatsapp_message_id", parsed.messageId);
 
     if (result.type === "transcription") {
-      // Process the transcribed voice note through Groot AI
+      // Process transcribed voice note through Groot AI — reply with text
       try {
         const grootResponse = await generateGrootResponse(userId, result.text, displayName);
+        await sendWhatsAppMessage(parsed.from, grootResponse.text);
         await storeOutboundMessage(userId, grootResponse.text, {
           mood: grootResponse.detectedMood,
           source: "voice_note",
         });
-
-        // Voice in → voice out (mirror the modality)
-        try {
-          const ttsProvider = getTTSProvider();
-          const audioBuffer = await ttsProvider.synthesize(grootResponse.text);
-          await sendVoiceNote(parsed.from, audioBuffer);
-        } catch (ttsError) {
-          // TTS failed — fall back to text so user still gets a response
-          logger.warn({ error: ttsError }, "TTS failed, falling back to text reply");
-          await sendWhatsAppMessage(parsed.from, grootResponse.text);
-        }
       } catch (error) {
         logger.error({ error, userId }, "Groot engine failed for voice note");
         const fallback = getErrorResponse();
