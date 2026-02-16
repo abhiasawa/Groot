@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { after } from "next/server";
 
 export const maxDuration = 60;
 
@@ -102,26 +103,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (acceptedMessages.length > 0) {
-      await Promise.allSettled(
-        acceptedMessages.map(async (parsed) => {
-          try {
-            await processMessage(parsed);
-            logger.info(
-              {
-                messageId: parsed.messageId,
-                from: parsed.from,
-                type: parsed.type,
-              },
-              "Message processed",
-            );
-          } catch (error) {
-            logger.error({ error, messageId: parsed.messageId }, "Async message processing failed");
-          }
-        }),
-      );
-    }
-
     logger.info(
       {
         received: parsedMessages.length,
@@ -130,6 +111,30 @@ export async function POST(request: NextRequest) {
       },
       "Webhook accepted",
     );
+
+    // Process messages in the background — return 200 immediately so Meta
+    // doesn't time out or mark our webhook as unhealthy.
+    if (acceptedMessages.length > 0) {
+      after(async () => {
+        await Promise.allSettled(
+          acceptedMessages.map(async (parsed) => {
+            try {
+              await processMessage(parsed);
+              logger.info(
+                {
+                  messageId: parsed.messageId,
+                  from: parsed.from,
+                  type: parsed.type,
+                },
+                "Message processed",
+              );
+            } catch (error) {
+              logger.error({ error, messageId: parsed.messageId }, "Async message processing failed");
+            }
+          }),
+        );
+      });
+    }
 
     return NextResponse.json({ status: "ok" }, { status: 200 });
   } catch (error) {
