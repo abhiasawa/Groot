@@ -10,12 +10,20 @@ import { addMemory, searchMemories } from "@/lib/memory/supermemory-client";
 import { storeOutboundMessage } from "@/lib/memory/short-term";
 import { processMedia } from "@/lib/media/media-handler";
 import { generateGrootResponse, getErrorResponse } from "@/lib/ai/groot-engine";
+import { parseShortcut, getShortcutConfirmation } from "@/lib/capture/shortcut-parser";
+import { createTask } from "@/lib/capture/task-manager";
+import { extractUrls, processLink } from "@/lib/capture/link-processor";
+import { handleSendRequest } from "@/lib/whatsapp/outbound";
+import { matchBareNumber } from "@/lib/habits/bare-number-parser";
+import { recordCheckin, getStreakMessage } from "@/lib/habits/tracker";
+import { parseReminderText } from "@/lib/reminders/detector";
+import { createReminder, formatReminderTime } from "@/lib/reminders/scheduler";
+import { markUserResponded } from "@/lib/proactive/scheduler";
 import { logger } from "@/lib/logger";
 import type { WhatsAppWebhookPayload } from "@/types/whatsapp";
 
 /**
- * GET: Meta sends this to verify the webhook URL during setup.
- * Echo back the challenge token if our verify token matches.
+ * GET: Meta webhook verification.
  */
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -33,45 +41,36 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST: Meta sends incoming messages here.
- * We validate the signature, check for duplicates, then process async.
+ * POST: Incoming WhatsApp messages.
+ * Validates signature → deduplicates → processes message.
  */
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    // Read raw body for signature validation
     const rawBody = Buffer.from(await request.arrayBuffer());
     const signature = request.headers.get("x-hub-signature-256");
 
-    // Validate webhook signature
     if (
       process.env.META_APP_SECRET &&
-      !validateWebhookSignature(
-        rawBody,
-        signature,
-        process.env.META_APP_SECRET,
-      )
+      !validateWebhookSignature(rawBody, signature, process.env.META_APP_SECRET)
     ) {
       logger.warn("Invalid webhook signature");
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
-    // Parse JSON only after validation
     const body = JSON.parse(rawBody.toString("utf8")) as WhatsAppWebhookPayload;
 
     if (body.object !== "whatsapp_business_account") {
       return NextResponse.json({ error: "Not a WhatsApp event" }, { status: 404 });
     }
 
-    // Parse the message
     const parsed = parseWebhookPayload(body);
     if (!parsed) {
-      // Status updates, read receipts, etc. — just acknowledge
       return NextResponse.json({ status: "ok" }, { status: 200 });
     }
 
-    // Deduplication check
+    // Deduplication
     const supabase = getSupabaseAdmin();
     const { data: existing } = await supabase
       .from("processed_messages")
@@ -80,125 +79,109 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (existing) {
-      logger.info({ messageId: parsed.messageId }, "Duplicate message, skipping");
       return NextResponse.json({ status: "ok" }, { status: 200 });
     }
 
-    // Mark as processed (upsert for race conditions)
     await supabase.from("processed_messages").upsert(
-      {
-        whatsapp_message_id: parsed.messageId,
-        processed_at: new Date().toISOString(),
-      },
+      { whatsapp_message_id: parsed.messageId, processed_at: new Date().toISOString() },
       { onConflict: "whatsapp_message_id", ignoreDuplicates: true },
     );
 
-    // Process the message (async in production with waitUntil, sync for now)
     await processMessage(parsed);
 
-    const latencyMs = Date.now() - startTime;
     logger.info(
-      { messageId: parsed.messageId, from: parsed.from, type: parsed.type, latencyMs },
+      { messageId: parsed.messageId, from: parsed.from, type: parsed.type, latencyMs: Date.now() - startTime },
       "Message processed",
     );
 
     return NextResponse.json({ status: "ok" }, { status: 200 });
   } catch (error) {
     logger.error({ error }, "Webhook processing error");
-    // Always return 200 to prevent Meta retries
     return NextResponse.json({ status: "ok" }, { status: 200 });
   }
 }
 
 /**
- * Process an incoming WhatsApp message.
- * Pipeline: mark read → get/create user → onboarding OR normal flow
+ * Full message processing pipeline.
+ * Order: mark read → user lookup → onboarding → media → shortcuts → links → habits → intents → Groot AI
  */
 async function processMessage(
   parsed: NonNullable<ReturnType<typeof parseWebhookPayload>>,
 ): Promise<void> {
-  // Mark as read (blue checkmarks)
-  await markMessageAsRead(parsed.messageId).catch(() => {
-    // Non-critical, don't fail the pipeline
-  });
+  await markMessageAsRead(parsed.messageId).catch(() => {});
 
-  // Get or create user
   const user = await getOrCreateUser(parsed.from, parsed.displayName);
 
-  // Store inbound message (skip during onboarding step 0 — intro hasn't sent yet)
+  // Track user activity for de-escalation
+  await markUserResponded(user.id);
+
+  // Store inbound message
   if (user.onboarding_step > 0 || isOnboardingComplete(user)) {
     await storeInboundMessage(user.id, parsed);
   }
 
-  // Onboarding flow — new users go through 5-message sequence
+  // Onboarding
   if (!isOnboardingComplete(user)) {
     const handled = await handleOnboarding(user, parsed);
     if (handled) return;
   }
 
-  // Handle media messages (audio, images)
+  // Media processing (audio/image)
   if (parsed.mediaId && parsed.mediaMimeType) {
-    await sendWhatsAppMessage(parsed.from, "_Processing your media..._");
-    const mediaResult = await processMedia(parsed.mediaId, parsed.type, parsed.mediaMimeType);
-
-    if (mediaResult && mediaResult.text) {
-      // Store media description in the message record
-      const supabase = getSupabaseAdmin();
-      await supabase
-        .from("messages")
-        .update({ media_description: mediaResult.text })
-        .eq("user_id", user.id)
-        .eq("whatsapp_message_id", parsed.messageId);
-
-      // For transcriptions, treat the text as user's actual message
-      if (mediaResult.type === "transcription") {
-        const response = `_Voice note transcribed:_\n\n"${mediaResult.text}"`;
-        await sendWhatsAppMessage(parsed.from, response);
-        await storeOutboundMessage(user.id, response);
-      } else if (mediaResult.type === "vision") {
-        const desc = mediaResult.description || mediaResult.text;
-        const response = `_I see:_ ${desc}`;
-        await sendWhatsAppMessage(parsed.from, response);
-        await storeOutboundMessage(user.id, response);
-      }
-    } else {
-      await sendWhatsAppMessage(
-        parsed.from,
-        "_I received your media but couldn't process it right now. I've saved it for later._",
-      );
-    }
+    await handleMedia(user.id, parsed);
     return;
   }
 
-  // Normal text flow
   const text = parsed.text;
   if (!text) {
-    await sendWhatsAppMessage(
-      parsed.from,
-      "_I received your message but I can only handle text for now. More coming soon!_",
-    );
+    await sendWhatsAppMessage(parsed.from, "_I received your message but I can only handle text for now._");
     return;
   }
 
-  // Phase 3: Memory Router — classify intent and extract profile facts
-  const classified = classifyIntent(text);
-  logger.info(
-    { userId: user.id, intent: classified.intent, confidence: classified.confidence },
-    "Intent classified",
-  );
+  // 1. Shortcuts (fastest path — skip AI)
+  const shortcut = parseShortcut(text);
+  if (shortcut) {
+    await handleShortcut(user.id, parsed.from, shortcut);
+    return;
+  }
 
-  // Extract and store profile facts in parallel
+  // 2. URL detection
+  const urls = extractUrls(text);
+  if (urls.length > 0) {
+    await handleLink(user.id, parsed.from, urls[0]!);
+    return;
+  }
+
+  // 3. Bare number (habit check-in)
+  const bareNumber = await matchBareNumber(user.id, text);
+  if (bareNumber) {
+    const { streak, isMilestone } = await recordCheckin(
+      user.id,
+      bareNumber.habit.id,
+      bareNumber.value,
+    );
+    const msg = getStreakMessage(bareNumber.habit.name, streak, isMilestone);
+    await sendWhatsAppMessage(parsed.from, msg);
+    await storeOutboundMessage(user.id, msg);
+    return;
+  }
+
+  // 4. Intent classification
+  const classified = classifyIntent(text);
+  logger.info({ userId: user.id, intent: classified.intent, confidence: classified.confidence }, "Intent classified");
+
+  // Extract profile facts
   const profileFacts = extractProfileFacts(text);
   if (profileFacts.length > 0) {
     await upsertProfileFacts(user.id, profileFacts);
   }
 
-  // Store in long-term memory (Supermemory) if message is substantive
+  // Store in long-term memory if substantive
   if (shouldStoreInLongTerm(text, classified.intent)) {
     await addMemory(text, user.id, [classified.intent]);
   }
 
-  // Handle based on intent
+  // Route by intent
   switch (classified.intent) {
     case "store_memory": {
       await addMemory(text, user.id, ["explicit_memory"]);
@@ -211,9 +194,7 @@ async function processMessage(
     case "query_memory": {
       const results = await searchMemories(text, user.id, 3);
       if (results.length > 0) {
-        const memories = results
-          .map((r) => `• ${r.content}`)
-          .join("\n\n");
+        const memories = results.map((r) => `• ${r.content}`).join("\n\n");
         const response = `Here's what I remember:\n\n${memories}`;
         await sendWhatsAppMessage(parsed.from, response);
         await storeOutboundMessage(user.id, response);
@@ -225,23 +206,25 @@ async function processMessage(
       break;
     }
 
+    case "send_message": {
+      await handleSendRequest({
+        contactName: text.replace(/^(send|tell|message|text)\s+/i, "").split(/\s+(saying|that|a message)\s+/i)[0] ?? "",
+        messageContent: text,
+        userId: user.id,
+        userPhone: parsed.from,
+      });
+      break;
+    }
+
     case "command": {
-      if (classified.extractedData?.command === "help") {
-        const helpText = `Here's what I can do:\n\n*Quick Capture*\n• *note:* _save a note_\n• *todo:* _add a task_\n• *idea:* _capture an idea_\n• *remind:* _set a reminder_\n\n*Memory*\n• Tell me facts — I'll remember them\n• Ask me anything you've told me\n\n*Coming Soon*\n• Habit tracking & streaks\n• Voice notes & image analysis\n• Link summaries\n• Smart reminders`;
-        await sendWhatsAppMessage(parsed.from, helpText);
-        await storeOutboundMessage(user.id, helpText);
-      }
+      await handleCommand(user.id, parsed.from, classified.extractedData?.command ?? "help");
       break;
     }
 
     default: {
-      // Groot AI engine — full conversational intelligence
+      // Groot AI engine
       try {
-        const grootResponse = await generateGrootResponse(
-          user.id,
-          text,
-          user.display_name,
-        );
+        const grootResponse = await generateGrootResponse(user.id, text, user.display_name);
         await sendWhatsAppMessage(parsed.from, grootResponse.text);
         await storeOutboundMessage(user.id, grootResponse.text, {
           mood: grootResponse.detectedMood,
@@ -257,9 +240,92 @@ async function processMessage(
   }
 }
 
-/**
- * Store an inbound message in the messages table.
- */
+// ─── Handler functions ───
+
+async function handleMedia(
+  userId: string,
+  parsed: NonNullable<ReturnType<typeof parseWebhookPayload>>,
+): Promise<void> {
+  await sendWhatsAppMessage(parsed.from, "_Processing your media..._");
+  const result = await processMedia(parsed.mediaId!, parsed.type, parsed.mediaMimeType!);
+
+  if (result?.text) {
+    const supabase = getSupabaseAdmin();
+    await supabase
+      .from("messages")
+      .update({ media_description: result.text })
+      .eq("user_id", userId)
+      .eq("whatsapp_message_id", parsed.messageId);
+
+    if (result.type === "transcription") {
+      const response = `_Voice note transcribed:_\n\n"${result.text}"`;
+      await sendWhatsAppMessage(parsed.from, response);
+      await storeOutboundMessage(userId, response);
+    } else if (result.type === "vision") {
+      const response = `_I see:_ ${result.description || result.text}`;
+      await sendWhatsAppMessage(parsed.from, response);
+      await storeOutboundMessage(userId, response);
+    }
+  } else {
+    await sendWhatsAppMessage(parsed.from, "_I received your media but couldn't process it right now. I've saved it for later._");
+  }
+}
+
+async function handleShortcut(
+  userId: string,
+  from: string,
+  shortcut: NonNullable<ReturnType<typeof parseShortcut>>,
+): Promise<void> {
+  switch (shortcut.type) {
+    case "todo":
+      await createTask(userId, shortcut.content, "todo");
+      break;
+    case "idea":
+      await addMemory(shortcut.content, userId, ["idea"]);
+      break;
+    case "note":
+      await addMemory(shortcut.content, userId, ["note"]);
+      break;
+    case "remind": {
+      const parsed = parseReminderText(shortcut.content);
+      if (parsed) {
+        await createReminder(userId, parsed.content, parsed.remindAt);
+        const time = formatReminderTime(parsed.remindAt.toISOString());
+        const response = `*Reminder set:* ${parsed.content}\n_I'll remind you ${time}_`;
+        await sendWhatsAppMessage(from, response);
+        await storeOutboundMessage(userId, response);
+        return;
+      }
+      break;
+    }
+  }
+
+  const response = getShortcutConfirmation(shortcut.type, shortcut.content);
+  await sendWhatsAppMessage(from, response);
+  await storeOutboundMessage(userId, response);
+}
+
+async function handleLink(userId: string, from: string, url: string): Promise<void> {
+  await sendWhatsAppMessage(from, "_Reading that article now..._");
+  const response = await processLink(url, userId);
+  await sendWhatsAppMessage(from, response);
+  await storeOutboundMessage(userId, response);
+}
+
+async function handleCommand(userId: string, from: string, command: string): Promise<void> {
+  switch (command) {
+    case "help": {
+      const helpText = `Here's what I can do:\n\n*Quick Capture*\n• *note:* _save a note_\n• *todo:* _add a task_\n• *idea:* _capture an idea_\n• *remind:* _set a reminder_\n\n*Memory*\n• Tell me facts — I'll remember them\n• Ask me anything you've told me\n\n*Habits*\n• Track habits with daily check-ins\n• Streak milestones and trends\n\n*More*\n• Share links for summaries\n• Send voice notes\n• Send images for analysis`;
+      await sendWhatsAppMessage(from, helpText);
+      await storeOutboundMessage(userId, helpText);
+      break;
+    }
+    default: {
+      await sendWhatsAppMessage(from, `_Command "${command}" not recognized. Type *help* to see what I can do._`);
+    }
+  }
+}
+
 async function storeInboundMessage(
   userId: string,
   parsed: NonNullable<ReturnType<typeof parseWebhookPayload>>,
@@ -272,8 +338,6 @@ async function storeInboundMessage(
     content: parsed.text ?? parsed.caption,
     media_url: parsed.mediaId ? `media:${parsed.mediaId}` : null,
     whatsapp_message_id: parsed.messageId,
-    metadata: parsed.interactiveReply
-      ? { interactive_reply: parsed.interactiveReply }
-      : {},
+    metadata: parsed.interactiveReply ? { interactive_reply: parsed.interactiveReply } : {},
   });
 }
