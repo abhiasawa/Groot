@@ -1,6 +1,6 @@
 import { logger } from "@/lib/logger";
 
-const WHATSAPP_API_URL = "https://graph.facebook.com/v21.0";
+const WHATSAPP_API_URL = "https://graph.facebook.com/v22.0";
 
 /**
  * Upload audio buffer and send as voice note via WhatsApp.

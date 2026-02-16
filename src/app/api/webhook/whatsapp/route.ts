@@ -19,6 +19,8 @@ import { recordCheckin, getStreakMessage } from "@/lib/habits/tracker";
 import { parseReminderText } from "@/lib/reminders/detector";
 import { createReminder, formatReminderTime } from "@/lib/reminders/scheduler";
 import { markUserResponded } from "@/lib/proactive/scheduler";
+import { getTTSProvider } from "@/lib/providers/tts";
+import { sendVoiceNote } from "@/lib/whatsapp/voice-reply";
 import { logger } from "@/lib/logger";
 import type { WhatsAppWebhookPayload } from "@/types/whatsapp";
 
@@ -128,7 +130,7 @@ async function processMessage(
 
   // Media processing (audio/image)
   if (parsed.mediaId && parsed.mediaMimeType) {
-    await handleMedia(user.id, parsed);
+    await handleMedia(user.id, parsed, user.display_name);
     return;
   }
 
@@ -245,6 +247,7 @@ async function processMessage(
 async function handleMedia(
   userId: string,
   parsed: NonNullable<ReturnType<typeof parseWebhookPayload>>,
+  displayName: string | null,
 ): Promise<void> {
   await sendWhatsAppMessage(parsed.from, "_Processing your media..._");
   const result = await processMedia(parsed.mediaId!, parsed.type, parsed.mediaMimeType!);
@@ -258,9 +261,30 @@ async function handleMedia(
       .eq("whatsapp_message_id", parsed.messageId);
 
     if (result.type === "transcription") {
-      const response = `_Voice note transcribed:_\n\n"${result.text}"`;
-      await sendWhatsAppMessage(parsed.from, response);
-      await storeOutboundMessage(userId, response);
+      // Process the transcribed voice note through Groot AI (not just echo it)
+      try {
+        const grootResponse = await generateGrootResponse(userId, result.text, displayName);
+        // Send text response
+        await sendWhatsAppMessage(parsed.from, grootResponse.text);
+        await storeOutboundMessage(userId, grootResponse.text, {
+          mood: grootResponse.detectedMood,
+          source: "voice_note",
+        });
+
+        // Also send a voice note reply (mirror the modality)
+        try {
+          const ttsProvider = getTTSProvider();
+          const audioBuffer = await ttsProvider.synthesize(grootResponse.text);
+          await sendVoiceNote(parsed.from, audioBuffer);
+        } catch (ttsError) {
+          logger.warn({ error: ttsError }, "TTS voice reply failed, text reply already sent");
+        }
+      } catch (error) {
+        logger.error({ error, userId }, "Groot engine failed for voice note");
+        const fallback = getErrorResponse();
+        await sendWhatsAppMessage(parsed.from, fallback);
+        await storeOutboundMessage(userId, fallback);
+      }
     } else if (result.type === "vision") {
       const response = `_I see:_ ${result.description || result.text}`;
       await sendWhatsAppMessage(parsed.from, response);
