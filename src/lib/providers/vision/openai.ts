@@ -25,7 +25,7 @@ export class OpenAIVisionProvider implements VisionProvider {
     try {
       const response = await this.client.chat.completions.create({
         model: "gpt-5-mini",
-        max_tokens: 1024,
+        max_completion_tokens: 1024,
         messages: [
           {
             role: "user",
