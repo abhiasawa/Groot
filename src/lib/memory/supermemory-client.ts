@@ -104,8 +104,8 @@ export async function searchMemories(
     return [];
   }
 
+  const timeoutMs = 1500;
   try {
-    const timeoutMs = 1500;
     const response = await fetch(`${getBaseUrl()}/memories/search`, {
       method: "POST",
       headers: {
