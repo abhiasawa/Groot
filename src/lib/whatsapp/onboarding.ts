@@ -101,6 +101,15 @@ export async function handleOnboarding(
 
   switch (step) {
     case 0:
+      // If the user's first message already contains a name, skip the intro ask
+      if (parsed.text) {
+        const earlyName = await extractName(parsed.text);
+        if (earlyName) {
+          await updateOnboardingStep(user.id, 1);
+          await handleStep1(user, { ...parsed, text: parsed.text });
+          return true;
+        }
+      }
       await handleStep0(user);
       return true;
     case 1:
