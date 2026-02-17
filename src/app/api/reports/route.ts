@@ -20,7 +20,7 @@ export async function GET() {
   const supabase = getSupabaseAdmin();
   const { data } = await supabase
     .from("weekly_reports")
-    .select("id, week_start, week_end, summary, key_topics, mood_trend, created_at")
+    .select("id, week_start, week_end, summary, key_topics, mood_trend, insights, created_at")
     .eq("user_id", userId)
     .order("week_start", { ascending: false })
     .limit(20);

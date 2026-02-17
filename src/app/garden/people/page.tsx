@@ -84,10 +84,21 @@ export default function PeoplePage() {
                   >
                     {person.name.charAt(0).toUpperCase()}
                   </div>
-                  <div className="min-w-0">
-                    <p className="font-medium text-sm truncate" style={{ color: "var(--color-text)" }}>
-                      {person.name}
-                    </p>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-sm truncate" style={{ color: "var(--color-text)" }}>
+                        {person.name}
+                      </p>
+                      <span
+                        className="text-[9px] px-1.5 py-0.5 rounded-full shrink-0"
+                        style={{
+                          backgroundColor: person.mentionCount >= 10 ? "var(--color-primary)" : person.mentionCount >= 5 ? "var(--color-accent)" : "var(--color-surface)",
+                          color: person.mentionCount >= 5 ? "white" : "var(--color-text-secondary)",
+                        }}
+                      >
+                        {person.mentionCount >= 10 ? "frequent" : person.mentionCount >= 5 ? "regular" : "few"}
+                      </span>
+                    </div>
                     {person.relationship && (
                       <p className="text-xs capitalize" style={{ color: "var(--color-text-secondary)" }}>
                         {person.relationship}
