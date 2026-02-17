@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { useCurrentUser } from "@/hooks/use-current-user";
 import PageHeader from "@/components/garden/page-header";
 import DiaryCard from "@/components/garden/diary-card";
 
@@ -37,7 +36,6 @@ const MOOD_COLORS: Record<number, string> = {
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export default function MoodPage() {
-  const { user } = useCurrentUser();
   const [dailyMoods, setDailyMoods] = useState<DailyMood[]>([]);
   const [weeklyTrend, setWeeklyTrend] = useState<WeeklyTrend[]>([]);
   const [recentMood, setRecentMood] = useState<string | null>(null);
@@ -45,7 +43,6 @@ export default function MoodPage() {
   const [year] = useState(new Date().getFullYear());
 
   useEffect(() => {
-    if (!user) return;
     fetch(`/api/mood?year=${year}`)
       .then((r) => r.json())
       .then((data) => {
@@ -55,7 +52,7 @@ export default function MoodPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [user, year]);
+  }, [year]);
 
   if (loading) {
     return (

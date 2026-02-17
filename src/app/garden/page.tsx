@@ -28,15 +28,14 @@ const MOOD_ACCENTS: Record<string, string> = {
 };
 
 export default function GardenHome() {
-  const { user, loading: userLoading } = useCurrentUser();
+  const { user } = useCurrentUser();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
 
+  // Fire all data fetches immediately — don't wait for user hook
   useEffect(() => {
-    if (!user) return;
-
     const hour = new Date().getHours();
     let greeting = "Good morning";
     if (hour >= 12 && hour < 17) greeting = "Good afternoon";
@@ -56,7 +55,7 @@ export default function GardenHome() {
     ]).then(([memoriesRes, dashRes, flashbackRes, moodRes, peopleRes, habitsRes]) => {
       setData({
         greeting,
-        userName: user.display_name || "friend",
+        userName: "", // filled from user hook below
         memoriesCount: memoriesRes.total ?? 0,
         recentMemories: memoriesRes.memories ?? [],
         pendingTasks: dashRes.tasks ?? 0,
@@ -68,7 +67,7 @@ export default function GardenHome() {
       });
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, [user]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,8 +80,10 @@ export default function GardenHome() {
   const todayFormatted = today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
   const memberDays = user ? Math.max(1, Math.floor((Date.now() - new Date(user.created_at).getTime()) / (1000 * 60 * 60 * 24))) : 0;
 
-  if (userLoading || loading) return <LoadingSkeleton />;
+  if (loading) return <LoadingSkeleton />;
   if (!data) return <LoadingSkeleton />;
+
+  const displayName = user?.display_name || "friend";
 
   const moodColor = data.recentMood ? (MOOD_ACCENTS[data.recentMood.toLowerCase()] ?? "var(--color-mood-okay)") : null;
 
@@ -105,7 +106,7 @@ export default function GardenHome() {
             lineHeight: 1.2,
           }}
         >
-          {data.greeting}, {data.userName}
+          {data.greeting}, {displayName}
         </h1>
         {data.recentMood && (
           <div className="flex items-center gap-2 mt-3">

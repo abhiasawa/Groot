@@ -2,7 +2,6 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
-import { useCurrentUser } from "@/hooks/use-current-user";
 import PageHeader from "@/components/garden/page-header";
 import DiaryCard from "@/components/garden/diary-card";
 
@@ -23,7 +22,6 @@ interface GraphLink {
 }
 
 export default function GraphPage() {
-  const { user, loading: userLoading } = useCurrentUser();
   const [graphData, setGraphData] = useState<{ nodes: GraphNode[]; links: GraphLink[] }>({
     nodes: [],
     links: [],
@@ -32,8 +30,6 @@ export default function GraphPage() {
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
 
   useEffect(() => {
-    if (!user) return;
-
     fetch("/api/graph")
       .then((r) => r.json())
       .then((data) => {
@@ -44,9 +40,9 @@ export default function GraphPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [user]);
+  }, []);
 
-  if (userLoading || loading) {
+  if (loading) {
     return (
       <div className="space-y-6 animate-pulse">
         <div className="h-8 w-40 rounded" style={{ backgroundColor: "var(--color-surface)" }} />

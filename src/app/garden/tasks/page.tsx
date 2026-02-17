@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useCurrentUser } from "@/hooks/use-current-user";
 import PageHeader from "@/components/garden/page-header";
 import DiaryCard from "@/components/garden/diary-card";
 
@@ -15,19 +14,17 @@ interface Task {
 }
 
 export default function TasksPage() {
-  const { user, loading: userLoading } = useCurrentUser();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDone, setShowDone] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
     fetch("/api/tasks")
       .then((r) => r.json())
       .then((data) => setTasks(data.tasks ?? []))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [user]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleTask = useCallback(async (taskId: string, currentStatus: boolean) => {
     const newStatus = !currentStatus;
@@ -43,7 +40,7 @@ export default function TasksPage() {
     }
   }, []);
 
-  if (userLoading || loading) {
+  if (loading) {
     return (
       <div className="space-y-4 animate-pulse max-w-3xl mx-auto">
         <div className="h-8 w-24 rounded" style={{ backgroundColor: "var(--color-surface)" }} />

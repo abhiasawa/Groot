@@ -37,13 +37,12 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
     fetch("/api/profile")
       .then((r) => r.json())
       .then((data) => setProfile(data))
       .catch(() => setProfile(null))
       .finally(() => setLoading(false));
-  }, [user]);
+  }, []);
 
   const handleDelete = async (factId: string) => {
     try {

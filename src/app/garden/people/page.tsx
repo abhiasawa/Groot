@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useCurrentUser } from "@/hooks/use-current-user";
 import PageHeader from "@/components/garden/page-header";
 import DiaryCard from "@/components/garden/diary-card";
 
@@ -26,7 +25,6 @@ function getAvatarColor(name: string): string {
 }
 
 export default function PeoplePage() {
-  const { user } = useCurrentUser();
   const [people, setPeople] = useState<Person[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedPerson, setExpandedPerson] = useState<string | null>(null);
@@ -34,13 +32,12 @@ export default function PeoplePage() {
   const [loadingMemories, setLoadingMemories] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
     fetch("/api/people")
       .then((r) => r.json())
       .then((data) => setPeople(data.people ?? []))
       .catch(() => setPeople([]))
       .finally(() => setLoading(false));
-  }, [user]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleExpand = async (name: string) => {
     if (expandedPerson === name) {

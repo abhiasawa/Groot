@@ -2,7 +2,6 @@
 
 import { Suspense, useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { useCurrentUser } from "@/hooks/use-current-user";
 import PageHeader from "@/components/garden/page-header";
 import DiaryCard from "@/components/garden/diary-card";
 
@@ -42,7 +41,6 @@ export default function JournalPage() {
 }
 
 function JournalContent() {
-  const { user } = useCurrentUser();
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") ?? "";
 
@@ -60,7 +58,6 @@ function JournalContent() {
   const [moodMap, setMoodMap] = useState<Map<string, number>>(new Map());
 
   const fetchMemories = useCallback(async () => {
-    if (!user) return;
     setLoading(true);
     const params = new URLSearchParams({ limit: "100" });
     if (searchQuery) params.set("q", searchQuery);
@@ -76,11 +73,10 @@ function JournalContent() {
       setMemories([]);
     }
     setLoading(false);
-  }, [user, searchQuery, activeFilter, selectedDate]);
+  }, [searchQuery, activeFilter, selectedDate]);
 
   // Fetch calendar dots + mood data when month changes
   useEffect(() => {
-    if (!user) return;
     const year = calendarMonth.getFullYear();
     const month = String(calendarMonth.getMonth() + 1).padStart(2, "0");
     fetch(`/api/memories?month=${year}-${month}`)
@@ -95,7 +91,7 @@ function JournalContent() {
         setMoodMap(map);
       })
       .catch(() => setMoodMap(new Map()));
-  }, [user, calendarMonth]);
+  }, [calendarMonth]);
 
   useEffect(() => { fetchMemories(); }, [fetchMemories]);
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useCurrentUser } from "@/hooks/use-current-user";
 import PageHeader from "@/components/garden/page-header";
 import DiaryCard from "@/components/garden/diary-card";
 
@@ -23,20 +22,18 @@ const MOOD_BAR_COLORS: Record<string, string> = {
 };
 
 export default function InsightsPage() {
-  const { user, loading: userLoading } = useCurrentUser();
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
     fetch("/api/reports")
       .then((r) => r.json())
       .then((data) => setReports(data.reports ?? []))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [user]);
+  }, []);
 
-  if (userLoading || loading) {
+  if (loading) {
     return (
       <div className="space-y-6 animate-pulse max-w-3xl mx-auto">
         <div className="h-8 w-32 rounded" style={{ backgroundColor: "var(--color-surface)" }} />

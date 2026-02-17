@@ -14,7 +14,7 @@ interface Preferences {
 }
 
 export default function SettingsPage() {
-  const { user, loading: userLoading } = useCurrentUser();
+  const { user } = useCurrentUser();
   const [prefs, setPrefs] = useState<Preferences>({
     morning_checkin: true,
     evening_journal: true,
@@ -26,8 +26,6 @@ export default function SettingsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
-
     fetch("/api/settings")
       .then((r) => r.json())
       .then((data) => {
@@ -35,7 +33,7 @@ export default function SettingsPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [user]);
+  }, []);
 
   const updatePref = useCallback(
     (key: keyof Preferences, value: boolean) => {
@@ -72,7 +70,7 @@ export default function SettingsPage() {
     }
   };
 
-  if (userLoading || loading) {
+  if (loading) {
     return (
       <div className="space-y-6 animate-pulse max-w-3xl mx-auto">
         <div className="h-8 w-24 rounded" style={{ backgroundColor: "var(--color-surface)" }} />

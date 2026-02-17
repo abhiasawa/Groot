@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useCurrentUser } from "@/hooks/use-current-user";
 import PageHeader from "@/components/garden/page-header";
 import DiaryCard from "@/components/garden/diary-card";
 
@@ -17,20 +16,18 @@ interface Habit {
 }
 
 export default function HabitsPage() {
-  const { user, loading: userLoading } = useCurrentUser();
   const [habits, setHabits] = useState<Habit[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
     fetch("/api/habits?include=checkins")
       .then((r) => r.json())
       .then((data) => setHabits(data.habits ?? []))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [user]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (userLoading || loading) {
+  if (loading) {
     return (
       <div className="space-y-4 animate-pulse max-w-3xl mx-auto">
         <div className="h-8 w-24 rounded" style={{ backgroundColor: "var(--color-surface)" }} />
