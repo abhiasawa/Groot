@@ -13,7 +13,7 @@ export class OpenAIProvider implements LLMProvider {
       throw new Error("OPENAI_API_KEY is required for OpenAI provider");
     }
     this.client = new OpenAI({ apiKey });
-    this.model = process.env.OPENAI_CHAT_MODEL ?? "gpt-5-mini";
+    this.model = process.env.OPENAI_CHAT_MODEL ?? "gpt-4o-mini";
   }
 
   async generateResponse(
@@ -37,7 +37,8 @@ export class OpenAIProvider implements LLMProvider {
       const response = await this.client.chat.completions.create({
         model: this.model,
         messages: openaiMessages,
-        max_completion_tokens: options?.maxTokens ?? 2048,
+        max_tokens: options?.maxTokens ?? 2048,
+        temperature: options?.temperature ?? 0.7,
         ...(options?.jsonMode ? { response_format: { type: "json_object" as const } } : {}),
       });
 
