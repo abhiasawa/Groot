@@ -5,6 +5,7 @@ import type { LLMProvider, LLMMessage, LLMResponse } from "../types";
 export class AnthropicProvider implements LLMProvider {
   name = "anthropic";
   private client: Anthropic;
+  private model: string;
 
   constructor() {
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -12,6 +13,7 @@ export class AnthropicProvider implements LLMProvider {
       throw new Error("ANTHROPIC_API_KEY is required for Anthropic provider");
     }
     this.client = new Anthropic({ apiKey });
+    this.model = process.env.ANTHROPIC_CHAT_MODEL ?? "claude-sonnet-4-5-20250514";
   }
 
   async generateResponse(
@@ -42,7 +44,7 @@ export class AnthropicProvider implements LLMProvider {
 
     try {
       const response = await this.client.messages.create({
-        model: "claude-sonnet-4-5-20250514",
+        model: this.model,
         max_tokens: options?.maxTokens ?? 1024,
         temperature: options?.temperature ?? 0.7,
         system: contextualSystemPromptParts.join("\n\n"),

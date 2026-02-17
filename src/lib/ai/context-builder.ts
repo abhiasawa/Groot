@@ -25,10 +25,13 @@ export async function buildContext(
   currentMessage: string,
   userName: string | null,
 ): Promise<BuiltContext> {
-  // Fetch all context sources in parallel (10 messages keeps LLM fast + cheap)
+  const recentLimit = parsePositiveInt(process.env.WHATSAPP_CONTEXT_RECENT_LIMIT, 6);
+  const memoryLimit = parsePositiveInt(process.env.WHATSAPP_MEMORY_SEARCH_LIMIT, 2);
+
+  // Fetch all context sources in parallel (lean defaults keep WhatsApp replies fast)
   const [recentMessages, relevantMemories, profileSummary] = await Promise.all([
-    getRecentMessages(userId, 10),
-    searchMemories(currentMessage, userId, 3).catch((error) => {
+    getRecentMessages(userId, recentLimit),
+    searchMemories(currentMessage, userId, memoryLimit).catch((error) => {
       logger.warn({ error }, "Supermemory search failed, continuing without long-term context");
       return [];
     }),
@@ -82,4 +85,10 @@ export async function buildContext(
     relevantMemories: relevantMemories.map((m) => m.content),
     userName,
   };
+}
+
+function parsePositiveInt(raw: string | undefined, fallback: number): number {
+  if (!raw) return fallback;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }

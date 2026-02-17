@@ -84,7 +84,7 @@ function createProvider(name: string): LLMProvider | null {
  * Get the fallback chain based on the configured primary provider.
  */
 function getFallbackChain(): string[] {
-  const primary = process.env.AI_PROVIDER ?? "anthropic";
+  const primary = process.env.AI_PROVIDER ?? "openai";
   const all = ["anthropic", "openai"];
   return [primary, ...all.filter((p) => p !== primary)];
 }

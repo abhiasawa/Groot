@@ -5,6 +5,7 @@ import type { LLMProvider, LLMMessage, LLMResponse } from "../types";
 export class OpenAIProvider implements LLMProvider {
   name = "openai";
   private client: OpenAI;
+  private model: string;
 
   constructor() {
     const apiKey = process.env.OPENAI_API_KEY;
@@ -12,6 +13,7 @@ export class OpenAIProvider implements LLMProvider {
       throw new Error("OPENAI_API_KEY is required for OpenAI provider");
     }
     this.client = new OpenAI({ apiKey });
+    this.model = process.env.OPENAI_CHAT_MODEL ?? "gpt-5-mini";
   }
 
   async generateResponse(
@@ -33,7 +35,7 @@ export class OpenAIProvider implements LLMProvider {
 
     try {
       const response = await this.client.chat.completions.create({
-        model: "gpt-5-mini",
+        model: this.model,
         messages: openaiMessages,
         max_completion_tokens: options?.maxTokens ?? 2048,
         ...(options?.jsonMode ? { response_format: { type: "json_object" as const } } : {}),

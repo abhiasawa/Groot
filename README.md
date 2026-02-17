@@ -149,13 +149,18 @@ CRON_SECRET=any_random_secret_string
 
 ```env
 ANTHROPIC_API_KEY=sk-ant-xxxxx          # Required if AI_PROVIDER=anthropic
+ANTHROPIC_CHAT_MODEL=claude-sonnet-4-5-20250514
 GOOGLE_GEMINI_API_KEY=xxxxx             # Required if AI_PROVIDER=gemini
+OPENAI_CHAT_MODEL=gpt-5-mini
 OWNER_EMAIL=you@example.com             # For multi-user portal auth safety
 UPSTASH_REDIS_REST_URL=xxxxx            # Enables API rate limiting
 UPSTASH_REDIS_REST_TOKEN=xxxxx          # Enables API rate limiting
 TRANSCRIPTION_PROVIDER=openai           # openai (default) | gemini
 TTS_PROVIDER=openai                     # openai (default) | google | elevenlabs
 TTS_VOICE=nova                          # Voice for TTS replies
+WHATSAPP_CONTEXT_RECENT_LIMIT=6         # Lower = faster replies, less history
+WHATSAPP_MEMORY_SEARCH_LIMIT=2          # Lower = faster replies, fewer memories
+WHATSAPP_RESPONSE_MAX_TOKENS=512        # Lower = faster replies, shorter outputs
 ```
 
 </details>

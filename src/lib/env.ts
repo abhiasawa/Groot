@@ -16,6 +16,8 @@ const envSchema = z.object({
   ANTHROPIC_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
   SUPERMEMORY_API_KEY: z.string().optional(),
+  OPENAI_CHAT_MODEL: z.string().optional(),
+  ANTHROPIC_CHAT_MODEL: z.string().optional(),
 
   // Upstash (optional — rate limiting disabled without it)
   UPSTASH_REDIS_REST_URL: z.string().optional(),
@@ -25,7 +27,7 @@ const envSchema = z.object({
   CRON_SECRET: z.string().optional(),
   OWNER_WHATSAPP_NUMBER: z.string().optional(),
   OWNER_EMAIL: z.string().email().optional(),
-  AI_PROVIDER: z.enum(["anthropic", "openai", "gemini"]).default("anthropic"),
+  AI_PROVIDER: z.enum(["anthropic", "openai", "gemini"]).default("openai"),
   VISION_PROVIDER: z
     .enum(["anthropic", "openai", "gemini"])
     .default("anthropic"),
@@ -34,6 +36,9 @@ const envSchema = z.object({
     .enum(["openai", "google", "elevenlabs"])
     .default("openai"),
   TTS_VOICE: z.string().default("nova"),
+  WHATSAPP_CONTEXT_RECENT_LIMIT: z.string().optional(),
+  WHATSAPP_MEMORY_SEARCH_LIMIT: z.string().optional(),
+  WHATSAPP_RESPONSE_MAX_TOKENS: z.string().optional(),
 });
 
 function getEnv() {
