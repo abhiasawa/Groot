@@ -15,7 +15,7 @@ export default function GardenLayout({
   return (
     <div style={{
       backgroundColor: "var(--color-bg)",
-      backgroundImage: "var(--texture-grain)",
+      backgroundImage: "var(--texture-canvas)",
       color: "var(--color-text)",
       minHeight: "100vh",
     }}>
