@@ -65,16 +65,23 @@ export async function generateGrootResponse(
   // 4. Process metadata
   const metadata = response.metadata;
   const profileUpdates: ProfileFact[] = (metadata?.profileUpdates ?? []).map((u) => ({
-    category: u.category as ProfileFact["category"],
-    key: u.key,
+    category: normalizeProfileCategory(u.category),
+    key: normalizeProfileKey(u.key),
     value: u.value,
     confidence: 0.8,
     source: "ai_extraction",
   }));
 
-  // Apply profile updates
-  if (profileUpdates.length > 0) {
-    await upsertProfileFacts(userId, profileUpdates);
+  // Deduplicate profile updates (same category+key = keep last)
+  const deduped = new Map<string, ProfileFact>();
+  for (const fact of profileUpdates) {
+    deduped.set(`${fact.category}:${fact.key}`, fact);
+  }
+
+  // Apply profile updates (deduplicated)
+  const dedupedUpdates = [...deduped.values()];
+  if (dedupedUpdates.length > 0) {
+    await upsertProfileFacts(userId, dedupedUpdates);
   }
 
   return {
@@ -82,9 +89,34 @@ export async function generateGrootResponse(
     detectedMood: metadata?.detectedMood,
     shouldStoreMemory: metadata?.shouldStoreMemory ?? false,
     memoryTags: metadata?.memoryTags ?? [],
-    profileUpdates,
+    profileUpdates: dedupedUpdates,
     detectedDates: metadata?.detectedDates ?? [],
   };
+}
+
+// ─── Helpers ───
+
+const CATEGORY_MAP: Record<string, ProfileFact["category"]> = {
+  static: "static",
+  dynamic: "dynamic",
+  preference: "preference",
+  goal: "goal",
+  health: "dynamic",
+  habit: "dynamic",
+  activity: "dynamic",
+  fitness: "dynamic",
+  relationships: "static",
+  relationship: "static",
+  personal: "static",
+  hobby: "static",
+};
+
+function normalizeProfileCategory(raw: string): ProfileFact["category"] {
+  return CATEGORY_MAP[raw.toLowerCase()] ?? "dynamic";
+}
+
+function normalizeProfileKey(raw: string): string {
+  return raw.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "");
 }
 
 /**

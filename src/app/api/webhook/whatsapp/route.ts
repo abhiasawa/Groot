@@ -403,10 +403,35 @@ async function createRemindersFromDetectedDates(
   if (detectedDates.length === 0) return;
 
   const now = Date.now();
+  const seenDates = new Set<string>();
+
   for (const item of detectedDates.slice(0, 3)) {
     const remindAt = new Date(item.date);
     if (Number.isNaN(remindAt.getTime())) continue;
     if (remindAt.getTime() <= now) continue;
+
+    // Deduplicate by date (same day = same reminder)
+    const dateKey = remindAt.toISOString().slice(0, 10);
+    if (seenDates.has(dateKey)) continue;
+    seenDates.add(dateKey);
+
+    // Check if a reminder already exists for this user on this date
+    const supabase = getSupabaseAdmin();
+    const dayStart = new Date(dateKey + "T00:00:00Z").toISOString();
+    const dayEnd = new Date(dateKey + "T23:59:59Z").toISOString();
+    const { data: existing } = await supabase
+      .from("reminders")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("is_sent", false)
+      .gte("remind_at", dayStart)
+      .lte("remind_at", dayEnd)
+      .limit(1);
+
+    if (existing && existing.length > 0) {
+      logger.info({ userId, date: dateKey }, "Skipping duplicate reminder for this date");
+      continue;
+    }
 
     await createReminder(
       userId,
