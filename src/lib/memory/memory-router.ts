@@ -12,7 +12,6 @@
  * - reflection: User is journaling/reflecting
  * - command: Explicit command (help, undo, settings, etc.)
  * - send_message: User wants to send a message to someone else
- * - capture_shortcut: Prefix command (todo:/idea:/note:/remind:)
  * - link_share: User shared a URL
  */
 
@@ -24,15 +23,12 @@ export type MessageIntent =
   | "reflection"
   | "command"
   | "send_message"
-  | "capture_shortcut"
   | "link_share";
 
 export interface ClassifiedMessage {
   intent: MessageIntent;
   confidence: number;
   extractedData?: {
-    shortcutType?: "todo" | "idea" | "note" | "remind";
-    shortcutContent?: string;
     command?: string;
     url?: string;
     contactName?: string;
@@ -43,8 +39,6 @@ export interface ClassifiedMessage {
 // ─── Pattern matchers ───
 
 const URL_REGEX = /https?:\/\/[^\s]+/i;
-
-const SHORTCUT_REGEX = /^(todo|idea|note|remind):\s*(.+)/i;
 
 const STORE_PATTERNS = [
   /^remember\b/i,
@@ -103,20 +97,7 @@ const REFLECTION_PATTERNS = [
 export function classifyIntent(text: string): ClassifiedMessage {
   const trimmed = text.trim();
 
-  // 1. Check shortcut prefixes first (highest priority, fastest path)
-  const shortcutMatch = trimmed.match(SHORTCUT_REGEX);
-  if (shortcutMatch) {
-    return {
-      intent: "capture_shortcut",
-      confidence: 1.0,
-      extractedData: {
-        shortcutType: shortcutMatch[1]!.toLowerCase() as "todo" | "idea" | "note" | "remind",
-        shortcutContent: shortcutMatch[2]!.trim(),
-      },
-    };
-  }
-
-  // 2. Check for URLs
+  // 1. Check for URLs
   const urlMatch = trimmed.match(URL_REGEX);
   if (urlMatch) {
     return {
@@ -185,7 +166,7 @@ export function classifyIntent(text: string): ClassifiedMessage {
  */
 export function shouldStoreInLongTerm(text: string, intent: MessageIntent): boolean {
   // Always store these intents
-  if (["store_memory", "reflection", "capture_shortcut"].includes(intent)) {
+  if (["store_memory", "reflection"].includes(intent)) {
     return true;
   }
 
