@@ -30,10 +30,12 @@ export async function generateGrootResponse(
   userName: string | null,
   isNewUser: boolean = false,
 ): Promise<GrootResponse> {
+  const t0 = Date.now();
   logger.info({ userId, isNewUser, messageLength: currentMessage.length }, "Groot engine started");
 
   // 1. Build context
   const context = await buildContext(userId, currentMessage, userName);
+  const t1 = Date.now();
 
   // 2. Assemble system prompt
   const currentDate = new Date().toLocaleDateString("en-US", {
@@ -55,6 +57,7 @@ export async function generateGrootResponse(
     maxTokens: 2048,
     temperature: 0.7,
   });
+  const t2 = Date.now();
 
   logger.info(
     {
@@ -62,6 +65,8 @@ export async function generateGrootResponse(
       provider: provider.name,
       inputTokens: response.usage?.inputTokens,
       outputTokens: response.usage?.outputTokens,
+      contextMs: t1 - t0,
+      llmMs: t2 - t1,
     },
     "Groot response generated",
   );
@@ -92,6 +97,7 @@ export async function generateGrootResponse(
     await upsertProfileFacts(userId, dedupedUpdates);
   }
 
+  const t3 = Date.now();
   logger.info(
     {
       userId,
@@ -101,6 +107,10 @@ export async function generateGrootResponse(
       dates: metadata?.detectedDates?.length ?? 0,
       profileUpdates: dedupedUpdates.length,
       responseLength: response.text.length,
+      contextMs: t1 - t0,
+      llmMs: t2 - t1,
+      profileUpsertMs: t3 - t2,
+      totalMs: t3 - t0,
     },
     "Groot engine complete",
   );

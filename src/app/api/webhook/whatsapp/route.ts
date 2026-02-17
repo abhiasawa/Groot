@@ -136,17 +136,20 @@ export async function POST(request: NextRequest) {
  * The LLM naturally handles intent, memory, reminders, etc.
  */
 async function processMessage(parsed: ParsedMessage): Promise<void> {
+  const pStart = Date.now();
   markMessageAsRead(parsed.messageId).catch(() => {});
 
   const { user, isNewUser } = await getOrCreateUser(parsed.from, parsed.displayName);
+  const pUser = Date.now();
 
   logger.info(
-    { userId: user.id, isNewUser, type: parsed.type, hasMedia: !!parsed.mediaId, hasText: !!parsed.text, hasInteractive: !!parsed.interactiveReply },
+    { userId: user.id, isNewUser, type: parsed.type, hasMedia: !!parsed.mediaId, hasText: !!parsed.text, hasInteractive: !!parsed.interactiveReply, userLookupMs: pUser - pStart },
     "Processing message",
   );
 
   // Store inbound message immediately so context is available for batch detection
   await storeInboundMessage(user.id, parsed);
+  const pStore = Date.now();
 
   // Non-critical (fire-and-forget)
   markUserResponded(user.id).catch(() => {});
@@ -192,6 +195,7 @@ async function processMessage(parsed: ParsedMessage): Promise<void> {
       user.display_name,
       isNewUser,
     );
+    const pGroot = Date.now();
 
     // Before sending: check if a newer message arrived while we were processing.
     // If so, discard this response — the newer message's handler will generate
@@ -205,6 +209,7 @@ async function processMessage(parsed: ParsedMessage): Promise<void> {
     }
 
     await sendWhatsAppMessage(parsed.from, grootResponse.text);
+    const pSend = Date.now();
 
     // Post-response actions driven by AI metadata
     const postOps: Promise<unknown>[] = [
@@ -226,6 +231,20 @@ async function processMessage(parsed: ParsedMessage): Promise<void> {
     }
 
     await Promise.allSettled(postOps);
+    const pEnd = Date.now();
+
+    logger.info(
+      {
+        userId: user.id,
+        userLookupMs: pUser - pStart,
+        storeInboundMs: pStore - pUser,
+        grootEngineMs: pGroot - pStore,
+        sendWhatsAppMs: pSend - pGroot,
+        postOpsMs: pEnd - pSend,
+        totalMs: pEnd - pStart,
+      },
+      "Message pipeline complete",
+    );
   } catch (error) {
     logger.error({ error, userId: user.id }, "Groot engine failed");
     const fallback = getErrorResponse();
