@@ -85,24 +85,19 @@ export default function GardenHome() {
         {data.recentMood && (
           <div className="flex items-center gap-2 mt-3">
             <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: moodColor ?? "var(--color-border)" }} />
-            <p className="text-sm" style={{ color: "var(--color-text-secondary)", fontFamily: "var(--font-diary)" }}>
-              Feeling <span style={{ color: moodColor ?? "var(--color-text)", fontWeight: 500, fontStyle: "italic" }}>{data.recentMood}</span> lately
+            <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
+              Feeling <span style={{ color: moodColor ?? "var(--color-text)", fontWeight: 600 }}>{data.recentMood}</span> lately
             </p>
           </div>
         )}
 
-        {/* Decorative divider */}
-        <div className="flex items-center gap-4 mt-6">
-          <div className="flex-1 h-px" style={{ backgroundColor: "var(--color-border)" }} />
-          <span className="text-xs" style={{ color: "var(--color-border)" }}>&#x2767;</span>
-          <div className="flex-1 h-px" style={{ backgroundColor: "var(--color-border)" }} />
-        </div>
+        <div className="mt-5 h-px" style={{ backgroundColor: "var(--color-border)" }} />
       </header>
 
       {/* ─── Search Bar ─── */}
       <form onSubmit={handleSearch}>
         <div
-          className="flex items-center gap-3 px-5 py-3.5 rounded-2xl transition-shadow"
+          className="flex items-center gap-3 px-4 py-2.5 rounded-lg transition-shadow"
           style={{
             backgroundColor: "var(--color-paper)",
             boxShadow: "var(--shadow-paper)",
@@ -117,7 +112,7 @@ export default function GardenHome() {
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search your memories..."
             className="flex-1 bg-transparent outline-none text-sm"
-            style={{ color: "var(--color-text)", fontFamily: "var(--font-diary)", fontStyle: "italic" }}
+            style={{ color: "var(--color-text)" }}
           />
         </div>
       </form>
@@ -164,18 +159,11 @@ export default function GardenHome() {
       {data.flashback && (
         <section>
           <SectionLabel text="30 Days Ago" />
-          <DiaryCard variant="paper" className="relative overflow-hidden">
-            {/* Faded corner ornament */}
-            <div
-              className="absolute top-0 right-0 w-16 h-16 opacity-[0.04]"
-              style={{ backgroundImage: "radial-gradient(circle at 100% 0%, var(--color-accent) 0%, transparent 70%)" }}
-            />
+          <DiaryCard variant="paper">
             <p
               className="text-sm leading-relaxed"
               style={{
                 color: "var(--color-text)",
-                fontFamily: "var(--font-diary)",
-                fontStyle: "italic",
                 lineHeight: 1.75,
               }}
             >

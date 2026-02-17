@@ -9,19 +9,16 @@ interface DiaryCardProps {
 }
 
 export default function DiaryCard({ children, className = "", variant = "default", onClick, style }: DiaryCardProps) {
-  const bg = variant === "paper" ? "var(--color-paper)" : "var(--color-card)";
-  const shadow = variant === "elevated" ? "var(--shadow-elevated)" : variant === "paper" ? "var(--shadow-paper)" : "var(--shadow-card)";
-  const texture = variant === "elevated" ? "var(--texture-aged)" : variant === "paper" ? "var(--texture-paper)" : "var(--texture-linen)";
+  const shadow = variant === "elevated" ? "var(--shadow-elevated)" : "none";
 
   return (
     <div
-      className={`p-5 transition-all duration-200 ${onClick ? "cursor-pointer" : ""} ${className}`}
+      className={`p-5 transition-all duration-150 ${onClick ? "cursor-pointer" : ""} ${className}`}
       style={{
-        backgroundColor: bg,
-        backgroundImage: texture,
-        boxShadow: shadow,
-        borderRadius: "var(--radius-lg)",
+        backgroundColor: "var(--color-card)",
         border: "1px solid var(--color-border)",
+        borderRadius: "var(--radius-lg)",
+        boxShadow: shadow,
         ...style,
       }}
       onClick={onClick}

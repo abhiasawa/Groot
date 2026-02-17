@@ -52,7 +52,7 @@ export default function HabitsPage() {
           <p className="font-medium text-base mb-1" style={{ color: "var(--color-text)", fontFamily: "var(--font-heading)" }}>
             No habits tracked yet
           </p>
-          <p className="text-sm" style={{ color: "var(--color-text-secondary)", fontFamily: "var(--font-diary)", fontStyle: "italic" }}>
+          <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
             Tell Groot to track a habit — &quot;Track my weight daily&quot; or &quot;I want to read 30 pages a day&quot;.
           </p>
         </DiaryCard>

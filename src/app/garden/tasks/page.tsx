@@ -69,7 +69,7 @@ export default function TasksPage() {
           <p className="font-medium text-base mb-1" style={{ color: "var(--color-text)", fontFamily: "var(--font-heading)" }}>
             No tasks yet
           </p>
-          <p className="text-sm" style={{ color: "var(--color-text-secondary)", fontFamily: "var(--font-diary)", fontStyle: "italic" }}>
+          <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
             Tell Groot on WhatsApp what you need to do — he&apos;ll track it for you.
           </p>
         </DiaryCard>

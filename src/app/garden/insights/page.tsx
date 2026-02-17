@@ -54,7 +54,7 @@ export default function InsightsPage() {
           <p className="font-medium text-base mb-1" style={{ color: "var(--color-text)", fontFamily: "var(--font-heading)" }}>
             No insights yet
           </p>
-          <p className="text-sm" style={{ color: "var(--color-text-secondary)", fontFamily: "var(--font-diary)", fontStyle: "italic" }}>
+          <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
             Groot generates a weekly insight report every Sunday. Keep chatting and your first report will appear here.
           </p>
         </DiaryCard>
@@ -67,11 +67,7 @@ export default function InsightsPage() {
               <div key={r.id}>
                 {/* Decorative week separator */}
                 {index > 0 && (
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className="flex-1 h-px" style={{ backgroundColor: "var(--color-border)" }} />
-                    <span className="text-xs" style={{ color: "var(--color-border)" }}>&#x2767;</span>
-                    <div className="flex-1 h-px" style={{ backgroundColor: "var(--color-border)" }} />
-                  </div>
+                  <div className="h-px mb-6" style={{ backgroundColor: "var(--color-border)" }} />
                 )}
 
                 <DiaryCard variant="paper">
@@ -86,7 +82,6 @@ export default function InsightsPage() {
                   {/* Week range in serif italic */}
                   <p style={{
                     fontFamily: "var(--font-heading)",
-                    fontStyle: "italic",
                     color: "var(--color-primary)",
                     fontSize: "var(--text-base)",
                     marginBottom: "var(--space-3)",

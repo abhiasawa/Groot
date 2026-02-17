@@ -93,7 +93,7 @@ export default function MoodPage() {
         <DiaryCard variant="paper" className="text-center !py-10">
           <span className="text-4xl block mb-3">&#x1F3AD;</span>
           <p className="font-medium text-base mb-1" style={{ color: "var(--color-text)", fontFamily: "var(--font-heading)" }}>No mood data yet</p>
-          <p className="text-sm" style={{ color: "var(--color-text-secondary)", fontFamily: "var(--font-diary)", fontStyle: "italic" }}>
+          <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
             Keep talking to Groot — your mood patterns will emerge over time.
           </p>
         </DiaryCard>
@@ -176,8 +176,8 @@ export default function MoodPage() {
                   <AreaChart data={weeklyTrend}>
                     <defs>
                       <linearGradient id="moodGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#5C5FA8" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#5C5FA8" stopOpacity={0} />
+                        <stop offset="5%" stopColor="#2383E2" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#2383E2" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <XAxis
@@ -200,7 +200,7 @@ export default function MoodPage() {
                       formatter={(value) => [MOOD_LABELS[Math.round(value as number)] ?? value, "Mood"]}
                       labelFormatter={(label) => new Date(String(label)).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                     />
-                    <Area type="monotone" dataKey="avgScore" stroke="#5C5FA8" fill="url(#moodGradient)" strokeWidth={2} />
+                    <Area type="monotone" dataKey="avgScore" stroke="#2383E2" fill="url(#moodGradient)" strokeWidth={2} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>

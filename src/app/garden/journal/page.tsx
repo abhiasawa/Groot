@@ -228,7 +228,7 @@ function JournalContent() {
       {/* Selected date indicator */}
       {selectedDate && (
         <div className="flex items-center gap-2">
-          <span className="text-sm" style={{ color: "var(--color-text-secondary)", fontFamily: "var(--font-diary)", fontStyle: "italic" }}>
+          <span className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
             {new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
           </span>
           <button onClick={() => setSelectedDate(null)} className="text-xs underline" style={{ color: "var(--color-primary)" }}>
@@ -268,19 +268,12 @@ function JournalContent() {
             return (
               <div key={dateLabel}>
                 {/* ─── Pattern 3: Decorative date separator ─── */}
-                <div className="flex items-center gap-4 my-6 first:mt-0">
-                  <div className="flex-1 h-px" style={{ backgroundColor: "var(--color-border)" }} />
-                  <h3 style={{
-                    fontFamily: "var(--font-diary)",
-                    color: "var(--color-text-secondary)",
-                    fontSize: "var(--text-sm)",
-                    fontStyle: "italic",
-                    whiteSpace: "nowrap",
-                  }}>
-                    {dateLabel}
-                  </h3>
-                  <div className="flex-1 h-px" style={{ backgroundColor: "var(--color-border)" }} />
-                </div>
+                <h3
+                  className="my-4 first:mt-0 text-sm font-semibold"
+                  style={{ color: "var(--color-text-secondary)" }}
+                >
+                  {dateLabel}
+                </h3>
 
                 {/* ─── Pattern 2: Mood-tinted timeline with left border ─── */}
                 <div className="relative pl-5">

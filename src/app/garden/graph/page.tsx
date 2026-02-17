@@ -70,10 +70,10 @@ export default function GraphPage() {
             nodeLabel="label"
             nodeColor={(node) => {
               const n = node as GraphNode;
-              return n.type === "profile" ? "#C4963E" : "#5C5FA8";
+              return n.type === "profile" ? "#D9730D" : "#2383E2";
             }}
             nodeVal={(node) => (node as GraphNode).size}
-            linkColor={() => "#9895C0"}
+            linkColor={() => "#E3E2E0"}
             onNodeClick={(node) => setSelectedNode(node as GraphNode)}
             width={typeof window !== "undefined" ? Math.min(window.innerWidth - 40, 1100) : 800}
             height={500}

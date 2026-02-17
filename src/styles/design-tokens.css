@@ -1,93 +1,91 @@
 :root {
-  /* ─── Colors: Light Mode — Leather Journal + Soft Indigo ─── */
-  --color-bg: #F2EBE0;
-  --color-surface: #E8DFD0;
-  --color-primary: #5C5FA8;
-  --color-primary-hover: #4E51A0;
-  --color-secondary: #9895C0;
-  --color-accent: #C4963E;
-  --color-text: #2C2418;
-  --color-text-secondary: #8B7E6C;
-  --color-danger: #B85450;
-  --color-border: #D5C8B4;
-  --color-card: #FAF6EE;
-  --color-paper: #FBF7F0;
-  --color-ink: #3A3020;
-  --color-leather: #8B6F4E;
-  --color-leather-dark: #5C4A32;
+  /* ─── Colors: Notion Light Mode ─── */
+  --color-bg: #FFFFFF;
+  --color-surface: #F7F6F3;
+  --color-primary: #2383E2;
+  --color-primary-hover: #1B6EC2;
+  --color-secondary: #9B9A97;
+  --color-accent: #D9730D;
+  --color-text: #37352F;
+  --color-text-secondary: #787774;
+  --color-danger: #E03E3E;
+  --color-border: rgba(55, 53, 47, 0.09);
+  --color-card: #FFFFFF;
+  --color-paper: #FFFFFF;
+  --color-ink: #37352F;
 
   /* ─── Colors: Dark Mode ─── */
-  --color-dark-bg: #1E1A15;
-  --color-dark-surface: #2A2520;
-  --color-dark-primary: #8E91D9;
-  --color-dark-secondary: #7B7DB0;
-  --color-dark-accent: #C4963E;
-  --color-dark-text: #E4E0D8;
-  --color-dark-text-secondary: #9D9588;
-  --color-dark-border: #3A3530;
-  --color-dark-card: #262118;
-  --color-dark-paper: #2E2820;
+  --color-dark-bg: #191919;
+  --color-dark-surface: #202020;
+  --color-dark-primary: #529CCA;
+  --color-dark-secondary: #9B9A97;
+  --color-dark-accent: #FFA344;
+  --color-dark-text: rgba(255, 255, 255, 0.81);
+  --color-dark-text-secondary: rgba(255, 255, 255, 0.443);
+  --color-dark-border: rgba(255, 255, 255, 0.094);
+  --color-dark-card: #202020;
+  --color-dark-paper: #202020;
 
-  /* ─── Mood Colors ─── */
-  --color-mood-great: #5BA06B;
-  --color-mood-good: #88AC8E;
-  --color-mood-okay: #C4963E;
-  --color-mood-low: #C4886E;
-  --color-mood-bad: #B85450;
-  --color-mood-none: #D5C8B4;
+  /* ─── Mood Colors (Notion palette) ─── */
+  --color-mood-great: #0F7B6C;
+  --color-mood-good: #448361;
+  --color-mood-okay: #CB912F;
+  --color-mood-low: #D9730D;
+  --color-mood-bad: #E03E3E;
+  --color-mood-none: #E3E2E0;
 
   /* ─── Typography ─── */
-  --font-heading: var(--font-lora), 'Georgia', serif;
-  --font-diary: var(--font-lora), 'Georgia', serif;
-  --font-body: var(--font-inter), system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-heading: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, sans-serif;
+  --font-diary: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, sans-serif;
+  --font-body: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, sans-serif;
+  --font-mono: 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
 
-  --text-xs: 0.8125rem;    /* 13px — minimum */
-  --text-sm: 0.875rem;     /* 14px */
-  --text-base: 0.9375rem;  /* 15px */
-  --text-lg: 1.125rem;     /* 18px */
-  --text-xl: 1.25rem;      /* 20px */
-  --text-2xl: 1.5rem;      /* 24px */
-  --text-3xl: 1.875rem;    /* 30px */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
 
-  --leading-body: 1.6;
-  --tracking-heading: -0.02em;
+  --leading-body: 1.5;
+  --tracking-heading: -0.01em;
 
-  /* ─── Shadows (warm brown-tinted) ─── */
-  --shadow-card: 0 1px 3px rgba(60, 40, 20, 0.08), 0 1px 2px rgba(60, 40, 20, 0.06);
-  --shadow-card-hover: 0 4px 12px rgba(60, 40, 20, 0.12);
-  --shadow-elevated: 0 8px 24px rgba(60, 40, 20, 0.16);
-  --shadow-paper: 0 1px 3px rgba(60, 40, 20, 0.06), 0 2px 6px rgba(60, 40, 20, 0.04), 0 0 0 1px rgba(60, 40, 20, 0.03);
+  /* ─── Shadows (Notion: minimal) ─── */
+  --shadow-card: none;
+  --shadow-card-hover: rgba(55, 53, 47, 0.16) 0px 2px 8px;
+  --shadow-elevated: rgba(15, 15, 15, 0.1) 0px 3px 6px, rgba(15, 15, 15, 0.2) 0px 9px 24px;
+  --shadow-paper: none;
 
-  /* ─── Textures (real image assets) ─── */
-  --texture-leather: url("/textures/leather-dark.png");
-  --texture-paper: url("/textures/paper.png");
-  --texture-canvas: url("/textures/cream-paper.png");
-  --texture-aged: url("/textures/aged-paper.png");
-  --texture-linen: url("/textures/linen.png");
+  /* ─── No textures (Notion style) ─── */
+  --texture-leather: none;
+  --texture-paper: none;
+  --texture-canvas: none;
+  --texture-aged: none;
+  --texture-linen: none;
 
   /* ─── Spacing (8px grid) ─── */
-  --space-1: 0.25rem;   /* 4px */
-  --space-2: 0.5rem;    /* 8px */
-  --space-3: 0.75rem;   /* 12px */
-  --space-4: 1rem;      /* 16px */
-  --space-5: 1.25rem;   /* 20px */
-  --space-6: 1.5rem;    /* 24px */
-  --space-8: 2rem;      /* 32px */
-  --space-10: 2.5rem;   /* 40px */
-  --space-12: 3rem;     /* 48px */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
 
   /* ─── Layout ─── */
   --max-width-text: 720px;
-  --card-padding: var(--space-6);
+  --card-padding: var(--space-5);
   --touch-target: 44px;
-  --sidebar-width: 260px;
-  --bottom-nav-height: 64px;
+  --sidebar-width: 240px;
+  --bottom-nav-height: 56px;
 
-  /* ─── Radius ─── */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+  /* ─── Radius (Notion: subtle) ─── */
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
   --radius-full: 9999px;
 }
 
@@ -102,7 +100,7 @@
   --color-border: var(--color-dark-border);
   --color-card: var(--color-dark-card);
   --color-paper: var(--color-dark-paper);
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.3);
-  --shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-card: none;
+  --shadow-card-hover: rgba(0, 0, 0, 0.3) 0px 2px 8px;
+  --shadow-elevated: rgba(0, 0, 0, 0.4) 0px 3px 6px, rgba(0, 0, 0, 0.5) 0px 9px 24px;
 }

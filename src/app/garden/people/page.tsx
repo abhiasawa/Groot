@@ -13,10 +13,10 @@ interface Person {
   source: "profile" | "contacts";
 }
 
-// Deterministic avatar colors — warm leather + indigo palette
+// Deterministic avatar colors — Notion palette
 const AVATAR_COLORS = [
-  "#5C5FA8", "#8B6F4E", "#7B5B8A", "#8A5B5B", "#4A6B8A",
-  "#6B7A5B", "#9E6B3B", "#5C4A7A", "#8A6B4A", "#6B5B8A",
+  "#2383E2", "#D9730D", "#0F7B6C", "#6940A5", "#E03E3E",
+  "#CB912F", "#448361", "#AD1A72", "#64473A", "#9B9A97",
 ];
 
 function getAvatarColor(name: string): string {
@@ -79,7 +79,7 @@ export default function PeoplePage() {
           <p className="font-medium text-base mb-1" style={{ color: "var(--color-text)", fontFamily: "var(--font-heading)" }}>
             No people tracked yet
           </p>
-          <p className="text-sm" style={{ color: "var(--color-text-secondary)", fontFamily: "var(--font-diary)", fontStyle: "italic" }}>
+          <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
             As you talk to Groot about the people in your life, they&apos;ll appear here automatically.
           </p>
         </DiaryCard>
@@ -124,7 +124,7 @@ export default function PeoplePage() {
                       {person.relationship && (
                         <p
                           className="text-xs capitalize mt-0.5"
-                          style={{ color: "var(--color-text-secondary)", fontFamily: "var(--font-diary)", fontStyle: "italic" }}
+                          style={{ color: "var(--color-text-secondary)" }}
                         >
                           {person.relationship}
                         </p>
@@ -150,7 +150,7 @@ export default function PeoplePage() {
                     {loadingMemories ? (
                       <div className="h-16 rounded-lg animate-pulse" style={{ backgroundColor: "var(--color-surface)" }} />
                     ) : personMemories.length === 0 ? (
-                      <p className="text-xs py-2 italic" style={{ color: "var(--color-text-secondary)", fontFamily: "var(--font-diary)" }}>
+                      <p className="text-xs py-2" style={{ color: "var(--color-text-secondary)" }}>
                         No related memories found.
                       </p>
                     ) : (

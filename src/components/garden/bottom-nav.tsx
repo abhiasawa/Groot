@@ -19,7 +19,6 @@ export default function BottomNav() {
       className="md:hidden fixed bottom-0 left-0 right-0 border-t flex items-center justify-around z-50"
       style={{
         backgroundColor: "var(--color-card)",
-        backgroundImage: "var(--texture-linen)",
         borderColor: "var(--color-border)",
         height: "var(--bottom-nav-height)",
         paddingBottom: "env(safe-area-inset-bottom)",
