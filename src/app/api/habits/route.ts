@@ -1,11 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { getAuthenticatedPortalUser, PortalAuthError } from "@/lib/auth/portal-user";
 
 /**
- * GET /api/habits — List habits with streak info for a user.
+ * GET /api/habits — List habits with streak info and optional check-in history.
+ *
+ * Query params:
+ *   include=checkins — also return last 30 days of check-in dates per habit
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const includeCheckins = request.nextUrl.searchParams.get("include") === "checkins";
+
   let userId: string;
   try {
     const user = await getAuthenticatedPortalUser();
@@ -42,7 +47,29 @@ export async function GET() {
     (streaks ?? []).map((s) => [s.habit_id, s]),
   );
 
-  // Merge habits with streaks
+  // Optionally fetch recent check-ins
+  let checkinMap = new Map<string, string[]>();
+  if (includeCheckins) {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const { data: checkins } = await supabase
+      .from("habit_checkins")
+      .select("habit_id, checked_in_at")
+      .in("habit_id", habitIds)
+      .gte("checked_in_at", thirtyDaysAgo.toISOString())
+      .order("checked_in_at", { ascending: true });
+
+    for (const c of checkins ?? []) {
+      const hid = c.habit_id as string;
+      const dateStr = (c.checked_in_at as string).split("T")[0]!;
+      if (!checkinMap.has(hid)) checkinMap.set(hid, []);
+      const existing = checkinMap.get(hid)!;
+      if (!existing.includes(dateStr)) existing.push(dateStr);
+    }
+  }
+
+  // Merge habits with streaks (and optionally checkins)
   const habitsWithStreaks = habits.map((h) => {
     const streak = streakMap.get(h.id);
     return {
@@ -55,6 +82,7 @@ export async function GET() {
       current_streak: streak?.current_streak ?? 0,
       longest_streak: streak?.longest_streak ?? 0,
       last_checkin_date: streak?.last_checkin_date ?? null,
+      ...(includeCheckins ? { recentCheckins: checkinMap.get(h.id) ?? [] } : {}),
     };
   });
 

@@ -2,6 +2,9 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import PageHeader from "@/components/garden/page-header";
+import DiaryCard from "@/components/garden/diary-card";
+import Link from "next/link";
 
 interface Preferences {
   morning_checkin: boolean;
@@ -44,7 +47,6 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key, value }),
       }).catch(() => {
-        // Revert on failure
         setPrefs((prev) => ({ ...prev, [key]: !value }));
       });
     },
@@ -72,7 +74,7 @@ export default function SettingsPage() {
 
   if (userLoading || loading) {
     return (
-      <div className="space-y-4 animate-pulse max-w-lg">
+      <div className="space-y-6 animate-pulse max-w-lg">
         <div className="h-8 w-24 rounded" style={{ backgroundColor: "var(--color-surface)" }} />
         <div className="h-48 rounded-xl" style={{ backgroundColor: "var(--color-surface)" }} />
         <div className="h-32 rounded-xl" style={{ backgroundColor: "var(--color-surface)" }} />
@@ -82,22 +84,26 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 max-w-lg">
-      <h1
-        className="text-2xl font-semibold"
-        style={{ color: "var(--color-text)", letterSpacing: "-0.02em" }}
-      >
-        Settings
-      </h1>
+      <PageHeader title="Settings" subtitle="Manage your preferences" />
+
+      {/* Quick Links */}
+      <DiaryCard>
+        <div className="flex flex-wrap gap-4">
+          <Link href="/garden/profile" className="text-sm underline" style={{ color: "var(--color-primary)" }}>
+            View Profile →
+          </Link>
+          <Link href="/garden/graph" className="text-sm underline" style={{ color: "var(--color-primary)" }}>
+            Knowledge Graph →
+          </Link>
+        </div>
+      </DiaryCard>
 
       {/* Notifications */}
-      <section
-        className="p-6 rounded-xl border"
-        style={{
-          backgroundColor: "var(--color-card)",
-          borderColor: "var(--color-border)",
-        }}
-      >
-        <h2 className="text-lg font-semibold mb-4" style={{ color: "var(--color-text)" }}>
+      <DiaryCard>
+        <h2
+          className="text-base font-semibold mb-4"
+          style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}
+        >
           Notifications
         </h2>
         <div className="space-y-4">
@@ -126,17 +132,14 @@ export default function SettingsPage() {
             onChange={(v) => updatePref("feature_tips", v)}
           />
         </div>
-      </section>
+      </DiaryCard>
 
       {/* Privacy */}
-      <section
-        className="p-6 rounded-xl border"
-        style={{
-          backgroundColor: "var(--color-card)",
-          borderColor: "var(--color-border)",
-        }}
-      >
-        <h2 className="text-lg font-semibold mb-4" style={{ color: "var(--color-text)" }}>
+      <DiaryCard>
+        <h2
+          className="text-base font-semibold mb-4"
+          style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}
+        >
           Privacy & Data
         </h2>
         <div className="space-y-3">
@@ -201,23 +204,20 @@ export default function SettingsPage() {
             </div>
           </div>
         )}
-      </section>
+      </DiaryCard>
 
       {/* About */}
-      <section
-        className="p-6 rounded-xl border"
-        style={{
-          backgroundColor: "var(--color-card)",
-          borderColor: "var(--color-border)",
-        }}
-      >
-        <h2 className="text-lg font-semibold mb-2" style={{ color: "var(--color-text)" }}>
+      <DiaryCard variant="paper">
+        <h2
+          className="text-base font-semibold mb-2"
+          style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}
+        >
           About Groot
         </h2>
         <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
           Groot is your AI Second Brain on WhatsApp. Version 0.1.0
         </p>
-      </section>
+      </DiaryCard>
     </div>
   );
 }

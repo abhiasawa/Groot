@@ -3,6 +3,8 @@
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import PageHeader from "@/components/garden/page-header";
+import DiaryCard from "@/components/garden/diary-card";
 
 const ForceGraph = dynamic(() => import("react-force-graph-2d"), { ssr: false });
 
@@ -46,7 +48,7 @@ export default function GraphPage() {
 
   if (userLoading || loading) {
     return (
-      <div className="space-y-4 animate-pulse">
+      <div className="space-y-6 animate-pulse">
         <div className="h-8 w-40 rounded" style={{ backgroundColor: "var(--color-surface)" }} />
         <div className="h-[60vh] rounded-xl" style={{ backgroundColor: "var(--color-surface)" }} />
       </div>
@@ -54,39 +56,19 @@ export default function GraphPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <h1
-        className="text-2xl font-semibold"
-        style={{ color: "var(--color-text)", letterSpacing: "-0.02em" }}
-      >
-        Knowledge Graph
-      </h1>
+    <div className="space-y-6">
+      <PageHeader title="Knowledge Graph" subtitle="Connections between your memories" />
 
       {graphData.nodes.length === 0 ? (
-        <div
-          className="p-8 rounded-xl border text-center"
-          style={{
-            backgroundColor: "var(--color-surface)",
-            borderColor: "var(--color-border)",
-          }}
-        >
-          <span className="text-4xl block mb-3">🕸️</span>
-          <p className="font-medium" style={{ color: "var(--color-text)" }}>
-            Your knowledge graph is empty
-          </p>
+        <DiaryCard variant="paper" className="text-center">
+          <span className="text-3xl block mb-2">🕸️</span>
+          <p className="font-medium" style={{ color: "var(--color-text)" }}>Your knowledge graph is empty</p>
           <p className="text-sm mt-1" style={{ color: "var(--color-text-secondary)" }}>
             Share more with Groot — connections between your memories will appear here.
           </p>
-        </div>
+        </DiaryCard>
       ) : (
-        <div
-          className="rounded-xl border overflow-hidden relative"
-          style={{
-            backgroundColor: "var(--color-card)",
-            borderColor: "var(--color-border)",
-            height: "60vh",
-          }}
-        >
+        <DiaryCard className="!p-0 overflow-hidden" style={{ height: "60vh" }}>
           <ForceGraph
             graphData={graphData}
             nodeLabel="label"
@@ -100,22 +82,16 @@ export default function GraphPage() {
             width={typeof window !== "undefined" ? Math.min(window.innerWidth - 40, 1100) : 800}
             height={500}
           />
-        </div>
+        </DiaryCard>
       )}
 
       {/* Node Detail Panel */}
       {selectedNode && (
-        <div
-          className="p-4 rounded-xl border"
-          style={{
-            backgroundColor: "var(--color-card)",
-            borderColor: "var(--color-border)",
-          }}
-        >
+        <DiaryCard>
           <div className="flex justify-between items-start">
             <div>
               <span
-                className="text-xs px-2 py-0.5 rounded-full"
+                className="text-[10px] px-2 py-0.5 rounded-full uppercase"
                 style={{
                   backgroundColor: "var(--color-surface)",
                   color: "var(--color-text-secondary)",
@@ -135,7 +111,7 @@ export default function GraphPage() {
               Close
             </button>
           </div>
-        </div>
+        </DiaryCard>
       )}
     </div>
   );

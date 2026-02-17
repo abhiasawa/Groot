@@ -5,11 +5,12 @@ import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
   { href: "/garden", label: "Home", icon: "🏡" },
-  { href: "/garden/memories", label: "Memories", icon: "🧠" },
-  { href: "/garden/graph", label: "Graph", icon: "🕸️" },
+  { href: "/garden/journal", label: "Journal", icon: "📓" },
+  { href: "/garden/people", label: "People", icon: "👥" },
+  { href: "/garden/mood", label: "Mood", icon: "🎭" },
   { href: "/garden/habits", label: "Habits", icon: "📊" },
   { href: "/garden/tasks", label: "Tasks", icon: "✅" },
-  { href: "/garden/reports", label: "Reports", icon: "📋" },
+  { href: "/garden/insights", label: "Insights", icon: "💡" },
   { href: "/garden/settings", label: "Settings", icon: "⚙️" },
 ];
 
@@ -29,7 +30,11 @@ export default function Sidebar() {
         <span className="text-2xl">🌱</span>
         <span
           className="text-lg font-semibold"
-          style={{ color: "var(--color-primary)", letterSpacing: "-0.02em" }}
+          style={{
+            fontFamily: "var(--font-heading)",
+            color: "var(--color-primary)",
+            letterSpacing: "-0.02em",
+          }}
         >
           The Garden
         </span>

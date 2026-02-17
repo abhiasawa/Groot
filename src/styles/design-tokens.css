@@ -1,16 +1,18 @@
 :root {
   /* ─── Colors: Light Mode ─── */
-  --color-bg: #FAFAF7;
-  --color-surface: #F5F3EE;
+  --color-bg: #FAF8F5;
+  --color-surface: #F3F0EB;
   --color-primary: #2D5F3B;
   --color-primary-hover: #245032;
   --color-secondary: #8BA98E;
   --color-accent: #D4A843;
-  --color-text: #2C2C2C;
-  --color-text-secondary: #7A7A72;
+  --color-text: #2A2520;
+  --color-text-secondary: #8A8478;
   --color-danger: #C45D4A;
-  --color-border: #E5E3DE;
-  --color-card: #FFFFFF;
+  --color-border: #E8E4DC;
+  --color-card: #FFFFFE;
+  --color-paper: #FFFDF8;
+  --color-ink: #3D3529;
 
   /* ─── Colors: Dark Mode ─── */
   --color-dark-bg: #1A2E1F;
@@ -22,10 +24,19 @@
   --color-dark-text-secondary: #A0A098;
   --color-dark-border: #2F4A35;
   --color-dark-card: #263E2C;
+  --color-dark-paper: #2A4230;
+
+  /* ─── Mood Colors ─── */
+  --color-mood-great: #4A9B62;
+  --color-mood-good: #8BA98E;
+  --color-mood-okay: #D4A843;
+  --color-mood-low: #C88B6E;
+  --color-mood-bad: #C45D4A;
+  --color-mood-none: #E8E4DC;
 
   /* ─── Typography ─── */
-  --font-heading: 'Inter', system-ui, sans-serif;
-  --font-body: 'Inter', system-ui, sans-serif;
+  --font-heading: var(--font-lora), 'Georgia', serif;
+  --font-body: var(--font-inter), system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
   --text-xs: 0.8125rem;    /* 13px — minimum */
@@ -38,6 +49,11 @@
 
   --leading-body: 1.6;
   --tracking-heading: -0.02em;
+
+  /* ─── Shadows ─── */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.12);
 
   /* ─── Spacing (8px grid) ─── */
   --space-1: 0.25rem;   /* 4px */
@@ -74,4 +90,8 @@
   --color-text-secondary: var(--color-dark-text-secondary);
   --color-border: var(--color-dark-border);
   --color-card: var(--color-dark-card);
+  --color-paper: var(--color-dark-paper);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.15);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.25);
+  --shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
