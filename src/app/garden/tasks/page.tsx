@@ -81,7 +81,7 @@ export default function TasksPage() {
             No tasks yet
           </p>
           <p className="text-sm mt-1" style={{ color: "var(--color-text-secondary)" }}>
-            Send &quot;todo: buy groceries&quot; to Groot on WhatsApp to add your first task.
+            Tell Groot on WhatsApp what you need to do — he&apos;ll track it for you.
           </p>
         </div>
       ) : (

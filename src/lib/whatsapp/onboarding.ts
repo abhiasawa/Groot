@@ -128,7 +128,7 @@ async function handleStep0(user: UserRecord): Promise<void> {
   // Message 1: Introduction
   await sendWhatsAppMessage(
     to,
-    `Hey, I'm *Groot* 🌱\n\nYour AI second brain that lives right here on WhatsApp.\nI remember everything you tell me, track your habits, and actually get smarter the more we talk.\n\nThink of me as the friend who never forgets.`,
+    `Hey, I'm *Groot* 🌱\n\nYour AI minion that lives right here on WhatsApp.\nI remember everything you tell me, track your habits, and get smarter the more we talk.\n\nJust tell me what to do.`,
   );
 
   // Message 2: Ask for name
@@ -194,10 +194,10 @@ async function handleStep2(user: UserRecord, parsed: ParsedMessage): Promise<voi
   // Store the goal in user_profile
   await storeGoal(user.id, goal);
 
-  // Message 4: Acknowledge goal + teach shortcut
+  // Message 4: Acknowledge goal + prompt first memory
   await sendWhatsAppMessage(
     to,
-    `Great goal — I'll remember that.\n\nHere's a quick trick. You can dump thoughts into me instantly:\n\n*note:* _save a note_\n*todo:* _add a task_\n*idea:* _capture an idea_\n\nTry it now! Send me:\n*note: My current weight is 82kg*\n\n_Or any note you want — it's your first memory._`,
+    `Great goal — I'll remember that.\n\nNow just talk to me naturally. Tell me anything — a fact about yourself, a thought, or something you want to remember.\n\nFor example:\n_"My current weight is 82kg"_\n_"I have a meeting with investors next Friday"_\n\n*Go ahead — send me your first thought.*`,
   );
 
   await updateOnboardingStep(user.id, 3);
@@ -228,7 +228,7 @@ async function handleStep3(user: UserRecord, parsed: ParsedMessage): Promise<voi
   // Message 5: Confirmation
   await sendWhatsAppMessage(
     to,
-    `*Saved.* Your first memory is planted 🌱\n\nFrom now on, just talk to me like a friend.\nAsk me anything, tell me things to remember, share links, send voice notes — I handle it all.\n\nYou can always type *help* to see what I can do.\n\nLet's grow together, *${displayName}*.`,
+    `*Saved.* Your first memory is planted 🌱\n\nFrom now on, just talk to me like a friend.\nAsk me anything, tell me things to remember, send voice notes — I handle it all naturally.\n\nLet's grow together, *${displayName}*.`,
   );
 
   await completeOnboarding(user.id);
@@ -349,14 +349,11 @@ async function storeFirstMemory(
 ): Promise<void> {
   const supabase = getSupabaseAdmin();
 
-  // Check if content has a shortcut prefix and strip it
-  const stripped = content.replace(/^(note|todo|idea|remind):\s*/i, "").trim();
-
   await supabase.from("messages").insert({
     user_id: userId,
     direction: "inbound",
     message_type: "text",
-    content: stripped || content,
+    content,
     whatsapp_message_id: whatsappMessageId,
     metadata: { source: "onboarding", is_first_memory: true },
   });
