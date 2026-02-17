@@ -44,8 +44,13 @@ async function getSupabaseAuthClient() {
         return cookieStore.getAll();
       },
       setAll(cookiesToSet) {
-        for (const cookie of cookiesToSet) {
-          cookieStore.set(cookie.name, cookie.value, cookie.options);
+        try {
+          for (const cookie of cookiesToSet) {
+            cookieStore.set(cookie.name, cookie.value, cookie.options);
+          }
+        } catch {
+          // setAll is called from Server Components where cookies can't be set.
+          // This is expected — the refresh will happen in middleware or route handlers instead.
         }
       },
     },

@@ -17,10 +17,12 @@ export default async function GardenLayout({
   try {
     await getAuthenticatedPortalUser();
   } catch (error) {
-    if (error instanceof PortalAuthError) {
-      redirect("/login?next=/garden");
+    // Any auth failure (PortalAuthError or unexpected) → redirect to login
+    // Next.js redirect() throws internally, so re-throw those
+    if (error && typeof error === "object" && "digest" in error) {
+      throw error; // Next.js internal redirect/notFound — let framework handle
     }
-    throw error;
+    redirect("/login?next=/garden");
   }
 
   return (
