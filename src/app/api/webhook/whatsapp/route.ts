@@ -145,15 +145,21 @@ async function processMessage(parsed: ParsedMessage): Promise<void> {
   const user = await getOrCreateUser(parsed.from, parsed.displayName);
 
   // Store inbound message immediately so context is available for batch detection
-  if (user.onboarding_step > 0 || isOnboardingComplete(user)) {
-    await storeInboundMessage(user.id, parsed);
-  }
+  await storeInboundMessage(user.id, parsed);
 
   // Non-critical (fire-and-forget)
   markUserResponded(user.id).catch(() => {});
 
   // Onboarding
   if (!isOnboardingComplete(user)) {
+    // Check-before-send: if a newer message arrived, skip — the newer handler will take over
+    if (!(await isLatestInboundMessage(user.id, parsed.messageId))) {
+      logger.info(
+        { messageId: parsed.messageId, userId: user.id },
+        "Skipping onboarding — newer inbound arrived",
+      );
+      return;
+    }
     const handled = await handleOnboarding(user, parsed);
     if (handled) return;
   }

@@ -164,19 +164,49 @@ export async function downloadWhatsAppMedia(
   const metaResponse = await fetch(`${WHATSAPP_API_URL}/${mediaId}`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
+
+  if (!metaResponse.ok) {
+    const errorBody = await metaResponse.text().catch(() => "no body");
+    logger.error(
+      { mediaId, status: metaResponse.status, errorBody },
+      "WhatsApp media URL fetch failed",
+    );
+    throw new Error(`Media URL fetch failed: ${metaResponse.status}`);
+  }
+
   const metaData = (await metaResponse.json()) as {
     url: string;
     mime_type: string;
   };
+
+  if (!metaData.url) {
+    logger.error({ mediaId, metaData }, "WhatsApp media URL missing from response");
+    throw new Error("Media URL missing from WhatsApp response");
+  }
 
   // Step 2: Download the binary
   const mediaResponse = await fetch(metaData.url, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 
+  if (!mediaResponse.ok) {
+    logger.error(
+      { mediaId, status: mediaResponse.status },
+      "WhatsApp media binary download failed",
+    );
+    throw new Error(`Media download failed: ${mediaResponse.status}`);
+  }
+
   const arrayBuffer = await mediaResponse.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
+  logger.info(
+    { mediaId, size: buffer.length, mimeType: metaData.mime_type },
+    "Media downloaded successfully",
+  );
+
   return {
-    buffer: Buffer.from(arrayBuffer),
+    buffer,
     mimeType: metaData.mime_type,
   };
 }

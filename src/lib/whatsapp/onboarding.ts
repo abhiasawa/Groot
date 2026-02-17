@@ -86,17 +86,24 @@ export async function handleOnboarding(
 
   // If user sent audio during onboarding, transcribe it first
   if (parsed.mediaId && parsed.mediaMimeType && parsed.type === "audio") {
+    logger.info(
+      { mediaId: parsed.mediaId, mimeType: parsed.mediaMimeType, step },
+      "Onboarding: attempting voice note transcription",
+    );
     try {
       const result = await processMedia(parsed.mediaId, "audio", parsed.mediaMimeType);
+      logger.info(
+        { resultType: result?.type, text: result?.text?.substring(0, 100), hasResult: !!result },
+        "Onboarding: transcription result",
+      );
       const transcribed = result?.text?.trim();
       if (transcribed && transcribed.length > 1 && !/^[.\s…]+$/.test(transcribed)) {
         parsed = { ...parsed, text: transcribed };
       } else {
         logger.info({ transcribed }, "Audio transcription was empty or meaningless");
-        // Leave parsed.text as null so the step handler asks again
       }
     } catch (error) {
-      logger.warn({ error }, "Failed to transcribe audio during onboarding");
+      logger.error({ error, mediaId: parsed.mediaId }, "Failed to transcribe audio during onboarding");
     }
   }
 
