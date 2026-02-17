@@ -163,27 +163,29 @@ export async function upsertProfileFacts(
   const supabase = getSupabaseAdmin();
   const now = new Date().toISOString();
 
-  for (const fact of facts) {
-    const { error } = await supabase.from("user_profile").upsert(
-      {
-        user_id: userId,
-        category: fact.category,
-        key: fact.key,
-        value: fact.value,
-        confidence: fact.confidence,
-        source: fact.source,
-        last_mentioned_at: now,
-        updated_at: now,
-      },
-      { onConflict: "user_id,category,key" },
-    );
-
-    if (error) {
-      logger.error({ error, userId, fact }, "Failed to upsert profile fact");
-    } else {
-      logger.info({ userId, key: fact.key, value: fact.value }, "Profile fact upserted");
-    }
-  }
+  const results = await Promise.allSettled(
+    facts.map((fact) =>
+      supabase.from("user_profile").upsert(
+        {
+          user_id: userId,
+          category: fact.category,
+          key: fact.key,
+          value: fact.value,
+          confidence: fact.confidence,
+          source: fact.source,
+          last_mentioned_at: now,
+          updated_at: now,
+        },
+        { onConflict: "user_id,category,key" },
+      ).then(({ error }) => {
+        if (error) {
+          logger.error({ error, userId, fact }, "Failed to upsert profile fact");
+        } else {
+          logger.info({ userId, key: fact.key, value: fact.value }, "Profile fact upserted");
+        }
+      }),
+    ),
+  );
 }
 
 /**

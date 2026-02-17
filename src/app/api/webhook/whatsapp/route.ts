@@ -285,21 +285,22 @@ async function handleMedia(
       try {
         const grootResponse = await generateGrootResponse(userId, result.text, displayName, isNewUser);
         await sendWhatsAppMessage(parsed.from, grootResponse.text);
-        await storeOutboundMessage(userId, grootResponse.text, {
-          mood: grootResponse.detectedMood,
-          source: "voice_note",
-        });
+
+        const postOps: Promise<unknown>[] = [
+          storeOutboundMessage(userId, grootResponse.text, {
+            mood: grootResponse.detectedMood,
+            source: "voice_note",
+          }),
+          createRemindersFromDetectedDates(userId, grootResponse.detectedDates),
+        ];
 
         if (grootResponse.shouldStoreMemory) {
-          await storeLongTermMemoryAndMark(
-            userId,
-            parsed.messageId,
-            result.text,
-            grootResponse.memoryTags,
+          postOps.push(
+            storeLongTermMemoryAndMark(userId, parsed.messageId, result.text, grootResponse.memoryTags),
           );
         }
 
-        await createRemindersFromDetectedDates(userId, grootResponse.detectedDates);
+        await Promise.allSettled(postOps);
       } catch (error) {
         logger.error({ error, userId }, "Groot engine failed for voice note");
         const fallback = getErrorResponse();
@@ -405,42 +406,48 @@ async function createRemindersFromDetectedDates(
 
   const now = Date.now();
   const seenDates = new Set<string>();
+  const supabase = getSupabaseAdmin();
 
+  // Filter valid future dates and deduplicate by day
+  const candidates: Array<{ item: { date: string; event: string }; remindAt: Date; dateKey: string }> = [];
   for (const item of detectedDates.slice(0, 3)) {
     const remindAt = new Date(item.date);
     if (Number.isNaN(remindAt.getTime())) continue;
     if (remindAt.getTime() <= now) continue;
-
-    // Deduplicate by date (same day = same reminder)
     const dateKey = remindAt.toISOString().slice(0, 10);
     if (seenDates.has(dateKey)) continue;
     seenDates.add(dateKey);
+    candidates.push({ item, remindAt, dateKey });
+  }
 
-    // Check if a reminder already exists for this user on this date
-    const supabase = getSupabaseAdmin();
-    const dayStart = new Date(dateKey + "T00:00:00Z").toISOString();
-    const dayEnd = new Date(dateKey + "T23:59:59Z").toISOString();
-    const { data: existing } = await supabase
-      .from("reminders")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("is_sent", false)
-      .gte("remind_at", dayStart)
-      .lte("remind_at", dayEnd)
-      .limit(1);
+  if (candidates.length === 0) return;
 
-    if (existing && existing.length > 0) {
-      logger.info({ userId, date: dateKey }, "Skipping duplicate reminder for this date");
-      continue;
-    }
+  // Check all duplicates in parallel
+  const dupeChecks = await Promise.all(
+    candidates.map(async ({ dateKey }) => {
+      const dayStart = new Date(dateKey + "T00:00:00Z").toISOString();
+      const dayEnd = new Date(dateKey + "T23:59:59Z").toISOString();
+      const { data: existing } = await supabase
+        .from("reminders")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("is_sent", false)
+        .gte("remind_at", dayStart)
+        .lte("remind_at", dayEnd)
+        .limit(1);
+      return existing && existing.length > 0;
+    }),
+  );
 
-    await createReminder(
-      userId,
-      item.event,
-      remindAt,
-      "Auto-detected from conversation",
-    ).catch((error) => {
-      logger.warn({ error, userId, item }, "Failed to create detected-date reminder");
-    });
+  // Create all non-duplicate reminders in parallel
+  const toCreate = candidates.filter((_, i) => !dupeChecks[i]);
+  if (toCreate.length > 0) {
+    await Promise.allSettled(
+      toCreate.map(({ item, remindAt }) =>
+        createReminder(userId, item.event, remindAt, "Auto-detected from conversation").catch((error) => {
+          logger.warn({ error, userId, item }, "Failed to create detected-date reminder");
+        }),
+      ),
+    );
   }
 }
