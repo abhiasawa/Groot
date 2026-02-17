@@ -35,7 +35,7 @@ export async function GET() {
     prefs[row.key as string] = row.value === "true";
   }
 
-  return NextResponse.json({ preferences: prefs });
+  return NextResponse.json({ preferences: prefs }, { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" } });
 }
 
 /**

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { cachedFetch } from "@/lib/garden/fetch-cache";
 import PageHeader from "@/components/garden/page-header";
 import DiaryCard from "@/components/garden/diary-card";
 
@@ -32,8 +33,7 @@ export default function PeoplePage() {
   const [loadingMemories, setLoadingMemories] = useState(false);
 
   useEffect(() => {
-    fetch("/api/people")
-      .then((r) => r.json())
+    cachedFetch<{ people: Person[] }>("/api/people")
       .then((data) => setPeople(data.people ?? []))
       .catch(() => setPeople([]))
       .finally(() => setLoading(false));

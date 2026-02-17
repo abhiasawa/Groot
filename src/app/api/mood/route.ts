@@ -90,5 +90,5 @@ export async function GET(request: NextRequest) {
 
   logger.info({ userId, year, totalDays: dailyMoods.length, weeks: weeklyTrend.length }, "Mood data loaded");
 
-  return NextResponse.json({ dailyMoods, weeklyTrend, recentMood });
+  return NextResponse.json({ dailyMoods, weeklyTrend, recentMood }, { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=120" } });
 }

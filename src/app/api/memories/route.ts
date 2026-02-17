@@ -54,13 +54,13 @@ export async function GET(request: NextRequest) {
       .lte("created_at", endOfMonth);
 
     const dates = [...new Set((data ?? []).map(d => (d.created_at as string).split("T")[0]))];
-    return NextResponse.json({ dates });
+    return NextResponse.json({ dates }, { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" } });
   }
 
   // Semantic search
   if (query) {
     const results = await searchMemories(query, userId, limit);
-    return NextResponse.json({ memories: results, total: results.length });
+    return NextResponse.json({ memories: results, total: results.length }, { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" } });
   }
 
   // List from Supabase messages
@@ -86,5 +86,5 @@ export async function GET(request: NextRequest) {
 
   const { data, count } = await queryBuilder;
 
-  return NextResponse.json({ memories: data ?? [], total: count ?? 0 });
+  return NextResponse.json({ memories: data ?? [], total: count ?? 0 }, { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" } });
 }

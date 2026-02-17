@@ -25,5 +25,5 @@ export async function GET() {
     .order("week_start", { ascending: false })
     .limit(20);
 
-  return NextResponse.json({ reports: data ?? [] });
+  return NextResponse.json({ reports: data ?? [] }, { headers: { "Cache-Control": "private, max-age=120, stale-while-revalidate=300" } });
 }

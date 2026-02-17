@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
+import { cachedFetch } from "@/lib/garden/fetch-cache";
 import PageHeader from "@/components/garden/page-header";
 import DiaryCard from "@/components/garden/diary-card";
 
@@ -79,12 +80,10 @@ function JournalContent() {
   useEffect(() => {
     const year = calendarMonth.getFullYear();
     const month = String(calendarMonth.getMonth() + 1).padStart(2, "0");
-    fetch(`/api/memories?month=${year}-${month}`)
-      .then((r) => r.json())
+    cachedFetch<{ dates?: string[] }>(`/api/memories?month=${year}-${month}`)
       .then((data) => setCalendarDots(new Set(data.dates ?? [])))
       .catch(() => setCalendarDots(new Set()));
-    fetch(`/api/mood?year=${year}`)
-      .then((r) => r.json())
+    cachedFetch<{ dailyMoods?: Array<{ date: string; score: number }> }>(`/api/mood?year=${year}`)
       .then((data) => {
         const map = new Map<string, number>();
         for (const d of data.dailyMoods ?? []) map.set(d.date, d.score);

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { cachedFetch } from "@/lib/garden/fetch-cache";
 import PageHeader from "@/components/garden/page-header";
 import DiaryCard from "@/components/garden/diary-card";
 import Link from "next/link";
@@ -26,8 +27,7 @@ export default function SettingsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
-    fetch("/api/settings")
-      .then((r) => r.json())
+    cachedFetch<{ preferences?: Preferences }>("/api/settings")
       .then((data) => {
         if (data.preferences) setPrefs(data.preferences);
       })

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { cachedFetch } from "@/lib/garden/fetch-cache";
 import PageHeader from "@/components/garden/page-header";
 import DiaryCard from "@/components/garden/diary-card";
 
@@ -20,8 +21,7 @@ export default function HabitsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/habits?include=checkins")
-      .then((r) => r.json())
+    cachedFetch<{ habits: Habit[] }>("/api/habits?include=checkins")
       .then((data) => setHabits(data.habits ?? []))
       .catch(() => {})
       .finally(() => setLoading(false));

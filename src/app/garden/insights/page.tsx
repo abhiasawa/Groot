@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { cachedFetch } from "@/lib/garden/fetch-cache";
 import PageHeader from "@/components/garden/page-header";
 import DiaryCard from "@/components/garden/diary-card";
 
@@ -26,8 +27,7 @@ export default function InsightsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/reports")
-      .then((r) => r.json())
+    cachedFetch<{ reports?: Report[] }>("/api/reports")
       .then((data) => setReports(data.reports ?? []))
       .catch(() => {})
       .finally(() => setLoading(false));

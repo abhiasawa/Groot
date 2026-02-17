@@ -26,7 +26,7 @@ export async function GET() {
     .order("created_at", { ascending: false })
     .limit(50);
 
-  return NextResponse.json({ tasks: data ?? [] });
+  return NextResponse.json({ tasks: data ?? [] }, { headers: { "Cache-Control": "private, max-age=15, stale-while-revalidate=30" } });
 }
 
 /**

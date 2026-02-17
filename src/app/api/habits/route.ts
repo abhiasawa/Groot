@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     .order("created_at");
 
   if (!habits || habits.length === 0) {
-    return NextResponse.json({ habits: [] });
+    return NextResponse.json({ habits: [] }, { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" } });
   }
 
   // Fetch streak info for all habits
@@ -86,5 +86,5 @@ export async function GET(request: NextRequest) {
     };
   });
 
-  return NextResponse.json({ habits: habitsWithStreaks });
+  return NextResponse.json({ habits: habitsWithStreaks }, { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" } });
 }

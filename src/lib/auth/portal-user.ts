@@ -23,11 +23,21 @@ export class PortalAuthError extends Error {
   }
 }
 
+// Server-side cache for single-user setup — avoids DB hit on every request
+let cachedPortalUser: PortalUser | null = null;
+let cacheExpiry = 0;
+const CACHE_TTL_MS = 60_000; // 60 seconds
+
 /**
  * Returns the portal user — no auth required.
  * Single-user setup: just returns the first (only) user from the DB.
+ * Cached for 60s to avoid redundant DB queries.
  */
 export async function getAuthenticatedPortalUser(): Promise<PortalUser> {
+  if (cachedPortalUser && Date.now() < cacheExpiry) {
+    return cachedPortalUser;
+  }
+
   const supabase = getSupabaseAdmin();
 
   const { data: user, error } = await supabase
@@ -45,6 +55,7 @@ export async function getAuthenticatedPortalUser(): Promise<PortalUser> {
     );
   }
 
-  logger.info({ userId: user.id, displayName: user.display_name }, "Portal user loaded");
-  return user as PortalUser;
+  cachedPortalUser = user as PortalUser;
+  cacheExpiry = Date.now() + CACHE_TTL_MS;
+  return cachedPortalUser;
 }

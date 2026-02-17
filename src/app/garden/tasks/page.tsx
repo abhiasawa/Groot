@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { cachedFetch } from "@/lib/garden/fetch-cache";
 import PageHeader from "@/components/garden/page-header";
 import DiaryCard from "@/components/garden/diary-card";
 
@@ -19,8 +20,7 @@ export default function TasksPage() {
   const [showDone, setShowDone] = useState(false);
 
   useEffect(() => {
-    fetch("/api/tasks")
-      .then((r) => r.json())
+    cachedFetch<{ tasks?: Task[] }>("/api/tasks")
       .then((data) => setTasks(data.tasks ?? []))
       .catch(() => {})
       .finally(() => setLoading(false));

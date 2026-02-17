@@ -31,7 +31,7 @@ export async function GET() {
     .limit(100);
 
   if (!messages || messages.length === 0) {
-    return NextResponse.json({ nodes: [], links: [] });
+    return NextResponse.json({ nodes: [], links: [] }, { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=120" } });
   }
 
   // Fetch profile facts for context
@@ -82,5 +82,5 @@ export async function GET() {
     }
   }
 
-  return NextResponse.json({ nodes: allNodes, links });
+  return NextResponse.json({ nodes: allNodes, links }, { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=120" } });
 }

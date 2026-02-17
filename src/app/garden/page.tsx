@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useCurrentUser } from "@/hooks/use-current-user";
+import { cachedFetch } from "@/lib/garden/fetch-cache";
 import DiaryCard from "@/components/garden/diary-card";
 import Link from "next/link";
 
-interface DashboardData {
-  greeting: string;
-  userName: string;
+interface HomeData {
+  displayName: string;
+  createdAt: string;
   memoriesCount: number;
   recentMemories: Array<{ id: string; content: string; message_type: string; created_at: string }>;
   pendingTasks: number;
@@ -28,46 +28,18 @@ const MOOD_ACCENTS: Record<string, string> = {
 };
 
 export default function GardenHome() {
-  const { user } = useCurrentUser();
-  const [data, setData] = useState<DashboardData | null>(null);
+  const [data, setData] = useState<HomeData | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
 
-  // Fire all data fetches immediately — don't wait for user hook
+  // Single consolidated API call — replaces 6 separate requests
   useEffect(() => {
-    const hour = new Date().getHours();
-    let greeting = "Good morning";
-    if (hour >= 12 && hour < 17) greeting = "Good afternoon";
-    if (hour >= 17) greeting = "Good evening";
-
-    const flashbackDate = new Date();
-    flashbackDate.setDate(flashbackDate.getDate() - 30);
-    const flashbackDateStr = flashbackDate.toISOString().split("T")[0];
-
-    Promise.all([
-      fetch("/api/memories?limit=5").then((r) => r.json()).catch(() => ({ memories: [], total: 0 })),
-      fetch("/api/dashboard").then((r) => r.json()).catch(() => ({ tasks: 0, reminders: 0 })),
-      fetch(`/api/memories?date=${flashbackDateStr}&limit=1`).then((r) => r.json()).catch(() => ({ memories: [] })),
-      fetch(`/api/mood?year=${new Date().getFullYear()}`).then((r) => r.json()).catch(() => ({ recentMood: null })),
-      fetch("/api/people").then((r) => r.json()).catch(() => ({ people: [] })),
-      fetch("/api/habits").then((r) => r.json()).catch(() => ({ habits: [] })),
-    ]).then(([memoriesRes, dashRes, flashbackRes, moodRes, peopleRes, habitsRes]) => {
-      setData({
-        greeting,
-        userName: "", // filled from user hook below
-        memoriesCount: memoriesRes.total ?? 0,
-        recentMemories: memoriesRes.memories ?? [],
-        pendingTasks: dashRes.tasks ?? 0,
-        upcomingReminders: dashRes.reminders ?? 0,
-        flashback: flashbackRes.memories?.[0] ?? null,
-        recentMood: moodRes.recentMood ?? null,
-        peopleCount: (peopleRes.people ?? []).length,
-        habitsCount: (habitsRes.habits ?? []).length,
-      });
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    cachedFetch<HomeData>("/api/garden/home")
+      .then((d) => setData(d))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,12 +50,14 @@ export default function GardenHome() {
 
   const today = new Date();
   const todayFormatted = today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
-  const memberDays = user ? Math.max(1, Math.floor((Date.now() - new Date(user.created_at).getTime()) / (1000 * 60 * 60 * 24))) : 0;
+  const memberDays = data?.createdAt ? Math.max(1, Math.floor((Date.now() - new Date(data.createdAt).getTime()) / (1000 * 60 * 60 * 24))) : 0;
 
   if (loading) return <LoadingSkeleton />;
   if (!data) return <LoadingSkeleton />;
 
-  const displayName = user?.display_name || "friend";
+  const displayName = data.displayName || "friend";
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   const moodColor = data.recentMood ? (MOOD_ACCENTS[data.recentMood.toLowerCase()] ?? "var(--color-mood-okay)") : null;
 
@@ -106,7 +80,7 @@ export default function GardenHome() {
             lineHeight: 1.2,
           }}
         >
-          {data.greeting}, {displayName}
+          {greeting}, {displayName}
         </h1>
         {data.recentMood && (
           <div className="flex items-center gap-2 mt-3">

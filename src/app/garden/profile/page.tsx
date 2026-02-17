@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { cachedFetch } from "@/lib/garden/fetch-cache";
 import PageHeader from "@/components/garden/page-header";
 import DiaryCard from "@/components/garden/diary-card";
 import Link from "next/link";
@@ -37,8 +38,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/profile")
-      .then((r) => r.json())
+    cachedFetch<ProfileData>("/api/profile")
       .then((data) => setProfile(data))
       .catch(() => setProfile(null))
       .finally(() => setLoading(false));

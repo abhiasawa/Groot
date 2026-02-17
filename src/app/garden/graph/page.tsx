@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
+import { cachedFetch } from "@/lib/garden/fetch-cache";
 import PageHeader from "@/components/garden/page-header";
 import DiaryCard from "@/components/garden/diary-card";
 
@@ -30,8 +31,7 @@ export default function GraphPage() {
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
 
   useEffect(() => {
-    fetch("/api/graph")
-      .then((r) => r.json())
+    cachedFetch<{ nodes?: GraphNode[]; links?: GraphLink[] }>("/api/graph")
       .then((data) => {
         setGraphData({
           nodes: data.nodes ?? [],

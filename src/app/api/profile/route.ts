@@ -52,7 +52,7 @@ export async function GET() {
   }
 
   logger.info({ userId, totalFacts: (data ?? []).length }, "Profile facts loaded for portal");
-  return NextResponse.json({ facts });
+  return NextResponse.json({ facts }, { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=120" } });
 }
 
 /**

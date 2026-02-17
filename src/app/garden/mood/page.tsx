@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import { cachedFetch } from "@/lib/garden/fetch-cache";
 import PageHeader from "@/components/garden/page-header";
 import DiaryCard from "@/components/garden/diary-card";
 
@@ -43,8 +44,7 @@ export default function MoodPage() {
   const [year] = useState(new Date().getFullYear());
 
   useEffect(() => {
-    fetch(`/api/mood?year=${year}`)
-      .then((r) => r.json())
+    cachedFetch<{ dailyMoods?: DailyMood[]; weeklyTrend?: WeeklyTrend[]; recentMood?: string }>(`/api/mood?year=${year}`)
       .then((data) => {
         setDailyMoods(data.dailyMoods ?? []);
         setWeeklyTrend(data.weeklyTrend ?? []);

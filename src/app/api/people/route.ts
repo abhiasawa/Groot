@@ -88,5 +88,5 @@ export async function GET() {
   });
 
   logger.info({ userId, peopleCount: people.length }, "People loaded for portal");
-  return NextResponse.json({ people });
+  return NextResponse.json({ people }, { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=120" } });
 }
