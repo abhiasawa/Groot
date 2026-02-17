@@ -28,6 +28,7 @@ export async function generateGrootResponse(
   userId: string,
   currentMessage: string,
   userName: string | null,
+  isNewUser: boolean = false,
 ): Promise<GrootResponse> {
   // 1. Build context
   const context = await buildContext(userId, currentMessage, userName);
@@ -43,6 +44,7 @@ export async function generateGrootResponse(
     context.userName,
     context.profileSummary,
     currentDate,
+    isNewUser,
   );
 
   // 3. Call LLM

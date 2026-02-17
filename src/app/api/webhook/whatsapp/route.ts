@@ -7,11 +7,7 @@ import { validateWebhookSignature } from "@/lib/whatsapp/validation";
 import { parseWebhookPayloads } from "@/lib/whatsapp/webhook-parser";
 import { sendWhatsAppMessage, markMessageAsRead } from "@/lib/whatsapp/client";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import {
-  getOrCreateUser,
-  isOnboardingComplete,
-  handleOnboarding,
-} from "@/lib/whatsapp/onboarding";
+import { getOrCreateUser } from "@/lib/whatsapp/onboarding";
 import { addMemory } from "@/lib/memory/supermemory-client";
 import { storeOutboundMessage } from "@/lib/memory/short-term";
 import { processMedia } from "@/lib/media/media-handler";
@@ -142,7 +138,7 @@ export async function POST(request: NextRequest) {
 async function processMessage(parsed: ParsedMessage): Promise<void> {
   markMessageAsRead(parsed.messageId).catch(() => {});
 
-  const user = await getOrCreateUser(parsed.from, parsed.displayName);
+  const { user, isNewUser } = await getOrCreateUser(parsed.from, parsed.displayName);
 
   // Store inbound message immediately so context is available for batch detection
   await storeInboundMessage(user.id, parsed);
@@ -150,23 +146,9 @@ async function processMessage(parsed: ParsedMessage): Promise<void> {
   // Non-critical (fire-and-forget)
   markUserResponded(user.id).catch(() => {});
 
-  // Onboarding
-  if (!isOnboardingComplete(user)) {
-    // Check-before-send: if a newer message arrived, skip — the newer handler will take over
-    if (!(await isLatestInboundMessage(user.id, parsed.messageId))) {
-      logger.info(
-        { messageId: parsed.messageId, userId: user.id },
-        "Skipping onboarding — newer inbound arrived",
-      );
-      return;
-    }
-    const handled = await handleOnboarding(user, parsed);
-    if (handled) return;
-  }
-
   // Media processing (audio/image)
   if (parsed.mediaId && parsed.mediaMimeType) {
-    await handleMedia(user.id, parsed, user.display_name);
+    await handleMedia(user.id, parsed, user.display_name, isNewUser);
     return;
   }
 
@@ -198,6 +180,7 @@ async function processMessage(parsed: ParsedMessage): Promise<void> {
       user.id,
       text,
       user.display_name,
+      isNewUser,
     );
 
     // Before sending: check if a newer message arrived while we were processing.
@@ -271,6 +254,7 @@ async function handleMedia(
   userId: string,
   parsed: ParsedMessage,
   displayName: string | null,
+  isNewUser: boolean = false,
 ): Promise<void> {
   // Only show status for non-audio media (images, docs) — voice notes reply directly
   if (parsed.type !== "audio") {
@@ -288,7 +272,7 @@ async function handleMedia(
 
     if (result.type === "transcription") {
       try {
-        const grootResponse = await generateGrootResponse(userId, result.text, displayName);
+        const grootResponse = await generateGrootResponse(userId, result.text, displayName, isNewUser);
         await sendWhatsAppMessage(parsed.from, grootResponse.text);
         await storeOutboundMessage(userId, grootResponse.text, {
           mood: grootResponse.detectedMood,
