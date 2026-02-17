@@ -26,6 +26,7 @@ export class WhisperProvider implements TranscriptionProvider {
       const response = await this.client.audio.transcriptions.create({
         file,
         model: "whisper-1",
+        language: "en",
         response_format: "verbose_json",
       });
 
