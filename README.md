@@ -25,12 +25,17 @@ Send a text, voice note, or image to Groot on WhatsApp and it remembers everythi
 - Configurable preferences: daily, weekly, or paused
 
 **The Garden (Web Portal)**
-- Authenticated dashboard with Supabase Auth (magic link)
-- Memory feed with semantic search
-- Knowledge graph visualization
-- Habit dashboard with streak counters and trend charts
-- Weekly Groot Reports
-- Dark mode, mobile-first design
+- Notion-inspired clean, minimal design
+- **Home** — daily briefing with mood pulse, flashbacks, and semantic search
+- **Journal** — timeline + calendar view of memories, grouped by date
+- **People** — auto-extracted relationship tracker from conversations
+- **Mood** — Year in Pixels grid, mood trends, and emotional patterns
+- **Habits** — streak counters, 30-day heatmaps, and check-in history
+- **Tasks** — grouped to-do/done with due dates and overdue indicators
+- **Insights** — weekly reports with mood bars and topic tags
+- **Profile** — categorized facts Groot has learned about you
+- **Graph** — interactive knowledge graph visualization
+- Mobile-first responsive layout with sidebar + bottom nav
 
 **Architecture**
 - Modular AI provider system — swap between OpenAI, Anthropic, or Gemini with one env var
@@ -169,16 +174,30 @@ src/
 │   ├── api/
 │   │   ├── webhook/whatsapp/   # WhatsApp webhook (signature validation + message processing)
 │   │   ├── cron/               # Daily check-in, evening reflection, reminders, weekly report
-│   │   ├── me/                 # Authenticated user endpoint
+│   │   ├── garden/home/        # Consolidated home page API (single request)
+│   │   ├── dashboard/          # Dashboard stats
 │   │   ├── memories/           # Memory list + semantic search
 │   │   ├── graph/              # Knowledge graph data
-│   │   ├── habits/             # Habit data with streaks
+│   │   ├── habits/             # Habit data with streaks + checkins
 │   │   ├── tasks/              # Quick capture tasks
-│   │   ├── reports/            # Weekly Groot Reports
+│   │   ├── reports/            # Weekly reports
+│   │   ├── mood/               # Mood tracking + Year in Pixels data
+│   │   ├── people/             # Auto-extracted relationship data
+│   │   ├── profile/            # User profile facts by category
+│   │   ├── me/                 # Authenticated user endpoint
 │   │   ├── settings/           # Notification preferences
 │   │   ├── export/             # Full data export (JSON)
 │   │   └── health/             # Health check endpoint
-│   ├── garden/                 # Web portal pages (auth-protected)
+│   ├── garden/                 # The Garden portal pages
+│   │   ├── journal/            # Timeline + calendar memory view
+│   │   ├── people/             # Relationship tracker
+│   │   ├── mood/               # Mood dashboard + Year in Pixels
+│   │   ├── habits/             # Habit streaks + heatmaps
+│   │   ├── tasks/              # Task management
+│   │   ├── insights/           # Enhanced weekly reports
+│   │   ├── profile/            # "What Groot Knows" about you
+│   │   ├── graph/              # Knowledge graph
+│   │   └── settings/           # Preferences
 │   ├── login/                  # Magic link login
 │   └── auth/callback/          # Supabase Auth callback
 ├── lib/
@@ -200,7 +219,7 @@ src/
 │   ├── reports/                # Weekly synthesis generator
 │   ├── supabase/               # Server (service role) + client (anon) instances
 │   └── whatsapp/               # API client, webhook parser, onboarding, outbound
-├── components/garden/          # Portal UI components
+├── components/garden/          # Portal UI components (Notion design system)
 ├── hooks/                      # SWR data-fetching hooks
 └── types/                      # TypeScript type definitions
 
