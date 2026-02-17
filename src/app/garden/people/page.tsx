@@ -13,6 +13,18 @@ interface Person {
   source: "profile" | "contacts";
 }
 
+// Deterministic warm avatar colors based on name
+const AVATAR_COLORS = [
+  "#2D5F3B", "#8B6D4A", "#5B4A8A", "#8A4A5B", "#3B6B7A",
+  "#6B7A3B", "#7A5B3B", "#4A6B5B", "#6B4A6B", "#5B6B4A",
+];
+
+function getAvatarColor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]!;
+}
+
 export default function PeoplePage() {
   const { user } = useCurrentUser();
   const [people, setPeople] = useState<Person[]>([]);
@@ -61,79 +73,115 @@ export default function PeoplePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-3xl mx-auto">
       <PageHeader title="People" subtitle="People from your conversations" />
 
       {people.length === 0 ? (
-        <DiaryCard variant="paper" className="text-center">
-          <span className="text-3xl block mb-2">👥</span>
-          <p className="font-medium" style={{ color: "var(--color-text)" }}>No people tracked yet</p>
-          <p className="text-sm mt-1" style={{ color: "var(--color-text-secondary)" }}>
+        <DiaryCard variant="paper" className="text-center !py-10">
+          <span className="text-4xl block mb-3">&#x1F465;</span>
+          <p className="font-medium text-base mb-1" style={{ color: "var(--color-text)", fontFamily: "var(--font-heading)" }}>
+            No people tracked yet
+          </p>
+          <p className="text-sm" style={{ color: "var(--color-text-secondary)", fontFamily: "var(--font-diary)", fontStyle: "italic" }}>
             As you talk to Groot about the people in your life, they&apos;ll appear here automatically.
           </p>
         </DiaryCard>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {people.map((person) => (
-            <div key={person.name}>
-              <DiaryCard onClick={() => handleExpand(person.name)} className="!p-4">
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold shrink-0"
-                    style={{ backgroundColor: "var(--color-primary)", color: "white" }}
-                  >
-                    {person.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-sm truncate" style={{ color: "var(--color-text)" }}>
-                        {person.name}
-                      </p>
-                      <span
-                        className="text-[9px] px-1.5 py-0.5 rounded-full shrink-0"
-                        style={{
-                          backgroundColor: person.mentionCount >= 10 ? "var(--color-primary)" : person.mentionCount >= 5 ? "var(--color-accent)" : "var(--color-surface)",
-                          color: person.mentionCount >= 5 ? "white" : "var(--color-text-secondary)",
-                        }}
-                      >
-                        {person.mentionCount >= 10 ? "frequent" : person.mentionCount >= 5 ? "regular" : "few"}
-                      </span>
-                    </div>
-                    {person.relationship && (
-                      <p className="text-xs capitalize" style={{ color: "var(--color-text-secondary)" }}>
-                        {person.relationship}
-                      </p>
-                    )}
-                    {person.lastMentioned && (
-                      <p className="text-xs mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
-                        Last mentioned {new Date(person.lastMentioned).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </DiaryCard>
+          {people.map((person) => {
+            const avatarColor = getAvatarColor(person.name);
+            const isExpanded = expandedPerson === person.name;
 
-              {/* Expanded: related memories */}
-              {expandedPerson === person.name && (
-                <div className="mt-2 ml-4 space-y-2">
-                  {loadingMemories ? (
-                    <div className="h-16 rounded-lg animate-pulse" style={{ backgroundColor: "var(--color-surface)" }} />
-                  ) : personMemories.length === 0 ? (
-                    <p className="text-xs py-2" style={{ color: "var(--color-text-secondary)" }}>No related memories found.</p>
-                  ) : (
-                    personMemories.map((m) => (
-                      <div key={m.id} className="p-3 rounded-lg text-xs" style={{ backgroundColor: "var(--color-surface)", color: "var(--color-text)" }}>
-                        <p className="line-clamp-2">{typeof m.content === "string" ? m.content : ""}</p>
-                        <p className="mt-1" style={{ color: "var(--color-text-secondary)" }}>
-                          {new Date(m.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            return (
+              <div key={person.name}>
+                <DiaryCard
+                  variant="paper"
+                  onClick={() => handleExpand(person.name)}
+                  className="!p-4"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-11 h-11 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 shadow-sm"
+                      style={{ backgroundColor: avatarColor, color: "white" }}
+                    >
+                      {person.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p
+                          className="font-medium text-sm truncate"
+                          style={{ color: "var(--color-text)", fontFamily: "var(--font-heading)" }}
+                        >
+                          {person.name}
                         </p>
+                        <span
+                          className="text-[9px] px-1.5 py-0.5 rounded-full shrink-0 uppercase tracking-wide"
+                          style={{
+                            backgroundColor: person.mentionCount >= 10 ? "var(--color-primary)" : person.mentionCount >= 5 ? "var(--color-accent)" : "var(--color-surface)",
+                            color: person.mentionCount >= 5 ? "white" : "var(--color-text-secondary)",
+                          }}
+                        >
+                          {person.mentionCount >= 10 ? "frequent" : person.mentionCount >= 5 ? "regular" : "few"}
+                        </span>
                       </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+                      {person.relationship && (
+                        <p
+                          className="text-xs capitalize mt-0.5"
+                          style={{ color: "var(--color-text-secondary)", fontFamily: "var(--font-diary)", fontStyle: "italic" }}
+                        >
+                          {person.relationship}
+                        </p>
+                      )}
+                      {person.lastMentioned && (
+                        <p className="text-[11px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
+                          Last mentioned {new Date(person.lastMentioned).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        </p>
+                      )}
+                    </div>
+                    <span className="text-xs transition-transform" style={{ color: "var(--color-text-secondary)", transform: isExpanded ? "rotate(90deg)" : "none" }}>
+                      &#x25B8;
+                    </span>
+                  </div>
+                </DiaryCard>
+
+                {/* Expanded: related memories */}
+                {isExpanded && (
+                  <div className="mt-2 ml-6 space-y-2 relative">
+                    {/* Connecting line */}
+                    <div className="absolute left-0 top-0 bottom-0 w-[2px] rounded-full -ml-3" style={{ backgroundColor: avatarColor, opacity: 0.3 }} />
+
+                    {loadingMemories ? (
+                      <div className="h-16 rounded-lg animate-pulse" style={{ backgroundColor: "var(--color-surface)" }} />
+                    ) : personMemories.length === 0 ? (
+                      <p className="text-xs py-2 italic" style={{ color: "var(--color-text-secondary)", fontFamily: "var(--font-diary)" }}>
+                        No related memories found.
+                      </p>
+                    ) : (
+                      personMemories.map((m) => (
+                        <div
+                          key={m.id}
+                          className="p-3 rounded-xl text-xs"
+                          style={{
+                            backgroundColor: "var(--color-paper)",
+                            boxShadow: "var(--shadow-paper)",
+                            border: "1px solid var(--color-border)",
+                            color: "var(--color-text)",
+                          }}
+                        >
+                          <p className="line-clamp-2" style={{ fontFamily: "var(--font-diary)", lineHeight: 1.6 }}>
+                            {typeof m.content === "string" ? m.content : ""}
+                          </p>
+                          <p className="mt-1.5 text-[10px]" style={{ color: "var(--color-text-secondary)" }}>
+                            {new Date(m.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

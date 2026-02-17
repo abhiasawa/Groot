@@ -74,7 +74,7 @@ export default function SettingsPage() {
 
   if (userLoading || loading) {
     return (
-      <div className="space-y-6 animate-pulse max-w-lg">
+      <div className="space-y-6 animate-pulse max-w-3xl mx-auto">
         <div className="h-8 w-24 rounded" style={{ backgroundColor: "var(--color-surface)" }} />
         <div className="h-48 rounded-xl" style={{ backgroundColor: "var(--color-surface)" }} />
         <div className="h-32 rounded-xl" style={{ backgroundColor: "var(--color-surface)" }} />
@@ -83,7 +83,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-lg">
+    <div className="space-y-6 max-w-3xl mx-auto">
       <PageHeader title="Settings" subtitle="Manage your preferences" />
 
       {/* Quick Links */}

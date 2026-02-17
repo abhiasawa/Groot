@@ -89,14 +89,14 @@ export default function MoodPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-3xl mx-auto">
       <PageHeader title="Mood" subtitle="How you've been feeling" />
 
       {dailyMoods.length === 0 ? (
-        <DiaryCard variant="paper" className="text-center">
-          <span className="text-3xl block mb-2">🎭</span>
-          <p className="font-medium" style={{ color: "var(--color-text)" }}>No mood data yet</p>
-          <p className="text-sm mt-1" style={{ color: "var(--color-text-secondary)" }}>
+        <DiaryCard variant="paper" className="text-center !py-10">
+          <span className="text-4xl block mb-3">&#x1F3AD;</span>
+          <p className="font-medium text-base mb-1" style={{ color: "var(--color-text)", fontFamily: "var(--font-heading)" }}>No mood data yet</p>
+          <p className="text-sm" style={{ color: "var(--color-text-secondary)", fontFamily: "var(--font-diary)", fontStyle: "italic" }}>
             Keep talking to Groot — your mood patterns will emerge over time.
           </p>
         </DiaryCard>

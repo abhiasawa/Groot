@@ -118,7 +118,7 @@ function JournalContent() {
   const isDefaultView = viewMode === "timeline" && !searchQuery && !selectedDate;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-3xl mx-auto">
       {/* Header row with view toggle */}
       <div className="flex items-center justify-between">
         <PageHeader title="Journal" subtitle={total > 0 ? `${total} entries` : "Your conversation diary"} />

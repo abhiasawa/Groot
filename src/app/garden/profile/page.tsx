@@ -78,7 +78,7 @@ export default function ProfilePage() {
     : 0;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-3xl mx-auto">
       <PageHeader title="Profile" subtitle="What Groot knows about you" />
 
       {/* Identity Header */}

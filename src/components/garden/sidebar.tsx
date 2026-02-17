@@ -21,27 +21,32 @@ export default function Sidebar() {
     <aside
       className="hidden md:flex flex-col w-[260px] h-screen fixed left-0 top-0 border-r"
       style={{
-        backgroundColor: "var(--color-surface)",
+        backgroundColor: "var(--color-paper)",
         borderColor: "var(--color-border)",
+        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='transparent'/%3E%3Crect width='1' height='1' fill='%23000' opacity='0.012'/%3E%3C/svg%3E")`,
       }}
     >
-      {/* Logo */}
-      <div className="p-6 flex items-center gap-3">
-        <span className="text-2xl">🌱</span>
-        <span
-          className="text-lg font-semibold"
-          style={{
-            fontFamily: "var(--font-heading)",
-            color: "var(--color-primary)",
-            letterSpacing: "-0.02em",
-          }}
-        >
-          The Garden
-        </span>
+      {/* Logo area */}
+      <div className="px-6 pt-7 pb-5">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">🌱</span>
+          <span
+            className="text-lg"
+            style={{
+              fontFamily: "var(--font-heading)",
+              color: "var(--color-primary)",
+              letterSpacing: "-0.02em",
+              fontWeight: 600,
+            }}
+          >
+            The Garden
+          </span>
+        </div>
+        <div className="mt-3 h-px" style={{ backgroundColor: "var(--color-border)" }} />
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 space-y-1">
+      <nav className="flex-1 px-3 space-y-0.5">
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.href ||
             (item.href !== "/garden" && pathname.startsWith(item.href));
@@ -50,13 +55,16 @@ export default function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
+              className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all duration-150"
               style={{
                 backgroundColor: isActive ? "var(--color-primary)" : "transparent",
                 color: isActive ? "white" : "var(--color-text-secondary)",
+                fontWeight: isActive ? 500 : 400,
+                fontFamily: "var(--font-body)",
+                boxShadow: isActive ? "0 2px 8px rgba(45, 95, 59, 0.2)" : "none",
               }}
             >
-              <span className="text-base">{item.icon}</span>
+              <span className="text-base w-6 text-center">{item.icon}</span>
               {item.label}
             </Link>
           );
@@ -64,9 +72,13 @@ export default function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t" style={{ borderColor: "var(--color-border)" }}>
-        <p className="text-xs" style={{ color: "var(--color-text-secondary)" }}>
-          Groot AI Second Brain
+      <div className="px-6 py-4">
+        <div className="h-px mb-4" style={{ backgroundColor: "var(--color-border)" }} />
+        <p
+          className="text-[11px] italic"
+          style={{ color: "var(--color-text-secondary)", fontFamily: "var(--font-diary)" }}
+        >
+          Your AI second brain
         </p>
       </div>
     </aside>

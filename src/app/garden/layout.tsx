@@ -19,7 +19,7 @@ export default function GardenLayout({
         className="md:ml-[260px] pb-20 md:pb-0 min-h-screen"
         style={{ maxWidth: "100%" }}
       >
-        <div className="p-4 md:p-8 max-w-6xl mx-auto">{children}</div>
+        <div className="p-4 md:px-10 md:py-8 max-w-5xl mx-auto">{children}</div>
       </main>
       <BottomNav />
     </div>

@@ -32,7 +32,7 @@ export default function HabitsPage() {
 
   if (userLoading || loading) {
     return (
-      <div className="space-y-4 animate-pulse">
+      <div className="space-y-4 animate-pulse max-w-3xl mx-auto">
         <div className="h-8 w-24 rounded" style={{ backgroundColor: "var(--color-surface)" }} />
         {[...Array(2)].map((_, i) => (
           <div key={i} className="h-32 rounded-xl" style={{ backgroundColor: "var(--color-surface)" }} />
@@ -41,58 +41,101 @@ export default function HabitsPage() {
     );
   }
 
+  // Summary stats
+  const totalStreakDays = habits.reduce((sum, h) => sum + h.current_streak, 0);
+  const bestStreak = habits.reduce((max, h) => Math.max(max, h.longest_streak), 0);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 max-w-3xl mx-auto">
       <PageHeader title="Habits" subtitle="Your tracked habits and streaks" />
 
       {habits.length === 0 ? (
-        <DiaryCard variant="paper" className="text-center">
-          <span className="text-3xl block mb-2">📊</span>
-          <p className="font-medium" style={{ color: "var(--color-text)" }}>No habits tracked yet</p>
-          <p className="text-sm mt-1" style={{ color: "var(--color-text-secondary)" }}>
+        <DiaryCard variant="paper" className="text-center !py-10">
+          <span className="text-4xl block mb-3">&#x1F4CA;</span>
+          <p className="font-medium text-base mb-1" style={{ color: "var(--color-text)", fontFamily: "var(--font-heading)" }}>
+            No habits tracked yet
+          </p>
+          <p className="text-sm" style={{ color: "var(--color-text-secondary)", fontFamily: "var(--font-diary)", fontStyle: "italic" }}>
             Tell Groot to track a habit — &quot;Track my weight daily&quot; or &quot;I want to read 30 pages a day&quot;.
           </p>
         </DiaryCard>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {habits.map((h) => (
-            <DiaryCard key={h.id}>
-              <div className="flex items-center justify-between mb-3">
-                <p className="font-medium text-sm" style={{ color: "var(--color-text)" }}>{h.name}</p>
-                <span className="text-[10px] px-2 py-0.5 rounded-full uppercase" style={{ backgroundColor: "var(--color-surface)", color: "var(--color-text-secondary)" }}>
-                  {h.category}
-                </span>
-              </div>
+        <>
+          {/* Summary strip */}
+          <div className="flex items-center gap-6">
+            <div>
+              <p className="text-2xl font-bold" style={{ color: "var(--color-primary)", fontFamily: "var(--font-heading)" }}>
+                {habits.length}
+              </p>
+              <p className="text-[11px] uppercase tracking-wide" style={{ color: "var(--color-text-secondary)" }}>habits</p>
+            </div>
+            <div className="w-px h-8" style={{ backgroundColor: "var(--color-border)" }} />
+            <div>
+              <p className="text-2xl font-bold" style={{ color: "var(--color-accent)", fontFamily: "var(--font-heading)" }}>
+                {totalStreakDays}
+              </p>
+              <p className="text-[11px] uppercase tracking-wide" style={{ color: "var(--color-text-secondary)" }}>active streak days</p>
+            </div>
+            <div className="w-px h-8" style={{ backgroundColor: "var(--color-border)" }} />
+            <div>
+              <p className="text-2xl font-bold" style={{ color: "var(--color-secondary)", fontFamily: "var(--font-heading)" }}>
+                {bestStreak}
+              </p>
+              <p className="text-[11px] uppercase tracking-wide" style={{ color: "var(--color-text-secondary)" }}>best streak</p>
+            </div>
+          </div>
 
-              {/* Streaks */}
-              <div className="flex gap-6 mb-4">
-                <div>
-                  <p className="text-2xl font-bold" style={{ color: "var(--color-primary)", fontFamily: "var(--font-mono)" }}>
-                    {h.current_streak}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {habits.map((h) => (
+              <DiaryCard key={h.id} variant="paper">
+                <div className="flex items-center justify-between mb-4">
+                  <p
+                    className="font-medium text-sm"
+                    style={{ color: "var(--color-text)", fontFamily: "var(--font-heading)" }}
+                  >
+                    {h.name}
                   </p>
-                  <p className="text-[10px] uppercase" style={{ color: "var(--color-text-secondary)" }}>Current</p>
+                  <span
+                    className="text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wide"
+                    style={{ backgroundColor: "var(--color-surface)", color: "var(--color-text-secondary)" }}
+                  >
+                    {h.category}
+                  </span>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold" style={{ color: "var(--color-text-secondary)", fontFamily: "var(--font-mono)" }}>
-                    {h.longest_streak}
-                  </p>
-                  <p className="text-[10px] uppercase" style={{ color: "var(--color-text-secondary)" }}>Best</p>
-                </div>
-                {h.target_value && h.target_unit && (
+
+                {/* Streaks */}
+                <div className="flex gap-6 mb-4">
                   <div>
-                    <p className="text-2xl font-bold" style={{ color: "var(--color-accent)", fontFamily: "var(--font-mono)" }}>
-                      {h.target_value}
+                    <p className="text-2xl font-bold" style={{ color: "var(--color-primary)", fontFamily: "var(--font-heading)" }}>
+                      {h.current_streak}
                     </p>
-                    <p className="text-[10px] uppercase" style={{ color: "var(--color-text-secondary)" }}>{h.target_unit}/day</p>
+                    <p className="text-[10px] uppercase tracking-wide" style={{ color: "var(--color-text-secondary)" }}>Current</p>
                   </div>
-                )}
-              </div>
+                  <div>
+                    <p className="text-2xl font-bold" style={{ color: "var(--color-text-secondary)", fontFamily: "var(--font-heading)" }}>
+                      {h.longest_streak}
+                    </p>
+                    <p className="text-[10px] uppercase tracking-wide" style={{ color: "var(--color-text-secondary)" }}>Best</p>
+                  </div>
+                  {h.target_value && h.target_unit && (
+                    <div>
+                      <p className="text-2xl font-bold" style={{ color: "var(--color-accent)", fontFamily: "var(--font-heading)" }}>
+                        {h.target_value}
+                      </p>
+                      <p className="text-[10px] uppercase tracking-wide" style={{ color: "var(--color-text-secondary)" }}>{h.target_unit}/day</p>
+                    </div>
+                  )}
+                </div>
 
-              {/* 30-day heatmap */}
-              <HabitHeatmap checkins={h.recentCheckins ?? []} />
-            </DiaryCard>
-          ))}
-        </div>
+                {/* Divider */}
+                <div className="h-px mb-3" style={{ backgroundColor: "var(--color-border)" }} />
+
+                {/* 30-day heatmap */}
+                <HabitHeatmap checkins={h.recentCheckins ?? []} />
+              </DiaryCard>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
@@ -108,20 +151,25 @@ function HabitHeatmap({ checkins }: { checkins: string[] }) {
     days.push({ date: dateStr, checked: checkinSet.has(dateStr) });
   }
 
+  const checkedCount = days.filter(d => d.checked).length;
+
   return (
     <div>
-      <p className="text-[10px] mb-1.5" style={{ color: "var(--color-text-secondary)" }}>Last 30 days</p>
-      <div className="flex gap-[3px]">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[10px] uppercase tracking-wide" style={{ color: "var(--color-text-secondary)" }}>Last 30 days</p>
+        <p className="text-[10px]" style={{ color: "var(--color-text-secondary)" }}>{checkedCount}/30</p>
+      </div>
+      <div className="flex gap-[3px] flex-wrap">
         {days.map((d) => (
           <div
             key={d.date}
-            title={d.date}
-            className="rounded-sm"
+            title={`${d.date}: ${d.checked ? "Done" : "Missed"}`}
+            className="rounded-sm transition-all"
             style={{
-              width: "8px",
-              height: "8px",
+              width: "9px",
+              height: "9px",
               backgroundColor: d.checked ? "var(--color-primary)" : "var(--color-border)",
-              opacity: d.checked ? 1 : 0.4,
+              opacity: d.checked ? 1 : 0.3,
             }}
           />
         ))}
