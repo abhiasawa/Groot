@@ -302,7 +302,7 @@ function JournalContent() {
                           border: "1px solid var(--color-border)",
                           borderLeft: `3px solid ${moodColor}`,
                           // Pattern 3: Paper texture via subtle noise
-                          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='transparent'/%3E%3Crect width='1' height='1' fill='%23000' opacity='0.015'/%3E%3C/svg%3E")`,
+                          backgroundImage: "var(--texture-paper)",
                         }}
                       >
                         {/* ─── Pattern 1: Serif diary body text ─── */}

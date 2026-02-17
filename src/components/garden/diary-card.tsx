@@ -11,9 +11,7 @@ interface DiaryCardProps {
 export default function DiaryCard({ children, className = "", variant = "default", onClick, style }: DiaryCardProps) {
   const bg = variant === "paper" ? "var(--color-paper)" : "var(--color-card)";
   const shadow = variant === "elevated" ? "var(--shadow-elevated)" : variant === "paper" ? "var(--shadow-paper)" : "var(--shadow-card)";
-  const texture = variant === "paper"
-    ? `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='transparent'/%3E%3Crect width='1' height='1' fill='%23000' opacity='0.015'/%3E%3C/svg%3E")`
-    : undefined;
+  const texture = variant === "paper" ? "var(--texture-paper)" : undefined;
 
   return (
     <div

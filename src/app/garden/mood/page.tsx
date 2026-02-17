@@ -176,8 +176,8 @@ export default function MoodPage() {
                   <AreaChart data={weeklyTrend}>
                     <defs>
                       <linearGradient id="moodGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#2D5F3B" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#2D5F3B" stopOpacity={0} />
+                        <stop offset="5%" stopColor="#5C5FA8" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#5C5FA8" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <XAxis
@@ -200,7 +200,7 @@ export default function MoodPage() {
                       formatter={(value) => [MOOD_LABELS[Math.round(value as number)] ?? value, "Mood"]}
                       labelFormatter={(label) => new Date(String(label)).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                     />
-                    <Area type="monotone" dataKey="avgScore" stroke="#2D5F3B" fill="url(#moodGradient)" strokeWidth={2} />
+                    <Area type="monotone" dataKey="avgScore" stroke="#5C5FA8" fill="url(#moodGradient)" strokeWidth={2} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>

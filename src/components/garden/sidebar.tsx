@@ -21,9 +21,9 @@ export default function Sidebar() {
     <aside
       className="hidden md:flex flex-col w-[260px] h-screen fixed left-0 top-0 border-r"
       style={{
-        backgroundColor: "var(--color-paper)",
-        borderColor: "var(--color-border)",
-        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='transparent'/%3E%3Crect width='1' height='1' fill='%23000' opacity='0.012'/%3E%3C/svg%3E")`,
+        backgroundColor: "var(--color-leather-dark)",
+        borderColor: "rgba(255,255,255,0.08)",
+        backgroundImage: "var(--texture-leather)",
       }}
     >
       {/* Logo area */}
@@ -34,7 +34,7 @@ export default function Sidebar() {
             className="text-lg"
             style={{
               fontFamily: "var(--font-heading)",
-              color: "var(--color-primary)",
+              color: "#E4DDD0",
               letterSpacing: "-0.02em",
               fontWeight: 600,
             }}
@@ -42,7 +42,7 @@ export default function Sidebar() {
             The Garden
           </span>
         </div>
-        <div className="mt-3 h-px" style={{ backgroundColor: "var(--color-border)" }} />
+        <div className="mt-3 h-px" style={{ backgroundColor: "rgba(255,255,255,0.1)" }} />
       </div>
 
       {/* Nav */}
@@ -58,10 +58,10 @@ export default function Sidebar() {
               className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all duration-150"
               style={{
                 backgroundColor: isActive ? "var(--color-primary)" : "transparent",
-                color: isActive ? "white" : "var(--color-text-secondary)",
+                color: isActive ? "white" : "rgba(228, 221, 208, 0.7)",
                 fontWeight: isActive ? 500 : 400,
                 fontFamily: "var(--font-body)",
-                boxShadow: isActive ? "0 2px 8px rgba(45, 95, 59, 0.2)" : "none",
+                boxShadow: isActive ? "0 2px 8px rgba(92, 95, 168, 0.3)" : "none",
               }}
             >
               <span className="text-base w-6 text-center">{item.icon}</span>
@@ -73,10 +73,10 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="px-6 py-4">
-        <div className="h-px mb-4" style={{ backgroundColor: "var(--color-border)" }} />
+        <div className="h-px mb-4" style={{ backgroundColor: "rgba(255,255,255,0.1)" }} />
         <p
           className="text-[11px] italic"
-          style={{ color: "var(--color-text-secondary)", fontFamily: "var(--font-diary)" }}
+          style={{ color: "rgba(228, 221, 208, 0.5)", fontFamily: "var(--font-diary)" }}
         >
           Your AI second brain
         </p>

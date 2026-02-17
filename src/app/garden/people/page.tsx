@@ -13,10 +13,10 @@ interface Person {
   source: "profile" | "contacts";
 }
 
-// Deterministic warm avatar colors based on name
+// Deterministic avatar colors — warm leather + indigo palette
 const AVATAR_COLORS = [
-  "#2D5F3B", "#8B6D4A", "#5B4A8A", "#8A4A5B", "#3B6B7A",
-  "#6B7A3B", "#7A5B3B", "#4A6B5B", "#6B4A6B", "#5B6B4A",
+  "#5C5FA8", "#8B6F4E", "#7B5B8A", "#8A5B5B", "#4A6B8A",
+  "#6B7A5B", "#9E6B3B", "#5C4A7A", "#8A6B4A", "#6B5B8A",
 ];
 
 function getAvatarColor(name: string): string {

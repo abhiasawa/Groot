@@ -1,38 +1,40 @@
 :root {
-  /* ─── Colors: Light Mode ─── */
-  --color-bg: #FAF8F5;
-  --color-surface: #F3F0EB;
-  --color-primary: #2D5F3B;
-  --color-primary-hover: #245032;
-  --color-secondary: #8BA98E;
-  --color-accent: #D4A843;
-  --color-text: #2A2520;
-  --color-text-secondary: #8A8478;
-  --color-danger: #C45D4A;
-  --color-border: #E8E4DC;
-  --color-card: #FFFFFE;
-  --color-paper: #FFFDF8;
-  --color-ink: #3D3529;
+  /* ─── Colors: Light Mode — Leather Journal + Soft Indigo ─── */
+  --color-bg: #F2EBE0;
+  --color-surface: #E8DFD0;
+  --color-primary: #5C5FA8;
+  --color-primary-hover: #4E51A0;
+  --color-secondary: #9895C0;
+  --color-accent: #C4963E;
+  --color-text: #2C2418;
+  --color-text-secondary: #8B7E6C;
+  --color-danger: #B85450;
+  --color-border: #D5C8B4;
+  --color-card: #FAF6EE;
+  --color-paper: #FBF7F0;
+  --color-ink: #3A3020;
+  --color-leather: #8B6F4E;
+  --color-leather-dark: #5C4A32;
 
   /* ─── Colors: Dark Mode ─── */
-  --color-dark-bg: #1A2E1F;
-  --color-dark-surface: #223828;
-  --color-dark-primary: #4A9B62;
-  --color-dark-secondary: #6B8B6F;
-  --color-dark-accent: #D4A843;
-  --color-dark-text: #E8E8E0;
-  --color-dark-text-secondary: #A0A098;
-  --color-dark-border: #2F4A35;
-  --color-dark-card: #263E2C;
-  --color-dark-paper: #2A4230;
+  --color-dark-bg: #1E1A15;
+  --color-dark-surface: #2A2520;
+  --color-dark-primary: #8E91D9;
+  --color-dark-secondary: #7B7DB0;
+  --color-dark-accent: #C4963E;
+  --color-dark-text: #E4E0D8;
+  --color-dark-text-secondary: #9D9588;
+  --color-dark-border: #3A3530;
+  --color-dark-card: #262118;
+  --color-dark-paper: #2E2820;
 
   /* ─── Mood Colors ─── */
-  --color-mood-great: #4A9B62;
-  --color-mood-good: #8BA98E;
-  --color-mood-okay: #D4A843;
-  --color-mood-low: #C88B6E;
-  --color-mood-bad: #C45D4A;
-  --color-mood-none: #E8E4DC;
+  --color-mood-great: #5BA06B;
+  --color-mood-good: #88AC8E;
+  --color-mood-okay: #C4963E;
+  --color-mood-low: #C4886E;
+  --color-mood-bad: #B85450;
+  --color-mood-none: #D5C8B4;
 
   /* ─── Typography ─── */
   --font-heading: var(--font-lora), 'Georgia', serif;
@@ -51,11 +53,16 @@
   --leading-body: 1.6;
   --tracking-heading: -0.02em;
 
-  /* ─── Shadows ─── */
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.12);
-  --shadow-paper: 0 1px 2px rgba(45, 35, 20, 0.04), 0 2px 4px rgba(45, 35, 20, 0.03), 0 0 0 1px rgba(45, 35, 20, 0.02);
+  /* ─── Shadows (warm brown-tinted) ─── */
+  --shadow-card: 0 1px 3px rgba(60, 40, 20, 0.08), 0 1px 2px rgba(60, 40, 20, 0.06);
+  --shadow-card-hover: 0 4px 12px rgba(60, 40, 20, 0.12);
+  --shadow-elevated: 0 8px 24px rgba(60, 40, 20, 0.16);
+  --shadow-paper: 0 1px 3px rgba(60, 40, 20, 0.06), 0 2px 6px rgba(60, 40, 20, 0.04), 0 0 0 1px rgba(60, 40, 20, 0.03);
+
+  /* ─── Textures ─── */
+  --texture-leather: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
+  --texture-paper: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect width='6' height='6' fill='transparent'/%3E%3Ccircle cx='1' cy='1' r='0.5' fill='%236B5030' opacity='0.03'/%3E%3Ccircle cx='4' cy='3' r='0.3' fill='%236B5030' opacity='0.02'/%3E%3C/svg%3E");
+  --texture-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='transparent'/%3E%3Crect width='1' height='1' fill='%236B5030' opacity='0.035'/%3E%3C/svg%3E");
 
   /* ─── Spacing (8px grid) ─── */
   --space-1: 0.25rem;   /* 4px */
@@ -93,7 +100,7 @@
   --color-border: var(--color-dark-border);
   --color-card: var(--color-dark-card);
   --color-paper: var(--color-dark-paper);
-  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.15);
-  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.25);
-  --shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.35);
 }

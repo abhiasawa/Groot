@@ -107,7 +107,7 @@ export default function GardenHome() {
             backgroundColor: "var(--color-paper)",
             boxShadow: "var(--shadow-paper)",
             border: "1px solid var(--color-border)",
-            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='transparent'/%3E%3Crect width='1' height='1' fill='%23000' opacity='0.015'/%3E%3C/svg%3E")`,
+            backgroundImage: "var(--texture-paper)",
           }}
         >
           <span className="text-base" style={{ color: "var(--color-text-secondary)", opacity: 0.6 }}>&#x1F50D;</span>
@@ -233,7 +233,7 @@ export default function GardenHome() {
                       boxShadow: "var(--shadow-paper)",
                       borderRadius: "var(--radius-lg)",
                       border: "1px solid var(--color-border)",
-                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='transparent'/%3E%3Crect width='1' height='1' fill='%23000' opacity='0.015'/%3E%3C/svg%3E")`,
+                      backgroundImage: "var(--texture-paper)",
                     }}
                   >
                     <p
@@ -299,7 +299,7 @@ function StatCard({ value, label, href, accent }: { value: number; label: string
         backgroundColor: "var(--color-paper)",
         boxShadow: "var(--shadow-paper)",
         border: "1px solid var(--color-border)",
-        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='transparent'/%3E%3Crect width='1' height='1' fill='%23000' opacity='0.015'/%3E%3C/svg%3E")`,
+        backgroundImage: "var(--texture-paper)",
       }}
     >
       <p

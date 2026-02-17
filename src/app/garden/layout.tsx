@@ -13,7 +13,12 @@ export default function GardenLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div style={{ backgroundColor: "var(--color-bg)", color: "var(--color-text)", minHeight: "100vh" }}>
+    <div style={{
+      backgroundColor: "var(--color-bg)",
+      backgroundImage: "var(--texture-grain)",
+      color: "var(--color-text)",
+      minHeight: "100vh",
+    }}>
       <Sidebar />
       <main
         className="md:ml-[260px] pb-20 md:pb-0 min-h-screen"
