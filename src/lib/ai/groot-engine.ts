@@ -48,7 +48,7 @@ export async function generateGrootResponse(
   // 3. Call LLM
   const provider = getLLMProvider();
   const response = await provider.generateResponse(systemPrompt, context.messages, {
-    maxTokens: 1024,
+    maxTokens: 4096,
     temperature: 0.7,
   });
 
