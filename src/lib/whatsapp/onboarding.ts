@@ -86,26 +86,15 @@ export async function handleOnboarding(
 
   // If user sent audio during onboarding, transcribe it first
   if (parsed.mediaId && parsed.mediaMimeType && parsed.type === "audio") {
-    const supabase = getSupabaseAdmin();
-    const diagLog = async (msg: string) => {
-      await supabase.from("messages").update({ media_description: msg })
-        .eq("whatsapp_message_id", parsed.messageId);
-    };
-
-    await diagLog("transcription_started");
     try {
       const result = await processMedia(parsed.mediaId, "audio", parsed.mediaMimeType);
-      await diagLog(`result: type=${result?.type} text=${result?.text?.substring(0, 200)} hasResult=${!!result}`);
       const transcribed = result?.text?.trim();
       if (transcribed && transcribed.length > 1 && !/^[.\s…]+$/.test(transcribed)) {
         parsed = { ...parsed, text: transcribed };
-        await diagLog(`success: "${transcribed}"`);
       } else {
-        await diagLog(`empty_or_noise: "${transcribed}"`);
+        logger.info({ transcribed }, "Audio transcription was empty or meaningless");
       }
     } catch (error) {
-      const errMsg = error instanceof Error ? error.message : String(error);
-      await diagLog(`error: ${errMsg}`);
       logger.error({ error, mediaId: parsed.mediaId }, "Failed to transcribe audio during onboarding");
     }
   }
@@ -264,7 +253,7 @@ async function extractName(text: string | null): Promise<string | null> {
     const response = await provider.generateResponse(
       `Extract ONLY the person's name from the message below. The user was asked "What should I call you?" and this is their reply. Return ONLY the name — no quotes, no punctuation, no explanation. If you cannot find a name, return "NONE".`,
       [{ role: "user", content: trimmed }],
-      { maxTokens: 30, temperature: 0 },
+      { maxTokens: 512, temperature: 0 },
     );
 
     const extracted = response.text.trim().replace(/[."']+/g, "").trim();
@@ -293,7 +282,7 @@ async function extractGoal(text: string): Promise<string | null> {
     const response = await provider.generateResponse(
       `The user was asked "What's one goal you're working on right now?" and replied with the message below. Extract and return ONLY the goal in a concise form (1 short sentence). If the message doesn't contain any meaningful goal or is just noise/greeting/empty content, return "NONE".`,
       [{ role: "user", content: text }],
-      { maxTokens: 60, temperature: 0 },
+      { maxTokens: 512, temperature: 0 },
     );
 
     const extracted = response.text.trim().replace(/^["']+|["']+$/g, "").trim();

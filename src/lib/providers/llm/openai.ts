@@ -35,7 +35,7 @@ export class OpenAIProvider implements LLMProvider {
       const response = await this.client.chat.completions.create({
         model: "gpt-5-mini",
         messages: openaiMessages,
-        max_completion_tokens: options?.maxTokens ?? 1024,
+        max_completion_tokens: options?.maxTokens ?? 2048,
         ...(options?.jsonMode ? { response_format: { type: "json_object" as const } } : {}),
       });
 

@@ -62,7 +62,7 @@ Use WhatsApp formatting (_italic_ for emphasis if needed).`,
             content: `Today's conversations:\n${context}\n\nGenerate a personalized reflection question:`,
           },
         ],
-        { maxTokens: 100, temperature: 0.9 },
+        { maxTokens: 1024, temperature: 0.9 },
       );
 
       return `Hey ${name}, time for a quick reflection 🌙\n\n${response.text}`;

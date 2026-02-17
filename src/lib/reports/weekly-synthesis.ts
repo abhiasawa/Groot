@@ -75,7 +75,7 @@ Include:
 End with an encouraging note.`,
         },
       ],
-      { maxTokens: 512, temperature: 0.8 },
+      { maxTokens: 2048, temperature: 0.8 },
     );
 
     // Store the report
