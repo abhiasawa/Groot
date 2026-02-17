@@ -105,7 +105,7 @@ async function summarizeContent(content: string, url: string): Promise<string> {
         content: `Summarize this article in 3-5 bullet points. Use • for bullets. Be concise but capture key insights.\n\nURL: ${url}\n\nContent:\n${content}`,
       },
     ],
-    { maxTokens: 1024, temperature: 0.3 },
+    { maxTokens: 16384, temperature: 0.3 },
   );
 
   return response.text;
