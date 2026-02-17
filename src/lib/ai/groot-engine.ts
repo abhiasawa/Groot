@@ -94,7 +94,10 @@ export async function generateGrootResponse(
       { userId, updates: dedupedUpdates.map((u) => `${u.category}:${u.key}=${u.value}`) },
       "Upserting profile updates from metadata",
     );
-    await upsertProfileFacts(userId, dedupedUpdates);
+    // Don't block the user-facing reply on profile persistence.
+    upsertProfileFacts(userId, dedupedUpdates).catch((error) => {
+      logger.warn({ error, userId }, "Profile upsert failed");
+    });
   }
 
   const t3 = Date.now();

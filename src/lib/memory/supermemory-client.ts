@@ -105,12 +105,14 @@ export async function searchMemories(
   }
 
   try {
+    const timeoutMs = 1500;
     const response = await fetch(`${getBaseUrl()}/memories/search`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
+      signal: AbortSignal.timeout(timeoutMs),
       body: JSON.stringify({
         query,
         limit,
@@ -129,6 +131,15 @@ export async function searchMemories(
     logger.info({ userId, query: query.slice(0, 80), resultsCount: results.length }, "Supermemory search complete");
     return results;
   } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "name" in error &&
+      ["TimeoutError", "AbortError"].includes((error as { name?: string }).name ?? "")
+    ) {
+      logger.warn({ userId, timeoutMs }, "Supermemory search timed out");
+      return [];
+    }
     logger.error({ error, userId }, "Supermemory search error");
     return [];
   }
