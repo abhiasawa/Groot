@@ -140,30 +140,27 @@ export async function POST(request: NextRequest) {
  * The LLM naturally handles intent, memory, reminders, etc.
  */
 async function processMessage(parsed: ParsedMessage): Promise<void> {
-  // Fire-and-forget: mark as read doesn't block processing
   markMessageAsRead(parsed.messageId).catch(() => {});
 
   const user = await getOrCreateUser(parsed.from, parsed.displayName);
 
-  // Run non-critical early writes in parallel (don't block the pipeline)
-  const earlyWrites: Promise<unknown>[] = [
-    markUserResponded(user.id),
-  ];
+  // Store inbound message immediately so context is available for batch detection
   if (user.onboarding_step > 0 || isOnboardingComplete(user)) {
-    earlyWrites.push(storeInboundMessage(user.id, parsed));
+    await storeInboundMessage(user.id, parsed);
   }
-  const earlyWritesPromise = Promise.allSettled(earlyWrites);
+
+  // Non-critical (fire-and-forget)
+  markUserResponded(user.id).catch(() => {});
 
   // Onboarding
   if (!isOnboardingComplete(user)) {
     const handled = await handleOnboarding(user, parsed);
-    if (handled) { await earlyWritesPromise; return; }
+    if (handled) return;
   }
 
   // Media processing (audio/image)
   if (parsed.mediaId && parsed.mediaMimeType) {
     await handleMedia(user.id, parsed, user.display_name);
-    await earlyWritesPromise;
     return;
   }
 
@@ -174,7 +171,7 @@ async function processMessage(parsed: ParsedMessage): Promise<void> {
       parsed.from,
       parsed.interactiveReply.id,
     );
-    if (handled) { await earlyWritesPromise; return; }
+    if (handled) return;
   }
 
   const text = parsed.text;
@@ -183,17 +180,11 @@ async function processMessage(parsed: ParsedMessage): Promise<void> {
       parsed.from,
       "_I received your message but I can only handle text for now._",
     );
-    await earlyWritesPromise;
     return;
   }
 
   // Pending outbound follow-up (e.g., waiting for contact number)
-  if (await handlePendingOutboundReply(user.id, parsed.from, text)) {
-    await earlyWritesPromise;
-    return;
-  }
-
-  await earlyWritesPromise;
+  if (await handlePendingOutboundReply(user.id, parsed.from, text)) return;
 
   // ─── All text messages go through Groot AI ───
   try {
@@ -202,6 +193,17 @@ async function processMessage(parsed: ParsedMessage): Promise<void> {
       text,
       user.display_name,
     );
+
+    // Before sending: check if a newer message arrived while we were processing.
+    // If so, discard this response — the newer message's handler will generate
+    // a fresher response with full conversation context.
+    if (!(await isLatestInboundMessage(user.id, parsed.messageId))) {
+      logger.info(
+        { messageId: parsed.messageId, userId: user.id },
+        "Discarding response — newer inbound arrived during processing",
+      );
+      return;
+    }
 
     await sendWhatsAppMessage(parsed.from, grootResponse.text);
 
@@ -370,6 +372,28 @@ async function markInboundMessageAsSynced(
     .update({ synced_to_supermemory: true })
     .eq("user_id", userId)
     .eq("whatsapp_message_id", inboundMessageId);
+}
+
+/**
+ * Check if a message is the most recent inbound from this user.
+ * Used to discard stale responses when a newer message arrived during processing.
+ */
+async function isLatestInboundMessage(
+  userId: string,
+  whatsappMessageId: string,
+): Promise<boolean> {
+  const supabase = getSupabaseAdmin();
+  const { data } = await supabase
+    .from("messages")
+    .select("whatsapp_message_id")
+    .eq("user_id", userId)
+    .eq("direction", "inbound")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (!data) return true;
+  return data.whatsapp_message_id === whatsappMessageId;
 }
 
 async function createRemindersFromDetectedDates(

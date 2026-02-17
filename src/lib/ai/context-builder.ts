@@ -7,11 +7,10 @@ import type { LLMMessage } from "@/lib/providers/types";
 /**
  * Context builder — assembles the full context for an AI response.
  *
- * Gathers from 4 sources in parallel:
- * 1. Short-term messages (last 20 from Supabase)
+ * Gathers from 3 sources in parallel:
+ * 1. Short-term messages (last 10 from Supabase — includes current message)
  * 2. Long-term memories (semantic search from Supermemory)
  * 3. User profile (from user_profile table)
- * 4. Current message
  */
 
 export interface BuiltContext {
@@ -61,11 +60,10 @@ export async function buildContext(
     });
   }
 
-  // Add current message
-  messages.push({
-    role: "user",
-    content: currentMessage,
-  });
+  // Note: currentMessage is NOT added explicitly here because it's already
+  // stored in the messages table before this call (storeInboundMessage is awaited
+  // before generateGrootResponse). This also supports message batching — when
+  // multiple rapid messages arrive, all appear naturally in stored messages.
 
   return {
     messages,
