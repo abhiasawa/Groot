@@ -30,6 +30,8 @@ export async function generateGrootResponse(
   userName: string | null,
   isNewUser: boolean = false,
 ): Promise<GrootResponse> {
+  logger.info({ userId, isNewUser, messageLength: currentMessage.length }, "Groot engine started");
+
   // 1. Build context
   const context = await buildContext(userId, currentMessage, userName);
 
@@ -83,8 +85,25 @@ export async function generateGrootResponse(
   // Apply profile updates (deduplicated)
   const dedupedUpdates = [...deduped.values()];
   if (dedupedUpdates.length > 0) {
+    logger.info(
+      { userId, updates: dedupedUpdates.map((u) => `${u.category}:${u.key}=${u.value}`) },
+      "Upserting profile updates from metadata",
+    );
     await upsertProfileFacts(userId, dedupedUpdates);
   }
+
+  logger.info(
+    {
+      userId,
+      mood: metadata?.detectedMood,
+      shouldStore: metadata?.shouldStoreMemory ?? false,
+      tags: metadata?.memoryTags,
+      dates: metadata?.detectedDates?.length ?? 0,
+      profileUpdates: dedupedUpdates.length,
+      responseLength: response.text.length,
+    },
+    "Groot engine complete",
+  );
 
   return {
     text: response.text,

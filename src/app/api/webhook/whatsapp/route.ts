@@ -140,6 +140,11 @@ async function processMessage(parsed: ParsedMessage): Promise<void> {
 
   const { user, isNewUser } = await getOrCreateUser(parsed.from, parsed.displayName);
 
+  logger.info(
+    { userId: user.id, isNewUser, type: parsed.type, hasMedia: !!parsed.mediaId, hasText: !!parsed.text, hasInteractive: !!parsed.interactiveReply },
+    "Processing message",
+  );
+
   // Store inbound message immediately so context is available for batch detection
   await storeInboundMessage(user.id, parsed);
 
@@ -148,12 +153,14 @@ async function processMessage(parsed: ParsedMessage): Promise<void> {
 
   // Media processing (audio/image)
   if (parsed.mediaId && parsed.mediaMimeType) {
+    logger.info({ userId: user.id, mediaType: parsed.type, mimeType: parsed.mediaMimeType }, "Routing to media handler");
     await handleMedia(user.id, parsed, user.display_name, isNewUser);
     return;
   }
 
   // Interactive button/list replies (send confirmations, proactive preferences)
   if (parsed.interactiveReply?.id) {
+    logger.info({ userId: user.id, buttonId: parsed.interactiveReply.id }, "Routing to interactive reply handler");
     const handled = await handleInteractiveReply(
       user.id,
       parsed.from,
@@ -172,7 +179,10 @@ async function processMessage(parsed: ParsedMessage): Promise<void> {
   }
 
   // Pending outbound follow-up (e.g., waiting for contact number)
-  if (await handlePendingOutboundReply(user.id, parsed.from, text)) return;
+  if (await handlePendingOutboundReply(user.id, parsed.from, text)) {
+    logger.info({ userId: user.id }, "Message handled by pending outbound reply");
+    return;
+  }
 
   // ─── All text messages go through Groot AI ───
   try {
@@ -232,6 +242,7 @@ async function handleInteractiveReply(
   buttonId: string,
 ): Promise<boolean> {
   if (buttonId.startsWith("proactive_")) {
+    logger.info({ userId, buttonId }, "Updating proactive preference");
     const preference = await updateProactivePreference(userId, buttonId);
     const responseMap: Record<string, string> = {
       daily: "*Done.* I'll keep checking in daily. 🌱",

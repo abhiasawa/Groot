@@ -33,8 +33,9 @@ export async function getRecentMessages(
     return [];
   }
 
-  // Reverse to get chronological order
-  return (data ?? []).reverse() as ShortTermMessage[];
+  const messages = (data ?? []).reverse() as ShortTermMessage[];
+  logger.info({ userId, count: messages.length, limit }, "Recent messages fetched");
+  return messages;
 }
 
 /**

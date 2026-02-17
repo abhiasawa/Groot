@@ -125,7 +125,9 @@ export async function searchMemories(
     }
 
     const result = (await response.json()) as { results: SupermemorySearchResult[] };
-    return result.results ?? [];
+    const results = result.results ?? [];
+    logger.info({ userId, query: query.slice(0, 80), resultsCount: results.length }, "Supermemory search complete");
+    return results;
   } catch (error) {
     logger.error({ error, userId }, "Supermemory search error");
     return [];

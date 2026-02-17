@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { logger } from "@/lib/logger";
 
 export interface PortalUser {
   id: string;
@@ -37,11 +38,13 @@ export async function getAuthenticatedPortalUser(): Promise<PortalUser> {
     .single();
 
   if (error || !user) {
+    logger.warn({ error }, "Portal: no user found in DB");
     throw new PortalAuthError(
       "No user found. Send a message on WhatsApp first to create your account.",
       404,
     );
   }
 
+  logger.info({ userId: user.id, displayName: user.display_name }, "Portal user loaded");
   return user as PortalUser;
 }

@@ -48,7 +48,9 @@ export async function sendWhatsAppMessage(
     throw new Error(`WhatsApp API error: ${JSON.stringify(error)}`);
   }
 
-  return response.json() as Promise<WhatsAppSendResult>;
+  const result = await response.json() as WhatsAppSendResult;
+  logger.info({ to, messageId: result.messages?.[0]?.id, textLength: text.length }, "WhatsApp message sent");
+  return result;
 }
 
 /**

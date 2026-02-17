@@ -65,6 +65,17 @@ export async function buildContext(
   // before generateGrootResponse). This also supports message batching — when
   // multiple rapid messages arrive, all appear naturally in stored messages.
 
+  logger.info(
+    {
+      userId,
+      recentMessages: recentMessages.length,
+      longTermMemories: relevantMemories.length,
+      profileLength: profileSummary.length,
+      totalLLMMessages: messages.length,
+    },
+    "Context built",
+  );
+
   return {
     messages,
     profileSummary,

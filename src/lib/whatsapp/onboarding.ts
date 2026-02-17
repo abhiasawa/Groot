@@ -27,6 +27,7 @@ export async function getOrCreateUser(
     .single();
 
   if (existing) {
+    logger.info({ userId: existing.id, displayName: existing.display_name }, "Existing user found");
     return { user: existing as UserRecord, isNewUser: false };
   }
 

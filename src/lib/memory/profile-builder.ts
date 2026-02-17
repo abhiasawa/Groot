@@ -199,9 +199,16 @@ export async function getUserProfileSummary(userId: string): Promise<string> {
     .order("category")
     .order("key");
 
-  if (error || !data || data.length === 0) {
+  if (error) {
+    logger.error({ error, userId }, "Failed to fetch user profile");
     return "";
   }
+  if (!data || data.length === 0) {
+    logger.info({ userId }, "User profile is empty");
+    return "";
+  }
+
+  logger.info({ userId, factCount: data.length }, "User profile loaded");
 
   const grouped: Record<string, string[]> = {};
   for (const row of data) {

@@ -66,6 +66,10 @@ async function processAudio(
   try {
     const provider = getTranscriptionProvider();
     const result = await provider.transcribe(buffer, mimeType);
+    logger.info(
+      { provider: provider.name, textLength: result.text.length, language: result.language, duration: result.duration },
+      "Audio transcription successful",
+    );
     return {
       type: "transcription",
       text: result.text,
@@ -91,6 +95,10 @@ async function processImage(
       buffer,
       mimeType,
       "Describe this image and extract any text visible in it.",
+    );
+    logger.info(
+      { provider: provider.name, hasText: !!result.extractedText, category: result.category },
+      "Image analysis successful",
     );
     return {
       type: "vision",
