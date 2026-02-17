@@ -124,9 +124,9 @@ function normalizeProfileKey(raw: string): string {
  */
 export function getErrorResponse(): string {
   const responses = [
-    "_Hmm, my brain is a bit foggy right now._ I've saved your message and I'll process it soon.",
-    "_Something went wrong on my end._ Your message is safe — I'll get back to you shortly.",
-    "_I hit a snag._ Give me a moment and try again.",
+    "_Something tripped me up._ Your message is safe — try again in a sec.",
+    "_My bad, hit a snag._ Send that again?",
+    "_Glitched for a moment there._ I've got your message, give me another shot.",
   ];
   return responses[Math.floor(Math.random() * responses.length)]!;
 }

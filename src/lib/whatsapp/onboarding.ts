@@ -128,7 +128,7 @@ async function handleStep0(user: UserRecord): Promise<void> {
   // Message 1: Introduction
   await sendWhatsAppMessage(
     to,
-    `Hey, I'm *Groot* 🌱\n\nYour AI minion that lives right here on WhatsApp.\nI remember everything you tell me, track your habits, and get smarter the more we talk.\n\nJust tell me what to do.`,
+    `Hey, I'm *Groot*.\n\nI live here on WhatsApp. Think of me as the smartest person in your contacts — I can brainstorm with you, remember things, give advice, or just chat.\n\nI get better the more we talk.`,
   );
 
   // Message 2: Ask for name
@@ -154,10 +154,10 @@ async function handleStep1(user: UserRecord, parsed: ParsedMessage): Promise<voi
   // Store the name
   await updateUserName(user.id, name);
 
-  // Message 3: Personal greeting + ask goal
+  // Message 3: Personal greeting + ask what they're up to
   await sendWhatsAppMessage(
     to,
-    `Nice to meet you, *${name}*! ✨\n\nI work best when I know what matters to you.\n\n*What's one goal you're working on right now?*\n\n_Could be fitness, a project, learning something new — anything._`,
+    `Good to meet you, *${name}*.\n\nI'm curious — *what are you working on these days?*\n\n_A project, a side hustle, something you're learning — anything goes._`,
   );
 
   await updateOnboardingStep(user.id, 2);
@@ -194,10 +194,10 @@ async function handleStep2(user: UserRecord, parsed: ParsedMessage): Promise<voi
   // Store the goal in user_profile
   await storeGoal(user.id, goal);
 
-  // Message 4: Acknowledge goal + prompt first memory
+  // Message 4: Acknowledge + prompt first thought
   await sendWhatsAppMessage(
     to,
-    `Great goal — I'll remember that.\n\nNow just talk to me naturally. Tell me anything — a fact about yourself, a thought, or something you want to remember.\n\nFor example:\n_"My current weight is 82kg"_\n_"I have a meeting with investors next Friday"_\n\n*Go ahead — send me your first thought.*`,
+    `Interesting — I'll keep that in mind.\n\nNow just talk to me like you would a sharp friend. I'll remember what matters.\n\n*Tell me something — a thought, a question, anything on your mind.*`,
   );
 
   await updateOnboardingStep(user.id, 3);
@@ -228,7 +228,7 @@ async function handleStep3(user: UserRecord, parsed: ParsedMessage): Promise<voi
   // Message 5: Confirmation
   await sendWhatsAppMessage(
     to,
-    `*Saved.* Your first memory is planted 🌱\n\nFrom now on, just talk to me like a friend.\nAsk me anything, tell me things to remember, send voice notes — I handle it all naturally.\n\nLet's grow together, *${displayName}*.`,
+    `Got it, *${displayName}*. That's your first memory locked in.\n\nFrom here on, just talk to me. Ask questions, bounce ideas, vent, share stuff to remember — whatever you need.\n\nI'm here.`,
   );
 
   await completeOnboarding(user.id);
