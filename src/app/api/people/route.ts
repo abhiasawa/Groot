@@ -30,12 +30,18 @@ export async function GET() {
   const people: PersonEntry[] = [];
   const seen = new Set<string>();
 
-  // 1. Profile facts that mention people (relationship keys, family, etc.)
-  const { data: profileFacts } = await supabase
-    .from("user_profile")
-    .select("key, value, last_mentioned_at")
-    .eq("user_id", userId)
-    .eq("category", "static");
+  // Fetch profile facts and contacts in parallel
+  const [{ data: profileFacts }, { data: contacts }] = await Promise.all([
+    supabase
+      .from("user_profile")
+      .select("key, value, last_mentioned_at")
+      .eq("user_id", userId)
+      .eq("category", "static"),
+    supabase
+      .from("contacts")
+      .select("name, last_messaged_at")
+      .eq("owner_user_id", userId),
+  ]);
 
   const PEOPLE_KEYS = ["family", "partner", "spouse", "wife", "husband", "friend", "sibling", "parent",
     "mother", "father", "brother", "sister", "son", "daughter", "child", "boss", "colleague",
@@ -58,12 +64,6 @@ export async function GET() {
       }
     }
   }
-
-  // 2. Contacts table
-  const { data: contacts } = await supabase
-    .from("contacts")
-    .select("name, last_messaged_at")
-    .eq("owner_user_id", userId);
 
   for (const contact of contacts ?? []) {
     const normalized = (contact.name as string).toLowerCase().trim();

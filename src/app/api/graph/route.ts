@@ -20,25 +20,25 @@ export async function GET() {
 
   const supabase = getSupabaseAdmin();
 
-  // Fetch recent messages with content
-  const { data: messages } = await supabase
-    .from("messages")
-    .select("id, content, message_type, metadata, created_at")
-    .eq("user_id", userId)
-    .eq("direction", "inbound")
-    .not("content", "is", null)
-    .order("created_at", { ascending: false })
-    .limit(100);
+  // Fetch messages and profile facts in parallel
+  const [{ data: messages }, { data: profile }] = await Promise.all([
+    supabase
+      .from("messages")
+      .select("id, content, message_type, metadata, created_at")
+      .eq("user_id", userId)
+      .eq("direction", "inbound")
+      .not("content", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(100),
+    supabase
+      .from("user_profile")
+      .select("category, key, value")
+      .eq("user_id", userId),
+  ]);
 
   if (!messages || messages.length === 0) {
     return NextResponse.json({ nodes: [], links: [] }, { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=120" } });
   }
-
-  // Fetch profile facts for context
-  const { data: profile } = await supabase
-    .from("user_profile")
-    .select("category, key, value")
-    .eq("user_id", userId);
 
   // Build nodes
   const nodes = messages.map((m) => ({

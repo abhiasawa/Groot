@@ -36,37 +36,37 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ habits: [] }, { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" } });
   }
 
-  // Fetch streak info for all habits
+  // Fetch streaks (and optionally checkins) in parallel
   const habitIds = habits.map((h) => h.id);
-  const { data: streaks } = await supabase
-    .from("habit_streaks")
-    .select("habit_id, current_streak, longest_streak, last_checkin_date")
-    .in("habit_id", habitIds);
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const [{ data: streaks }, { data: checkins }] = await Promise.all([
+    supabase
+      .from("habit_streaks")
+      .select("habit_id, current_streak, longest_streak, last_checkin_date")
+      .in("habit_id", habitIds),
+    includeCheckins
+      ? supabase
+          .from("habit_checkins")
+          .select("habit_id, checked_in_at")
+          .in("habit_id", habitIds)
+          .gte("checked_in_at", thirtyDaysAgo.toISOString())
+          .order("checked_in_at", { ascending: true })
+      : Promise.resolve({ data: null }),
+  ]);
 
   const streakMap = new Map(
     (streaks ?? []).map((s) => [s.habit_id, s]),
   );
 
-  // Optionally fetch recent check-ins
-  let checkinMap = new Map<string, string[]>();
-  if (includeCheckins) {
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    const { data: checkins } = await supabase
-      .from("habit_checkins")
-      .select("habit_id, checked_in_at")
-      .in("habit_id", habitIds)
-      .gte("checked_in_at", thirtyDaysAgo.toISOString())
-      .order("checked_in_at", { ascending: true });
-
-    for (const c of checkins ?? []) {
-      const hid = c.habit_id as string;
-      const dateStr = (c.checked_in_at as string).split("T")[0]!;
-      if (!checkinMap.has(hid)) checkinMap.set(hid, []);
-      const existing = checkinMap.get(hid)!;
-      if (!existing.includes(dateStr)) existing.push(dateStr);
-    }
+  const checkinMap = new Map<string, string[]>();
+  for (const c of checkins ?? []) {
+    const hid = c.habit_id as string;
+    const dateStr = (c.checked_in_at as string).split("T")[0]!;
+    if (!checkinMap.has(hid)) checkinMap.set(hid, []);
+    const existing = checkinMap.get(hid)!;
+    if (!existing.includes(dateStr)) existing.push(dateStr);
   }
 
   // Merge habits with streaks (and optionally checkins)
