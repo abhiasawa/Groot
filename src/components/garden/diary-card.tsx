@@ -13,7 +13,7 @@ export default function DiaryCard({ children, className = "", variant = "default
 
   return (
     <div
-      className={`p-5 transition-all duration-150 ${onClick ? "cursor-pointer" : ""} ${className}`}
+      className={`p-5 transition-all duration-150 overflow-hidden ${onClick ? "cursor-pointer" : ""} ${className}`}
       style={{
         backgroundColor: "var(--color-card)",
         border: "1px solid var(--color-border)",
