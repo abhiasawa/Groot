@@ -3,13 +3,6 @@
 import { useState, useRef, useEffect } from "react";
 import MarkdownContent from "./markdown-content";
 
-interface LinkedMemory {
-  id: string;
-  content: string;
-  message_type: string;
-  created_at: string;
-}
-
 interface MemoryCardProps {
   id: string;
   content: string;
@@ -19,8 +12,6 @@ interface MemoryCardProps {
   moodColor: string;
   isExpanded: boolean;
   onToggleExpand: (id: string) => void;
-  linkedMemories?: LinkedMemory[];
-  loadingLinks?: boolean;
 }
 
 const TYPE_ICONS: Record<string, string> = {
@@ -44,8 +35,6 @@ export default function MemoryCard({
   moodColor,
   isExpanded,
   onToggleExpand,
-  linkedMemories,
-  loadingLinks,
 }: MemoryCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [hovered, setHovered] = useState(false);
@@ -123,54 +112,6 @@ export default function MemoryCard({
           {isExpanded ? "Show less" : "Read more"}
         </span>
       </div>
-
-      {/* Linked Memories (expanded only) */}
-      {isExpanded && (
-        <div
-          className="px-5 pb-4 pt-2"
-          style={{ borderTop: "1px solid var(--color-border)" }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <p
-            className="text-[10px] uppercase tracking-[0.15em] mb-2 font-semibold"
-            style={{ color: "var(--color-text-secondary)" }}
-          >
-            Linked Memories
-          </p>
-
-          {loadingLinks ? (
-            <div className="space-y-2 animate-pulse">
-              {[...Array(2)].map((_, i) => (
-                <div key={i} className="h-8 rounded" style={{ backgroundColor: "var(--color-surface)" }} />
-              ))}
-            </div>
-          ) : linkedMemories && linkedMemories.length > 0 ? (
-            <div className="space-y-2">
-              {linkedMemories.map((lm) => (
-                <div
-                  key={lm.id}
-                  className="p-3 rounded-lg text-xs"
-                  style={{
-                    backgroundColor: "var(--color-surface)",
-                    color: "var(--color-text-secondary)",
-                    fontFamily: "var(--font-diary)",
-                    lineHeight: 1.6,
-                  }}
-                >
-                  <MarkdownContent content={lm.content} truncate={120} />
-                  <span className="text-[10px] block mt-1" style={{ color: "var(--color-text-secondary)", opacity: 0.6 }}>
-                    {new Date(lm.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs" style={{ color: "var(--color-text-secondary)", opacity: 0.6 }}>
-              No linked memories yet
-            </p>
-          )}
-        </div>
-      )}
     </div>
   );
 }

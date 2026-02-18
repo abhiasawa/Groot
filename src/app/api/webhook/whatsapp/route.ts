@@ -9,7 +9,7 @@ import { sendWhatsAppMessage, markMessageAsRead } from "@/lib/whatsapp/client";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { getOrCreateUser } from "@/lib/whatsapp/onboarding";
 import { addMemory } from "@/lib/memory/supermemory-client";
-import { detectAndLinkMemory } from "@/lib/memory/link-detector";
+
 import { storeOutboundMessage } from "@/lib/memory/short-term";
 import { processMedia } from "@/lib/media/media-handler";
 import { generateGrootResponse, getErrorResponse } from "@/lib/ai/groot-engine";
@@ -458,23 +458,6 @@ async function storeLongTermMemoryAndMark(
   const memoryId = await addMemory(content, userId, tags);
   if (memoryId) {
     await markInboundMessageAsSynced(userId, inboundMessageId);
-
-    // Fire-and-forget: detect and create bidirectional links
-    const supabase = getSupabaseAdmin();
-    Promise.resolve(
-      supabase
-        .from("messages")
-        .select("id")
-        .eq("user_id", userId)
-        .eq("whatsapp_message_id", inboundMessageId)
-        .single(),
-    )
-      .then(({ data }) => {
-        if (data?.id) {
-          detectAndLinkMemory(data.id as string, content, userId).catch(() => {});
-        }
-      })
-      .catch(() => {});
   }
 }
 

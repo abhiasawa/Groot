@@ -244,26 +244,49 @@ function ToggleRow({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4">
-      <div className="min-w-0">
-        <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: "16px",
+      }}
+    >
+      <div style={{ minWidth: 0 }}>
+        <p className="text-sm font-medium" style={{ color: "var(--color-text)", margin: 0 }}>
           {label}
         </p>
-        <p className="text-xs" style={{ color: "var(--color-text-secondary)" }}>
+        <p className="text-xs" style={{ color: "var(--color-text-secondary)", margin: 0 }}>
           {description}
         </p>
       </div>
       <button
         onClick={() => onChange(!value)}
-        className="w-11 h-6 rounded-full transition-colors relative shrink-0"
         style={{
+          width: 44,
+          height: 24,
+          minWidth: 44,
+          flexShrink: 0,
+          borderRadius: 9999,
+          position: "relative",
+          border: "none",
+          padding: 0,
+          cursor: "pointer",
           backgroundColor: value ? "var(--color-primary)" : "var(--color-border)",
+          transition: "background-color 0.2s",
         }}
       >
         <span
-          className="absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform shadow-sm"
           style={{
-            transform: value ? "translateX(22px)" : "translateX(2px)",
+            position: "absolute",
+            top: 2,
+            left: value ? 22 : 2,
+            width: 20,
+            height: 20,
+            borderRadius: 9999,
+            backgroundColor: "white",
+            transition: "left 0.2s",
+            boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
           }}
         />
       </button>

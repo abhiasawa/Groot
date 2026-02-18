@@ -63,7 +63,6 @@ export async function GET() {
   // Build links based on word overlap (simple approach)
   const linkMap = new Map<string, { source: string; target: string; strength: number }>();
   const allNodes = [...nodes, ...profileNodes];
-  const nodeIdSet = new Set(allNodes.map((n) => n.id));
 
   for (let i = 0; i < Math.min(nodes.length, 50); i++) {
     const wordsA = new Set(
@@ -79,36 +78,6 @@ export async function GET() {
           source: nodes[i]!.id,
           target: nodes[j]!.id,
           strength: Math.min(overlap / 5, 1),
-        });
-      }
-    }
-  }
-
-  // Merge persistent links from memory_links table (scoped to current user's messages)
-  const messageIds = nodes.map((n) => n.id);
-  const { data: persistentLinks } = messageIds.length > 0
-    ? await supabase
-        .from("memory_links")
-        .select("source_id, target_id, confidence")
-        .or(`source_id.in.(${messageIds.join(",")}),target_id.in.(${messageIds.join(",")})`)
-        .limit(500)
-    : { data: null };
-
-  if (persistentLinks) {
-    for (const pl of persistentLinks) {
-      const srcId = pl.source_id as string;
-      const tgtId = pl.target_id as string;
-      if (!nodeIdSet.has(srcId) || !nodeIdSet.has(tgtId)) continue;
-
-      const key = `${srcId}:${tgtId}`;
-      const existing = linkMap.get(key);
-      if (existing) {
-        existing.strength = Math.min(existing.strength + 0.3, 1.0);
-      } else {
-        linkMap.set(key, {
-          source: srcId,
-          target: tgtId,
-          strength: (pl.confidence as number) * 0.8,
         });
       }
     }

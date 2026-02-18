@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { Suspense, useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { cachedFetch } from "@/lib/garden/fetch-cache";
 import PageHeader from "@/components/garden/page-header";
@@ -54,29 +54,10 @@ function JournalContent() {
   const [viewMode, setViewMode] = useState<"timeline" | "calendar">("timeline");
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [linkedMemories, setLinkedMemories] = useState<Record<string, Array<{ id: string; content: string; message_type: string; created_at: string }>>>({});
-  const [loadingLinks, setLoadingLinks] = useState<string | null>(null);
-  const linkedMemoriesRef = useRef(linkedMemories);
-  linkedMemoriesRef.current = linkedMemories;
 
-  const handleToggleExpand = useCallback(async (id: string) => {
-    if (expandedId === id) {
-      setExpandedId(null);
-      return;
-    }
-    setExpandedId(id);
-    if (!linkedMemoriesRef.current[id]) {
-      setLoadingLinks(id);
-      try {
-        const res = await fetch(`/api/memories/${id}/links`);
-        const data = await res.json();
-        setLinkedMemories((prev) => ({ ...prev, [id]: data.links ?? [] }));
-      } catch {
-        setLinkedMemories((prev) => ({ ...prev, [id]: [] }));
-      }
-      setLoadingLinks(null);
-    }
-  }, [expandedId]);
+  const handleToggleExpand = useCallback((id: string) => {
+    setExpandedId((prev) => (prev === id ? null : id));
+  }, []);
 
   // Calendar state
   const [calendarMonth, setCalendarMonth] = useState(new Date());
@@ -313,8 +294,6 @@ function JournalContent() {
                       moodColor={moodColor}
                       isExpanded={expandedId === m.id}
                       onToggleExpand={handleToggleExpand}
-                      linkedMemories={linkedMemories[m.id]}
-                      loadingLinks={loadingLinks === m.id}
                     />
                   ))}
                 </div>
