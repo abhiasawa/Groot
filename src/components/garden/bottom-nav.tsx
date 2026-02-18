@@ -2,43 +2,56 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion } from "motion/react";
+import { cn } from "@/lib/utils";
+import { Home, BookOpen, Users, Heart, Settings } from "lucide-react";
 
 const NAV_ITEMS = [
-  { href: "/garden", label: "Home", icon: "🏡" },
-  { href: "/garden/journal", label: "Journal", icon: "📓" },
-  { href: "/garden/people", label: "People", icon: "👥" },
-  { href: "/garden/mood", label: "Mood", icon: "🎭" },
-  { href: "/garden/settings", label: "More", icon: "⚙️" },
+  { href: "/garden", label: "Home", icon: Home },
+  { href: "/garden/journal", label: "Journal", icon: BookOpen },
+  { href: "/garden/people", label: "People", icon: Users },
+  { href: "/garden/mood", label: "Mood", icon: Heart },
+  { href: "/garden/settings", label: "More", icon: Settings },
 ];
 
 export default function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav
-      className="md:hidden fixed bottom-0 left-0 right-0 border-t flex items-center justify-around z-50"
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-border bg-card z-50 flex items-center justify-around"
       style={{
-        backgroundColor: "var(--color-card)",
-        borderColor: "var(--color-border)",
-        height: "var(--bottom-nav-height)",
+        height: "56px",
         paddingBottom: "env(safe-area-inset-bottom)",
       }}
     >
       {NAV_ITEMS.map((item) => {
         const isActive = pathname === item.href ||
           (item.href !== "/garden" && pathname.startsWith(item.href));
+        const Icon = item.icon;
 
         return (
           <Link
             key={item.href}
             href={item.href}
-            className="flex flex-col items-center gap-0.5 py-1.5 min-w-[44px] min-h-[44px] justify-center"
-            style={{
-              color: isActive ? "var(--color-primary)" : "var(--color-text-secondary)",
-            }}
+            className="relative flex flex-col items-center gap-0.5 py-1.5 min-w-[44px] min-h-[44px] justify-center"
           >
-            <span className="text-lg">{item.icon}</span>
-            <span className="text-[10px] font-medium">{item.label}</span>
+            {isActive && (
+              <motion.div
+                layoutId="bottomnav-active"
+                className="absolute -top-px left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-primary"
+                transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
+              />
+            )}
+            <Icon className={cn(
+              "h-5 w-5 transition-colors",
+              isActive ? "text-primary" : "text-muted-foreground"
+            )} />
+            <span className={cn(
+              "text-[10px] font-medium transition-colors",
+              isActive ? "text-primary" : "text-muted-foreground"
+            )}>
+              {item.label}
+            </span>
           </Link>
         );
       })}

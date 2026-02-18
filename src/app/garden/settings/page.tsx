@@ -4,9 +4,24 @@ import { useEffect, useState, useCallback } from "react";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { cachedFetch } from "@/lib/garden/fetch-cache";
 import PageHeader from "@/components/garden/page-header";
-import DiaryCard from "@/components/garden/diary-card";
 import ThemeToggle from "@/components/garden/theme-toggle";
 import Link from "next/link";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Download, Trash2 } from "lucide-react";
 
 interface Preferences {
   morning_checkin: boolean;
@@ -25,7 +40,6 @@ export default function SettingsPage() {
   });
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     cachedFetch<{ preferences?: Preferences }>("/api/settings")
@@ -73,10 +87,12 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 animate-pulse max-w-3xl mx-auto">
-        <div className="h-8 w-24 rounded" style={{ backgroundColor: "var(--color-surface)" }} />
-        <div className="h-48 rounded-xl" style={{ backgroundColor: "var(--color-surface)" }} />
-        <div className="h-32 rounded-xl" style={{ backgroundColor: "var(--color-surface)" }} />
+      <div className="space-y-6 max-w-3xl mx-auto">
+        <Skeleton className="h-8 w-24" />
+        <Skeleton className="h-12 rounded-xl" />
+        <Skeleton className="h-48 rounded-xl" />
+        <Skeleton className="h-48 rounded-xl" />
+        <Skeleton className="h-32 rounded-xl" />
       </div>
     );
   }
@@ -86,37 +102,33 @@ export default function SettingsPage() {
       <PageHeader title="Settings" subtitle="Manage your preferences" />
 
       {/* Quick Links */}
-      <DiaryCard>
-        <div className="flex flex-wrap gap-4">
-          <Link href="/garden/profile" className="text-sm underline" style={{ color: "var(--color-primary)" }}>
-            View Profile →
-          </Link>
-          <Link href="/garden/graph" className="text-sm underline" style={{ color: "var(--color-primary)" }}>
-            Knowledge Graph →
-          </Link>
-        </div>
-      </DiaryCard>
+      <Card>
+        <CardContent className="flex flex-wrap gap-4">
+          <Button variant="link" asChild className="h-auto p-0">
+            <Link href="/garden/profile">View Profile &rarr;</Link>
+          </Button>
+          <Button variant="link" asChild className="h-auto p-0">
+            <Link href="/garden/graph">Knowledge Graph &rarr;</Link>
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Appearance */}
-      <DiaryCard>
-        <h2
-          className="text-base font-semibold mb-4"
-          style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}
-        >
-          Appearance
-        </h2>
-        <ThemeToggle />
-      </DiaryCard>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Appearance</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ThemeToggle />
+        </CardContent>
+      </Card>
 
       {/* Notifications */}
-      <DiaryCard>
-        <h2
-          className="text-base font-semibold mb-4"
-          style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}
-        >
-          Notifications
-        </h2>
-        <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Notifications</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <ToggleRow
             label="Morning check-in"
             description="Daily at 8 AM (your timezone)"
@@ -141,93 +153,66 @@ export default function SettingsPage() {
             value={prefs.feature_tips}
             onChange={(v) => updatePref("feature_tips", v)}
           />
-        </div>
-      </DiaryCard>
+        </CardContent>
+      </Card>
 
-      {/* Privacy */}
-      <DiaryCard>
-        <h2
-          className="text-base font-semibold mb-4"
-          style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}
-        >
-          Privacy & Data
-        </h2>
-        <div className="space-y-3">
-          <button
-            onClick={handleExport}
+      {/* Privacy & Data */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Privacy & Data</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Button
+            variant="outline"
+            className="w-full justify-start"
             disabled={exporting}
-            className="w-full text-left px-4 py-3 rounded-lg text-sm border"
-            style={{
-              borderColor: "var(--color-border)",
-              color: "var(--color-text)",
-              opacity: exporting ? 0.5 : 1,
-            }}
+            onClick={handleExport}
           >
+            <Download />
             {exporting ? "Exporting..." : "Export my data (JSON)"}
-          </button>
-          <button
-            onClick={() => setShowDeleteConfirm(true)}
-            className="w-full text-left px-4 py-3 rounded-lg text-sm border"
-            style={{
-              borderColor: "var(--color-danger)",
-              color: "var(--color-danger)",
-            }}
-          >
-            Delete all my data
-          </button>
-        </div>
+          </Button>
 
-        {showDeleteConfirm && (
-          <div
-            className="mt-4 p-4 rounded-lg border"
-            style={{
-              borderColor: "var(--color-danger)",
-              backgroundColor: "var(--color-surface)",
-            }}
-          >
-            <p className="text-sm mb-3" style={{ color: "var(--color-danger)" }}>
-              This will permanently delete all your data including memories, habits, tasks, and reports. This action cannot be undone.
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="px-4 py-2 rounded-lg text-sm"
-                style={{
-                  backgroundColor: "var(--color-border)",
-                  color: "var(--color-text)",
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 rounded-lg text-sm"
-                style={{
-                  backgroundColor: "var(--color-danger)",
-                  color: "white",
-                  opacity: 0.5,
-                  cursor: "not-allowed",
-                }}
-                title="Contact support to delete your account"
-              >
-                Delete (contact support)
-              </button>
-            </div>
-          </div>
-        )}
-      </DiaryCard>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" className="w-full justify-start">
+                <Trash2 />
+                Delete all my data
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete all your data including memories,
+                  habits, tasks, and reports. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  variant="destructive"
+                  disabled
+                  title="Contact support to delete your account"
+                >
+                  Delete (contact support)
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </CardContent>
+      </Card>
 
       {/* About */}
-      <DiaryCard variant="paper">
-        <h2
-          className="text-base font-semibold mb-2"
-          style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}
-        >
-          About Groot
-        </h2>
-        <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
-          Groot is your AI Second Brain on WhatsApp. Version 0.1.0
-        </p>
-      </DiaryCard>
+      <Card className="bg-muted/50">
+        <CardHeader>
+          <CardTitle className="text-base">About Groot</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Groot is your AI Second Brain on WhatsApp. Version 0.1.0
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -244,52 +229,12 @@ function ToggleRow({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: "16px",
-      }}
-    >
-      <div style={{ minWidth: 0 }}>
-        <p className="text-sm font-medium" style={{ color: "var(--color-text)", margin: 0 }}>
-          {label}
-        </p>
-        <p className="text-xs" style={{ color: "var(--color-text-secondary)", margin: 0 }}>
-          {description}
-        </p>
+    <div className="flex items-center justify-between gap-4">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
       </div>
-      <button
-        onClick={() => onChange(!value)}
-        style={{
-          width: 44,
-          height: 24,
-          minWidth: 44,
-          flexShrink: 0,
-          borderRadius: 9999,
-          position: "relative",
-          border: "none",
-          padding: 0,
-          cursor: "pointer",
-          backgroundColor: value ? "var(--color-primary)" : "var(--color-border)",
-          transition: "background-color 0.2s",
-        }}
-      >
-        <span
-          style={{
-            position: "absolute",
-            top: 2,
-            left: value ? 22 : 2,
-            width: 20,
-            height: 20,
-            borderRadius: 9999,
-            backgroundColor: "white",
-            transition: "left 0.2s",
-            boxShadow: "0 1px 2px rgba(0,0,0,0.15)",
-          }}
-        />
-      </button>
+      <Switch checked={value} onCheckedChange={onChange} className="shrink-0" />
     </div>
   );
 }

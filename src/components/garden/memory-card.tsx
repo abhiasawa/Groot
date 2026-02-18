@@ -1,6 +1,11 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { motion } from "motion/react";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { FileText, Mic, Camera, ChevronDown } from "lucide-react";
 import MarkdownContent from "./markdown-content";
 
 interface MemoryCardProps {
@@ -14,16 +19,10 @@ interface MemoryCardProps {
   onToggleExpand: (id: string) => void;
 }
 
-const TYPE_ICONS: Record<string, string> = {
-  text: "\u270D\uFE0F",
-  audio: "\uD83C\uDFA4",
-  image: "\uD83D\uDCF7",
-};
-
-const TYPE_LABELS: Record<string, string> = {
-  text: "Text",
-  audio: "Voice",
-  image: "Photo",
+const TYPE_CONFIG: Record<string, { icon: React.ElementType; label: string }> = {
+  text: { icon: FileText, label: "Text" },
+  audio: { icon: Mic, label: "Voice" },
+  image: { icon: Camera, label: "Photo" },
 };
 
 export default function MemoryCard({
@@ -37,14 +36,11 @@ export default function MemoryCard({
   onToggleExpand,
 }: MemoryCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const [hovered, setHovered] = useState(false);
-
   const time = new Date(createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   const wordCount = content?.split(/\s+/).length ?? 0;
-  const typeIcon = TYPE_ICONS[messageType] ?? "\u270D\uFE0F";
-  const typeLabel = TYPE_LABELS[messageType] ?? "Text";
+  const config = TYPE_CONFIG[messageType] ?? TYPE_CONFIG["text"]!;
+  const Icon = config.icon;
 
-  // Scroll expanded card into view
   useEffect(() => {
     if (isExpanded && cardRef.current) {
       cardRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -52,66 +48,53 @@ export default function MemoryCard({
   }, [isExpanded]);
 
   return (
-    <div
+    <motion.div
       ref={cardRef}
-      className={`transition-all duration-200 break-inside-avoid cursor-pointer${isExpanded ? " [column-span:all]" : ""}`}
-      style={{
-        backgroundColor: "var(--color-paper)",
-        boxShadow: hovered ? "var(--shadow-card-hover, 0 4px 12px rgba(0,0,0,0.1))" : "var(--shadow-paper)",
-        borderRadius: "var(--radius-lg)",
-        border: "1px solid var(--color-border)",
-        borderLeft: `3px solid ${moodColor}`,
-        backgroundImage: "var(--texture-paper)",
-        transform: hovered && !isExpanded ? "translateY(-1px)" : "none",
-      }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onClick={() => onToggleExpand(id)}
+      whileHover={{ y: -1 }}
+      transition={{ duration: 0.15 }}
     >
-      {/* Header: type badge + mood dot + timestamp */}
-      <div className="flex items-center gap-2 px-5 pt-4 pb-2">
-        <span
-          className="text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1"
-          style={{ backgroundColor: "var(--color-surface)", color: "var(--color-text-secondary)" }}
-        >
-          <span>{typeIcon}</span> {typeLabel}
-        </span>
-        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: moodColor }} />
-        <span className="text-[11px] ml-auto" style={{ color: "var(--color-text-secondary)" }}>{time}</span>
-      </div>
-
-      {/* Content */}
-      <div className="px-5 pb-2">
-        {isExpanded ? (
-          <MarkdownContent content={content} />
-        ) : (
-          <MarkdownContent content={content} truncate={200} />
+      <Card
+        className={cn(
+          "cursor-pointer transition-all duration-200 hover:shadow-md overflow-hidden",
+          isExpanded && "col-span-full"
         )}
-
-        {mediaDescription && (
-          <p className="text-xs mt-2 italic" style={{ color: "var(--color-text-secondary)" }}>
-            {mediaDescription}
-          </p>
-        )}
-      </div>
-
-      {/* Footer */}
-      <div
-        className="flex items-center gap-3 px-5 py-3 flex-wrap"
-        style={{ borderTop: "1px dashed var(--color-border)", opacity: 0.7 }}
+        style={{ borderLeft: `3px solid ${moodColor}` }}
+        onClick={() => onToggleExpand(id)}
       >
-        {wordCount > 0 && (
-          <span className="text-[11px]" style={{ color: "var(--color-text-secondary)" }}>
-            {wordCount} words
+        {/* Header */}
+        <div className="flex items-center gap-2 px-5 pt-4 pb-2">
+          <Badge variant="secondary" className="text-[10px] px-2 py-0.5 gap-1">
+            <Icon className="h-3 w-3" />
+            {config.label}
+          </Badge>
+          <div className="h-2 w-2 rounded-full" style={{ backgroundColor: moodColor }} />
+          <span className="text-[11px] text-muted-foreground ml-auto">{time}</span>
+        </div>
+
+        {/* Content */}
+        <div className="px-5 pb-2">
+          <MarkdownContent content={content} truncate={isExpanded ? undefined : 200} />
+
+          {mediaDescription && (
+            <p className="text-xs mt-2 italic text-muted-foreground">
+              {mediaDescription}
+            </p>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center gap-3 px-5 py-3 border-t border-dashed border-border opacity-70">
+          {wordCount > 0 && (
+            <span className="text-[11px] text-muted-foreground">
+              {wordCount} words
+            </span>
+          )}
+          <span className="text-[11px] text-primary ml-auto flex items-center gap-1">
+            {isExpanded ? "Show less" : "Read more"}
+            <ChevronDown className={cn("h-3 w-3 transition-transform", isExpanded && "rotate-180")} />
           </span>
-        )}
-        <span
-          className="text-[11px] ml-auto"
-          style={{ color: "var(--color-primary)", cursor: "pointer" }}
-        >
-          {isExpanded ? "Show less" : "Read more"}
-        </span>
-      </div>
-    </div>
+        </div>
+      </Card>
+    </motion.div>
   );
 }

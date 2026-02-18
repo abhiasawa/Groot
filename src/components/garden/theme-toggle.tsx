@@ -1,11 +1,14 @@
 "use client";
 
 import { useTheme } from "@/contexts/theme-context";
+import { Button } from "@/components/ui/button";
+import { Sun, Moon, Monitor, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const OPTIONS = [
-  { value: "light" as const, label: "Light", icon: "\u2600\uFE0F" },
-  { value: "dark" as const, label: "Dark", icon: "\uD83C\uDF19" },
-  { value: "system" as const, label: "System", icon: "\uD83D\uDCBB" },
+  { value: "light" as const, label: "Light", icon: Sun },
+  { value: "dark" as const, label: "Dark", icon: Moon },
+  { value: "system" as const, label: "System", icon: Monitor },
 ];
 
 export default function ThemeToggle() {
@@ -13,27 +16,28 @@ export default function ThemeToggle() {
 
   return (
     <div className="space-y-3">
-      {OPTIONS.map((option) => (
-        <button
-          key={option.value}
-          onClick={() => setTheme(option.value)}
-          className="flex items-center justify-between w-full px-4 py-3 rounded-lg text-sm transition-colors"
-          style={{
-            backgroundColor: theme === option.value ? "var(--color-surface)" : "transparent",
-            color: "var(--color-text)",
-            border: theme === option.value ? "1px solid var(--color-primary)" : "1px solid var(--color-border)",
-          }}
-        >
-          <div className="flex items-center gap-3">
-            <span>{option.icon}</span>
-            <span>{option.label}</span>
-          </div>
-          {theme === option.value && (
-            <span style={{ color: "var(--color-primary)" }}>{"\u2713"}</span>
-          )}
-        </button>
-      ))}
-      <p className="text-xs" style={{ color: "var(--color-text-secondary)" }}>
+      {OPTIONS.map((option) => {
+        const isSelected = theme === option.value;
+        const Icon = option.icon;
+        return (
+          <Button
+            key={option.value}
+            variant="outline"
+            className={cn(
+              "w-full justify-between px-4 py-3 h-auto",
+              isSelected && "border-primary bg-secondary"
+            )}
+            onClick={() => setTheme(option.value)}
+          >
+            <div className="flex items-center gap-3">
+              <Icon className="h-4 w-4" />
+              <span>{option.label}</span>
+            </div>
+            {isSelected && <Check className="h-4 w-4 text-primary" />}
+          </Button>
+        );
+      })}
+      <p className="text-xs text-muted-foreground">
         Currently: {resolvedTheme} mode{theme === "system" ? " (following system)" : ""}
       </p>
     </div>

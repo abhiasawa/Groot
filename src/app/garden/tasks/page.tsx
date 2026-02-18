@@ -3,7 +3,18 @@
 import { useEffect, useState, useCallback } from "react";
 import { cachedFetch } from "@/lib/garden/fetch-cache";
 import PageHeader from "@/components/garden/page-header";
-import DiaryCard from "@/components/garden/diary-card";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { CheckSquare, ChevronRight } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { cn } from "@/lib/utils";
 
 interface Task {
   id: string;
@@ -42,10 +53,10 @@ export default function TasksPage() {
 
   if (loading) {
     return (
-      <div className="space-y-4 animate-pulse max-w-3xl mx-auto">
-        <div className="h-8 w-24 rounded" style={{ backgroundColor: "var(--color-surface)" }} />
+      <div className="space-y-4 max-w-3xl mx-auto">
+        <Skeleton className="h-8 w-24" />
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="h-14 rounded-xl" style={{ backgroundColor: "var(--color-surface)" }} />
+          <Skeleton key={i} className="h-14 rounded-xl" />
         ))}
       </div>
     );
@@ -54,7 +65,7 @@ export default function TasksPage() {
   const pending = tasks.filter((t) => !t.is_completed);
   const done = tasks.filter((t) => t.is_completed);
   const now = new Date();
-  const overdueCount = pending.filter(t => t.due_date && new Date(t.due_date) < now).length;
+  const overdueCount = pending.filter((t) => t.due_date && new Date(t.due_date) < now).length;
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
@@ -64,103 +75,133 @@ export default function TasksPage() {
       />
 
       {tasks.length === 0 ? (
-        <DiaryCard variant="paper" className="text-center !py-10">
-          <span className="text-4xl block mb-3">&#x2705;</span>
-          <p className="font-medium text-base mb-1" style={{ color: "var(--color-text)", fontFamily: "var(--font-heading)" }}>
-            No tasks yet
-          </p>
-          <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
-            Tell Groot on WhatsApp what you need to do — he&apos;ll track it for you.
-          </p>
-        </DiaryCard>
+        <Card className="text-center py-10">
+          <div className="flex flex-col items-center gap-3 px-6">
+            <CheckSquare className="size-10 text-muted-foreground" />
+            <p className="font-medium text-base text-foreground">
+              No tasks yet
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Tell Groot on WhatsApp what you need to do — he&apos;ll track it for you.
+            </p>
+          </div>
+        </Card>
       ) : (
         <>
           {/* Pending tasks */}
           <section>
-            <p className="text-[11px] uppercase tracking-[0.15em] mb-3" style={{ color: "var(--color-text-secondary)", fontWeight: 600 }}>
+            <p className="text-[11px] uppercase tracking-[0.15em] mb-3 font-semibold text-muted-foreground">
               To Do
             </p>
             <div className="space-y-2">
-              {pending.map((t) => {
-                const isOverdue = t.due_date && new Date(t.due_date) < now;
-                return (
-                  <DiaryCard
-                    key={t.id}
-                    variant="paper"
-                    onClick={() => toggleTask(t.id, t.is_completed)}
-                    className="!p-4"
-                    style={isOverdue ? { borderLeft: "3px solid var(--color-danger)" } : undefined}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-[18px] h-[18px] rounded-full border-2 shrink-0 transition-colors"
-                        style={{ borderColor: isOverdue ? "var(--color-danger)" : "var(--color-primary)", opacity: 0.7 }}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className="text-sm"
-                          style={{ color: "var(--color-text)", fontFamily: "var(--font-diary)", lineHeight: 1.5 }}
-                        >
-                          {t.content}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[11px]" style={{ color: "var(--color-text-secondary)" }}>
-                            {new Date(t.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                          </span>
-                          {t.due_date && (
-                            <>
-                              <span className="text-[11px]" style={{ color: "var(--color-border)" }}>&#x2022;</span>
-                              <span
-                                className="text-[11px] font-medium"
-                                style={{ color: isOverdue ? "var(--color-danger)" : "var(--color-text-secondary)" }}
-                              >
-                                {isOverdue ? "Overdue" : `Due ${new Date(t.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
+              <AnimatePresence mode="popLayout">
+                {pending.map((t) => {
+                  const isOverdue = t.due_date && new Date(t.due_date) < now;
+                  return (
+                    <motion.div
+                      key={t.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <Card
+                        className={cn(
+                          "!p-4 cursor-pointer hover:bg-muted/50 transition-colors",
+                          isOverdue && "border-l-[3px] border-l-destructive"
+                        )}
+                        onClick={() => toggleTask(t.id, t.is_completed)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Checkbox
+                            checked={false}
+                            className={cn(
+                              "shrink-0",
+                              isOverdue && "border-destructive"
+                            )}
+                            onClick={(e) => e.stopPropagation()}
+                            onCheckedChange={() => toggleTask(t.id, t.is_completed)}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-foreground leading-relaxed">
+                              {t.content}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[11px] text-muted-foreground">
+                                {new Date(t.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                               </span>
-                            </>
-                          )}
+                              {t.due_date && (
+                                <>
+                                  <span className="text-[11px] text-border">&#x2022;</span>
+                                  {isOverdue ? (
+                                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                                      Overdue
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-[11px] font-medium text-muted-foreground">
+                                      Due {new Date(t.due_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                    </span>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  </DiaryCard>
-                );
-              })}
+                      </Card>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
             </div>
           </section>
 
           {/* Done tasks */}
           {done.length > 0 && (
-            <section>
-              <button
-                onClick={() => setShowDone(!showDone)}
-                className="flex items-center gap-2 text-[11px] uppercase tracking-[0.15em] mb-3 transition-colors"
-                style={{ color: "var(--color-text-secondary)", fontWeight: 600 }}
-              >
-                <span className="transition-transform" style={{ display: "inline-block", transform: showDone ? "rotate(90deg)" : "none" }}>&#x25B8;</span>
+            <Collapsible open={showDone} onOpenChange={setShowDone}>
+              <CollapsibleTrigger className="flex items-center gap-2 text-[11px] uppercase tracking-[0.15em] mb-3 font-semibold text-muted-foreground transition-colors hover:text-foreground">
+                <ChevronRight
+                  className={cn(
+                    "size-3.5 transition-transform duration-200",
+                    showDone && "rotate-90"
+                  )}
+                />
                 {done.length} completed
-              </button>
-              {showDone && (
+              </CollapsibleTrigger>
+              <CollapsibleContent>
                 <div className="space-y-2">
-                  {done.map((t) => (
-                    <DiaryCard key={t.id} onClick={() => toggleTask(t.id, t.is_completed)} className="!p-4" style={{ opacity: 0.5 }}>
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="w-[18px] h-[18px] rounded-full shrink-0 flex items-center justify-center"
-                          style={{ backgroundColor: "var(--color-primary)" }}
+                  <AnimatePresence mode="popLayout">
+                    {done.map((t) => (
+                      <motion.div
+                        key={t.id}
+                        layout
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 0.5, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <Card
+                          className="!p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                          onClick={() => toggleTask(t.id, t.is_completed)}
                         >
-                          <span className="text-white text-[9px]">&#x2713;</span>
-                        </div>
-                        <p
-                          className="text-sm line-through"
-                          style={{ color: "var(--color-text-secondary)", fontFamily: "var(--font-diary)" }}
-                        >
-                          {t.content}
-                        </p>
-                      </div>
-                    </DiaryCard>
-                  ))}
+                          <div className="flex items-center gap-3">
+                            <Checkbox
+                              checked={true}
+                              className="shrink-0"
+                              onClick={(e) => e.stopPropagation()}
+                              onCheckedChange={() => toggleTask(t.id, t.is_completed)}
+                            />
+                            <p className="text-sm line-through text-muted-foreground">
+                              {t.content}
+                            </p>
+                          </div>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
                 </div>
-              )}
-            </section>
+              </CollapsibleContent>
+            </Collapsible>
           )}
         </>
       )}

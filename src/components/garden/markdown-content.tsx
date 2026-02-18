@@ -12,81 +12,62 @@ interface MarkdownContentProps {
 
 const components: Components = {
   h1: ({ children }) => (
-    <h1 style={{ fontFamily: "var(--font-heading)", fontSize: "var(--text-2xl)", color: "var(--color-text)", letterSpacing: "var(--tracking-heading)", marginTop: "var(--space-6)", marginBottom: "var(--space-3)" }}>
+    <h1 className="text-2xl font-bold text-foreground tracking-tight mt-6 mb-3">
       {children}
     </h1>
   ),
   h2: ({ children }) => (
-    <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "var(--text-xl)", color: "var(--color-text)", letterSpacing: "var(--tracking-heading)", marginTop: "var(--space-5)", marginBottom: "var(--space-2)" }}>
+    <h2 className="text-xl font-bold text-foreground tracking-tight mt-5 mb-2">
       {children}
     </h2>
   ),
   h3: ({ children }) => (
-    <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "var(--text-lg)", color: "var(--color-text)", marginTop: "var(--space-4)", marginBottom: "var(--space-2)" }}>
+    <h3 className="text-lg font-semibold text-foreground mt-4 mb-2">
       {children}
     </h3>
   ),
   p: ({ children }) => (
-    <p style={{ color: "var(--color-text)", fontFamily: "var(--font-diary)", lineHeight: 1.75, marginBottom: "var(--space-3)" }}>
+    <p className="text-foreground leading-[1.75] mb-3">
       {children}
     </p>
   ),
   strong: ({ children }) => (
-    <strong style={{ fontWeight: 600, color: "var(--color-text)" }}>{children}</strong>
+    <strong className="font-semibold text-foreground">{children}</strong>
   ),
   em: ({ children }) => (
-    <em style={{ fontStyle: "italic" }}>{children}</em>
+    <em className="italic">{children}</em>
   ),
   code: ({ children, className }) => {
     if (className) {
       return (
-        <code
-          className={className}
-          style={{
-            display: "block",
-            padding: "var(--space-4)",
-            borderRadius: "var(--radius-md)",
-            backgroundColor: "var(--color-surface)",
-            fontFamily: "var(--font-mono)",
-            fontSize: "var(--text-sm)",
-            overflowX: "auto",
-            lineHeight: 1.6,
-          }}
-        >
+        <code className={`${className} block p-4 rounded-md bg-muted font-mono text-sm overflow-x-auto leading-relaxed`}>
           {children}
         </code>
       );
     }
     return (
-      <code style={{
-        padding: "2px 6px",
-        borderRadius: "var(--radius-sm)",
-        backgroundColor: "var(--color-surface)",
-        fontFamily: "var(--font-mono)",
-        fontSize: "0.9em",
-        color: "var(--color-accent)",
-      }}>
+      <code className="px-1.5 py-0.5 rounded-sm bg-muted font-mono text-[0.9em] text-accent">
         {children}
       </code>
     );
   },
   pre: ({ children }) => (
-    <pre style={{ margin: "var(--space-3) 0", overflow: "auto" }}>
+    <pre className="my-3 overflow-auto">
       {children}
     </pre>
   ),
   ul: ({ children }) => (
-    <ul style={{ paddingLeft: "var(--space-6)", marginBottom: "var(--space-3)", listStyleType: "disc" }}>
+    <ul className="pl-6 mb-3 list-disc">
       {children}
     </ul>
   ),
   ol: ({ children }) => (
-    <ol style={{ paddingLeft: "var(--space-6)", marginBottom: "var(--space-3)", listStyleType: "decimal" }}>
+    <ol className="pl-6 mb-3 list-decimal">
       {children}
     </ol>
   ),
   li: ({ children }) => (
-    <li style={{ color: "var(--color-text)", fontFamily: "var(--font-diary)", lineHeight: 1.75, marginBottom: "var(--space-1)" }}>
+    <li className="text-foreground leading-[1.75] mb-1">
       {children}
     </li>
   ),
@@ -94,7 +75,7 @@ const components: Components = {
     <input
       {...props}
       disabled
-      style={{ marginRight: "var(--space-2)", accentColor: "var(--color-primary)" }}
+      className="mr-2 accent-primary"
     />
   ),
   a: ({ children, href }) => (
@@ -102,62 +83,44 @@ const components: Components = {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      style={{ color: "var(--color-primary)", textDecoration: "underline", textUnderlineOffset: "2px" }}
+      className="text-primary underline underline-offset-2 hover:text-primary/80"
     >
       {children}
     </a>
   ),
   table: ({ children }) => (
-    <div style={{ overflowX: "auto", marginBottom: "var(--space-3)" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "var(--text-sm)" }}>
+    <div className="overflow-x-auto mb-3">
+      <table className="w-full border-collapse text-sm">
         {children}
       </table>
     </div>
   ),
   th: ({ children }) => (
-    <th style={{
-      textAlign: "left",
-      padding: "var(--space-2) var(--space-3)",
-      borderBottom: "2px solid var(--color-border)",
-      fontWeight: 600,
-      color: "var(--color-text)",
-      fontSize: "var(--text-sm)",
-    }}>
+    <th className="text-left px-3 py-2 border-b-2 border-border font-semibold text-foreground text-sm">
       {children}
     </th>
   ),
   td: ({ children }) => (
-    <td style={{
-      padding: "var(--space-2) var(--space-3)",
-      borderBottom: "1px solid var(--color-border)",
-      color: "var(--color-text)",
-    }}>
+    <td className="px-3 py-2 border-b border-border text-foreground">
       {children}
     </td>
   ),
   blockquote: ({ children }) => (
-    <blockquote style={{
-      borderLeft: "3px solid var(--color-accent)",
-      paddingLeft: "var(--space-4)",
-      margin: "var(--space-3) 0",
-      color: "var(--color-text-secondary)",
-      fontStyle: "italic",
-    }}>
+    <blockquote className="border-l-[3px] border-accent pl-4 my-3 text-muted-foreground italic">
       {children}
     </blockquote>
   ),
   hr: () => (
-    <hr style={{ border: "none", height: "1px", backgroundColor: "var(--color-border)", margin: "var(--space-6) 0" }} />
+    <hr className="border-none h-px bg-border my-6" />
   ),
   del: ({ children }) => (
-    <del style={{ color: "var(--color-text-secondary)" }}>{children}</del>
+    <del className="text-muted-foreground">{children}</del>
   ),
 };
 
 function truncateMarkdown(text: string, limit: number): string {
   if (text.length <= limit) return text;
 
-  // Find a clean break point: end of a line, sentence, or word boundary
   let cutoff = limit;
   const lineBreak = text.lastIndexOf("\n", limit);
   if (lineBreak > limit * 0.6) {
@@ -169,7 +132,6 @@ function truncateMarkdown(text: string, limit: number): string {
 
   let result = text.slice(0, cutoff);
 
-  // Close any unclosed bold/italic markers
   const boldCount = (result.match(/\*\*/g) ?? []).length;
   if (boldCount % 2 !== 0) result += "**";
   const italicCount = (result.match(/(?<!\*)\*(?!\*)/g) ?? []).length;

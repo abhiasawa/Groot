@@ -1,10 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { ChevronRight, Users } from "lucide-react";
 import { cachedFetch } from "@/lib/garden/fetch-cache";
 import PageHeader from "@/components/garden/page-header";
-import DiaryCard from "@/components/garden/diary-card";
 import MarkdownContent from "@/components/garden/markdown-content";
+import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 
 interface Person {
   name: string;
@@ -59,11 +70,11 @@ export default function PeoplePage() {
 
   if (loading) {
     return (
-      <div className="space-y-4 animate-pulse">
-        <div className="h-8 w-32 rounded" style={{ backgroundColor: "var(--color-surface)" }} />
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-32" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-24 rounded-xl" style={{ backgroundColor: "var(--color-surface)" }} />
+            <Skeleton key={i} className="h-24 rounded-xl" />
           ))}
         </div>
       </div>
@@ -75,15 +86,17 @@ export default function PeoplePage() {
       <PageHeader title="People" subtitle="People from your conversations" />
 
       {people.length === 0 ? (
-        <DiaryCard variant="paper" className="text-center !py-10">
-          <span className="text-4xl block mb-3">&#x1F465;</span>
-          <p className="font-medium text-base mb-1" style={{ color: "var(--color-text)", fontFamily: "var(--font-heading)" }}>
-            No people tracked yet
-          </p>
-          <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
-            As you talk to Groot about the people in your life, they&apos;ll appear here automatically.
-          </p>
-        </DiaryCard>
+        <Card className="py-10">
+          <CardContent className="flex flex-col items-center text-center">
+            <Users className="size-10 text-muted-foreground mb-3" />
+            <p className="font-medium text-base mb-1 text-foreground">
+              No people tracked yet
+            </p>
+            <p className="text-sm text-muted-foreground">
+              As you talk to Groot about the people in your life, they&apos;ll appear here automatically.
+            </p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {people.map((person) => {
@@ -91,91 +104,102 @@ export default function PeoplePage() {
             const isExpanded = expandedPerson === person.name;
 
             return (
-              <div key={person.name}>
-                <DiaryCard
-                  variant="paper"
-                  onClick={() => handleExpand(person.name)}
-                  className="!p-4"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-11 h-11 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 shadow-sm"
-                      style={{ backgroundColor: avatarColor, color: "white" }}
-                    >
-                      {person.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p
-                          className="font-medium text-sm truncate"
-                          style={{ color: "var(--color-text)", fontFamily: "var(--font-heading)" }}
-                        >
-                          {person.name}
-                        </p>
-                        <span
-                          className="text-[9px] px-1.5 py-0.5 rounded-full shrink-0 uppercase tracking-wide"
-                          style={{
-                            backgroundColor: person.mentionCount >= 10 ? "var(--color-primary)" : person.mentionCount >= 5 ? "var(--color-accent)" : "var(--color-surface)",
-                            color: person.mentionCount >= 5 ? "white" : "var(--color-text-secondary)",
-                          }}
-                        >
-                          {person.mentionCount >= 10 ? "frequent" : person.mentionCount >= 5 ? "regular" : "few"}
-                        </span>
-                      </div>
-                      {person.relationship && (
-                        <p
-                          className="text-xs capitalize mt-0.5"
-                          style={{ color: "var(--color-text-secondary)" }}
-                        >
-                          {person.relationship}
-                        </p>
-                      )}
-                      {person.lastMentioned && (
-                        <p className="text-[11px] mt-0.5" style={{ color: "var(--color-text-secondary)" }}>
-                          Last mentioned {new Date(person.lastMentioned).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                        </p>
-                      )}
-                    </div>
-                    <span className="text-xs transition-transform" style={{ color: "var(--color-text-secondary)", transform: isExpanded ? "rotate(90deg)" : "none" }}>
-                      &#x25B8;
-                    </span>
-                  </div>
-                </DiaryCard>
+              <Collapsible
+                key={person.name}
+                open={isExpanded}
+                onOpenChange={() => handleExpand(person.name)}
+              >
+                <motion.div whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
+                  <CollapsibleTrigger asChild>
+                    <Card className="cursor-pointer py-0 transition-shadow hover:shadow-md">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="size-11">
+                            <AvatarFallback
+                              className="text-sm font-semibold text-white"
+                              style={{ backgroundColor: avatarColor }}
+                            >
+                              {person.name.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-sm truncate text-foreground">
+                                {person.name}
+                              </p>
+                              <Badge
+                                variant={
+                                  person.mentionCount >= 10
+                                    ? "default"
+                                    : person.mentionCount >= 5
+                                      ? "secondary"
+                                      : "outline"
+                                }
+                                className="text-[9px] uppercase tracking-wide"
+                              >
+                                {person.mentionCount >= 10 ? "frequent" : person.mentionCount >= 5 ? "regular" : "few"}
+                              </Badge>
+                            </div>
+                            {person.relationship && (
+                              <p className="text-xs capitalize mt-0.5 text-muted-foreground">
+                                {person.relationship}
+                              </p>
+                            )}
+                            {person.lastMentioned && (
+                              <p className="text-[11px] mt-0.5 text-muted-foreground">
+                                Last mentioned {new Date(person.lastMentioned).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                              </p>
+                            )}
+                          </div>
+                          <ChevronRight
+                            className={cn(
+                              "size-4 shrink-0 text-muted-foreground transition-transform duration-200",
+                              isExpanded && "rotate-90"
+                            )}
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </CollapsibleTrigger>
+                </motion.div>
 
                 {/* Expanded: related memories */}
-                {isExpanded && (
-                  <div className="mt-2 ml-6 space-y-2 relative">
-                    {/* Connecting line */}
-                    <div className="absolute left-0 top-0 bottom-0 w-[2px] rounded-full -ml-3" style={{ backgroundColor: avatarColor, opacity: 0.3 }} />
+                <CollapsibleContent>
+                  <AnimatePresence>
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="mt-2 ml-6 space-y-2 relative"
+                    >
+                      {/* Connecting line */}
+                      <div
+                        className="absolute left-0 top-0 bottom-0 w-0.5 rounded-full -ml-3 opacity-30"
+                        style={{ backgroundColor: avatarColor }}
+                      />
 
-                    {loadingMemories ? (
-                      <div className="h-16 rounded-lg animate-pulse" style={{ backgroundColor: "var(--color-surface)" }} />
-                    ) : personMemories.length === 0 ? (
-                      <p className="text-xs py-2" style={{ color: "var(--color-text-secondary)" }}>
-                        No related memories found.
-                      </p>
-                    ) : (
-                      personMemories.map((m) => (
-                        <div
-                          key={m.id}
-                          className="p-3 rounded-xl text-xs"
-                          style={{
-                            backgroundColor: "var(--color-paper)",
-                            boxShadow: "var(--shadow-paper)",
-                            border: "1px solid var(--color-border)",
-                            color: "var(--color-text)",
-                          }}
-                        >
-                          <MarkdownContent content={typeof m.content === "string" ? m.content : ""} className="line-clamp-2" />
-                          <p className="mt-1.5 text-[10px]" style={{ color: "var(--color-text-secondary)" }}>
-                            {new Date(m.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                          </p>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
-              </div>
+                      {loadingMemories ? (
+                        <Skeleton className="h-16 rounded-lg" />
+                      ) : personMemories.length === 0 ? (
+                        <p className="text-xs py-2 text-muted-foreground">
+                          No related memories found.
+                        </p>
+                      ) : (
+                        personMemories.map((m) => (
+                          <Card key={m.id} className="py-0">
+                            <CardContent className="p-3">
+                              <MarkdownContent content={typeof m.content === "string" ? m.content : ""} className="text-xs line-clamp-2" />
+                              <p className="mt-1.5 text-[10px] text-muted-foreground">
+                                {new Date(m.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                              </p>
+                            </CardContent>
+                          </Card>
+                        ))
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                </CollapsibleContent>
+              </Collapsible>
             );
           })}
         </div>

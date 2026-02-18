@@ -2,9 +2,20 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
+import { Network } from "lucide-react";
 import { cachedFetch } from "@/lib/garden/fetch-cache";
 import PageHeader from "@/components/garden/page-header";
-import DiaryCard from "@/components/garden/diary-card";
+import { BackgroundGradient } from "@/components/aceternity/background-gradient";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 
 const ForceGraph = dynamic(() => import("react-force-graph-2d"), { ssr: false });
 
@@ -44,9 +55,9 @@ export default function GraphPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-8 w-40 rounded" style={{ backgroundColor: "var(--color-surface)" }} />
-        <div className="h-[60vh] rounded-xl" style={{ backgroundColor: "var(--color-surface)" }} />
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-40" />
+        <Skeleton className="h-[60vh] rounded-xl" />
       </div>
     );
   }
@@ -56,60 +67,57 @@ export default function GraphPage() {
       <PageHeader title="Knowledge Graph" subtitle="Connections between your memories" />
 
       {graphData.nodes.length === 0 ? (
-        <DiaryCard variant="paper" className="text-center">
-          <span className="text-3xl block mb-2">🕸️</span>
-          <p className="font-medium" style={{ color: "var(--color-text)" }}>Your knowledge graph is empty</p>
-          <p className="text-sm mt-1" style={{ color: "var(--color-text-secondary)" }}>
-            Share more with Groot — connections between your memories will appear here.
-          </p>
-        </DiaryCard>
+        <Card className="py-10">
+          <CardContent className="flex flex-col items-center text-center">
+            <Network className="size-10 text-muted-foreground mb-3" />
+            <p className="font-medium text-foreground">Your knowledge graph is empty</p>
+            <p className="text-sm mt-1 text-muted-foreground">
+              Share more with Groot -- connections between your memories will appear here.
+            </p>
+          </CardContent>
+        </Card>
       ) : (
-        <DiaryCard className="!p-0 overflow-hidden" style={{ height: "60vh" }}>
-          <ForceGraph
-            graphData={graphData}
-            nodeLabel="label"
-            nodeColor={(node) => {
-              const n = node as GraphNode;
-              return n.type === "profile" ? "#D9730D" : "#2383E2";
-            }}
-            nodeVal={(node) => (node as GraphNode).size}
-            linkColor={() => "#E3E2E0"}
-            linkWidth={() => 1}
-            onNodeClick={(node) => setSelectedNode(node as GraphNode)}
-            width={typeof window !== "undefined" ? Math.min(window.innerWidth - 40, 1100) : 800}
-            height={500}
-          />
-        </DiaryCard>
+        <BackgroundGradient containerClassName="rounded-xl">
+          <Card className="overflow-hidden p-0">
+            <CardContent className="p-0 h-[60vh]">
+              <ForceGraph
+                graphData={graphData}
+                nodeLabel="label"
+                nodeColor={(node) => {
+                  const n = node as GraphNode;
+                  return n.type === "profile" ? "#D9730D" : "#2383E2";
+                }}
+                nodeVal={(node) => (node as GraphNode).size}
+                linkColor={() => "hsl(var(--border))"}
+                linkWidth={() => 1}
+                onNodeClick={(node) => setSelectedNode(node as GraphNode)}
+                width={typeof window !== "undefined" ? Math.min(window.innerWidth - 40, 1100) : 800}
+                height={500}
+              />
+            </CardContent>
+          </Card>
+        </BackgroundGradient>
       )}
 
-      {/* Node Detail Panel */}
-      {selectedNode && (
-        <DiaryCard>
-          <div className="flex justify-between items-start">
-            <div>
-              <span
-                className="text-[10px] px-2 py-0.5 rounded-full uppercase"
-                style={{
-                  backgroundColor: "var(--color-surface)",
-                  color: "var(--color-text-secondary)",
-                }}
-              >
-                {selectedNode.type}
-              </span>
-              <p className="text-sm mt-2" style={{ color: "var(--color-text)" }}>
-                {selectedNode.content}
-              </p>
+      {/* Node Detail Sheet */}
+      <Sheet open={!!selectedNode} onOpenChange={(open) => { if (!open) setSelectedNode(null); }}>
+        <SheetContent side="right">
+          <SheetHeader>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-[10px] uppercase">
+                {selectedNode?.type}
+              </Badge>
             </div>
-            <button
-              onClick={() => setSelectedNode(null)}
-              className="text-sm"
-              style={{ color: "var(--color-text-secondary)" }}
-            >
-              Close
-            </button>
+            <SheetTitle>{selectedNode?.label}</SheetTitle>
+            <SheetDescription>Memory detail</SheetDescription>
+          </SheetHeader>
+          <div className="px-4 pb-4">
+            <p className="text-sm text-foreground leading-relaxed">
+              {selectedNode?.content}
+            </p>
           </div>
-        </DiaryCard>
-      )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

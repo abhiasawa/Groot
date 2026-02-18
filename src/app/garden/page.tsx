@@ -2,10 +2,19 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { cachedFetch } from "@/lib/garden/fetch-cache";
-import DiaryCard from "@/components/garden/diary-card";
-import MarkdownContent from "@/components/garden/markdown-content";
 import Link from "next/link";
+import { motion } from "motion/react";
+import { Search, Sprout, Heart, BarChart3, Lightbulb, Brain, CheckCircle2, Bell } from "lucide-react";
+import { cachedFetch } from "@/lib/garden/fetch-cache";
+import MarkdownContent from "@/components/garden/markdown-content";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
+import { NumberTicker } from "@/components/magicui/number-ticker";
+import { SparklesText } from "@/components/magicui/sparkles-text";
+import { BentoGrid, BentoGridItem } from "@/components/aceternity/bento-grid";
+import { cn } from "@/lib/utils";
 
 interface HomeData {
   displayName: string;
@@ -27,6 +36,24 @@ const MOOD_ACCENTS: Record<string, string> = {
   low: "var(--color-mood-low)", tired: "var(--color-mood-low)", anxious: "var(--color-mood-low)",
   stressed: "var(--color-mood-low)", bad: "var(--color-mood-bad)", sad: "var(--color-mood-bad)",
 };
+
+const MOOD_TW: Record<string, string> = {
+  positive: "text-mood-good", good: "text-mood-good", great: "text-mood-great",
+  happy: "text-mood-great", calm: "text-mood-good", motivated: "text-mood-good",
+  neutral: "text-mood-okay", okay: "text-mood-okay", fine: "text-mood-okay",
+  low: "text-mood-low", tired: "text-mood-low", anxious: "text-mood-low",
+  stressed: "text-mood-low", bad: "text-mood-bad", sad: "text-mood-bad",
+};
+
+const MOOD_BG_TW: Record<string, string> = {
+  positive: "bg-mood-good", good: "bg-mood-good", great: "bg-mood-great",
+  happy: "bg-mood-great", calm: "bg-mood-good", motivated: "bg-mood-good",
+  neutral: "bg-mood-okay", okay: "bg-mood-okay", fine: "bg-mood-okay",
+  low: "bg-mood-low", tired: "bg-mood-low", anxious: "bg-mood-low",
+  stressed: "bg-mood-low", bad: "bg-mood-bad", sad: "bg-mood-bad",
+};
+
+const STAT_COLORS = ["text-primary", "text-accent", "text-muted-foreground", "text-muted-foreground"] as const;
 
 export default function GardenHome() {
   const [data, setData] = useState<HomeData | null>(null);
@@ -53,183 +80,185 @@ export default function GardenHome() {
   const todayFormatted = today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
   const memberDays = data?.createdAt ? Math.max(1, Math.floor((Date.now() - new Date(data.createdAt).getTime()) / (1000 * 60 * 60 * 24))) : 0;
 
-  if (loading) return <LoadingSkeleton />;
-  if (!data) return <LoadingSkeleton />;
+  if (loading || !data) return <LoadingSkeleton />;
 
   const displayName = data.displayName || "friend";
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
-  const moodColor = data.recentMood ? (MOOD_ACCENTS[data.recentMood.toLowerCase()] ?? "var(--color-mood-okay)") : null;
+  const moodKey = data.recentMood?.toLowerCase() ?? "";
+  const moodTwColor = MOOD_TW[moodKey] ?? "text-mood-okay";
+  const moodBgTwColor = MOOD_BG_TW[moodKey] ?? "bg-border";
+
+  const stats = [
+    { value: data.memoriesCount, label: "memories", href: "/garden/journal" },
+    { value: data.pendingTasks, label: "tasks pending", href: "/garden/tasks" },
+    { value: data.peopleCount, label: "people", href: "/garden/people" },
+    { value: memberDays, label: "days together" },
+  ] as const;
+
+  const quickLinks = [
+    { href: "/garden/mood", icon: <Heart className="size-5 text-mood-good" />, label: "Mood Patterns", description: "Your emotional journey" },
+    { href: "/garden/habits", icon: <BarChart3 className="size-5 text-primary" />, label: "Habits", description: "Streaks and progress" },
+    { href: "/garden/insights", icon: <Lightbulb className="size-5 text-mood-okay" />, label: "Insights", description: "Weekly reflections" },
+    { href: "/garden/profile", icon: <Brain className="size-5 text-accent" />, label: "Profile", description: "What Groot knows" },
+  ] as const;
 
   return (
     <div className="space-y-10 max-w-3xl mx-auto">
-      {/* ─── Greeting Hero ─── */}
+      {/* Greeting Hero */}
       <header className="pt-4">
-        <p
-          className="text-xs uppercase tracking-[0.2em] mb-3"
-          style={{ color: "var(--color-text-secondary)", fontFamily: "var(--font-body)" }}
-        >
+        <p className="text-xs uppercase tracking-widest mb-3 text-muted-foreground">
           {todayFormatted}
         </p>
-        <h1
-          style={{
-            fontFamily: "var(--font-heading)",
-            fontSize: "clamp(1.75rem, 5vw, 2.25rem)",
-            color: "var(--color-text)",
-            letterSpacing: "-0.02em",
-            lineHeight: 1.2,
-          }}
-        >
-          {greeting}, {displayName}
+        <h1 className="text-[clamp(1.75rem,5vw,2.25rem)] font-bold tracking-tight leading-tight text-foreground">
+          {greeting},{" "}
+          <SparklesText className="inline-block">{displayName}</SparklesText>
         </h1>
         {data.recentMood && (
           <div className="flex items-center gap-2 mt-3">
-            <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: moodColor ?? "var(--color-border)" }} />
-            <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
-              Feeling <span style={{ color: moodColor ?? "var(--color-text)", fontWeight: 600 }}>{data.recentMood}</span> lately
+            <div className={cn("w-2.5 h-2.5 rounded-full", moodBgTwColor)} />
+            <p className="text-sm text-muted-foreground">
+              Feeling <span className={cn("font-semibold", moodTwColor)}>{data.recentMood}</span> lately
             </p>
           </div>
         )}
-
-        <div className="mt-5 h-px" style={{ backgroundColor: "var(--color-border)" }} />
+        <Separator className="mt-5" />
       </header>
 
-      {/* ─── Search Bar ─── */}
+      {/* Search Bar */}
       <form onSubmit={handleSearch}>
-        <div
-          className="flex items-center gap-3 px-4 py-2.5 rounded-lg transition-shadow"
-          style={{
-            backgroundColor: "var(--color-paper)",
-            boxShadow: "var(--shadow-paper)",
-            border: "1px solid var(--color-border)",
-            backgroundImage: "var(--texture-paper)",
-          }}
-        >
-          <span className="text-base" style={{ color: "var(--color-text-secondary)", opacity: 0.6 }}>&#x1F50D;</span>
-          <input
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search your memories..."
-            className="flex-1 bg-transparent outline-none text-sm"
-            style={{ color: "var(--color-text)" }}
+            className="pl-10"
           />
         </div>
       </form>
 
-      {/* ─── Life at a Glance ─── */}
+      {/* Life at a Glance */}
       <section>
         <SectionLabel text="Life at a Glance" />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <StatCard value={data.memoriesCount} label="memories" href="/garden/journal" accent="var(--color-primary)" />
-          <StatCard value={data.pendingTasks} label="tasks pending" href="/garden/tasks" accent="var(--color-accent)" />
-          <StatCard value={data.peopleCount} label="people" href="/garden/people" accent="var(--color-secondary)" />
-          <StatCard value={memberDays} label="days together" accent="var(--color-text-secondary)" />
+          {stats.map((s, i) => {
+            const colorClass = STAT_COLORS[i] ?? "text-muted-foreground";
+            return (
+              <motion.div
+                key={s.label}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: i * 0.1 }}
+              >
+                <StatCard value={s.value} label={s.label} href={"href" in s ? s.href : undefined} colorClass={colorClass} />
+              </motion.div>
+            );
+          })}
         </div>
       </section>
 
-      {/* ─── Today's Focus ─── */}
+      {/* Today's Focus */}
       {(data.pendingTasks > 0 || data.upcomingReminders > 0) && (
         <section>
-          <SectionLabel text="Today&apos;s Focus" />
-          <DiaryCard variant="paper" style={{ borderLeft: "3px solid var(--color-accent)" }}>
-            <div className="space-y-2">
+          <SectionLabel text="Today's Focus" />
+          <Card className="border-l-4 border-l-accent">
+            <CardContent className="space-y-2">
               {data.pendingTasks > 0 && (
                 <Link href="/garden/tasks" className="flex items-center gap-3 group">
-                  <span className="w-6 h-6 rounded-full flex items-center justify-center text-[10px]" style={{ backgroundColor: "var(--color-surface)", color: "var(--color-accent)" }}>&#x2713;</span>
-                  <span className="text-sm group-hover:underline" style={{ color: "var(--color-text)", fontFamily: "var(--font-diary)" }}>
+                  <span className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center">
+                    <CheckCircle2 className="size-3 text-accent" />
+                  </span>
+                  <span className="text-sm text-foreground group-hover:underline">
                     {data.pendingTasks} task{data.pendingTasks !== 1 ? "s" : ""} waiting for you
                   </span>
                 </Link>
               )}
               {data.upcomingReminders > 0 && (
                 <div className="flex items-center gap-3">
-                  <span className="w-6 h-6 rounded-full flex items-center justify-center text-[10px]" style={{ backgroundColor: "var(--color-surface)", color: "var(--color-primary)" }}>&#x23F0;</span>
-                  <span className="text-sm" style={{ color: "var(--color-text)", fontFamily: "var(--font-diary)" }}>
+                  <span className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center">
+                    <Bell className="size-3 text-primary" />
+                  </span>
+                  <span className="text-sm text-foreground">
                     {data.upcomingReminders} reminder{data.upcomingReminders !== 1 ? "s" : ""} coming up
                   </span>
                 </div>
               )}
-            </div>
-          </DiaryCard>
+            </CardContent>
+          </Card>
         </section>
       )}
 
-      {/* ─── Flashback ─── */}
+      {/* Flashback */}
       {data.flashback && (
         <section>
           <SectionLabel text="30 Days Ago" />
-          <DiaryCard variant="paper">
-            <MarkdownContent content={data.flashback.content} truncate={250} />
-            <p className="text-[11px] mt-3" style={{ color: "var(--color-text-secondary)" }}>
-              {new Date(data.flashback.created_at).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-            </p>
-          </DiaryCard>
+          <Card>
+            <CardContent>
+              <MarkdownContent content={data.flashback.content} truncate={250} />
+              <p className="text-[11px] mt-3 text-muted-foreground">
+                {new Date(data.flashback.created_at).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+              </p>
+            </CardContent>
+          </Card>
         </section>
       )}
 
-      {/* ─── Recent Activity ─── */}
+      {/* Recent Activity */}
       <section>
         <div className="flex items-center justify-between mb-1">
           <SectionLabel text="Recent Entries" />
-          <Link href="/garden/journal" className="text-xs underline" style={{ color: "var(--color-primary)" }}>
+          <Link href="/garden/journal" className="text-xs underline text-primary">
             View all &rarr;
           </Link>
         </div>
 
         {data.recentMemories.length === 0 ? (
-          <DiaryCard variant="paper" className="text-center !py-10">
-            <span className="text-4xl block mb-3">&#x1F331;</span>
-            <p
-              className="font-medium text-base mb-1"
-              style={{ color: "var(--color-text)", fontFamily: "var(--font-heading)" }}
-            >
-              Your Garden is ready to grow
-            </p>
-            <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
-              Start talking to Groot on WhatsApp — your memories will appear here.
-            </p>
-          </DiaryCard>
+          <Card className="text-center py-10">
+            <CardContent className="flex flex-col items-center">
+              <Sprout className="size-10 text-muted-foreground mb-3" />
+              <p className="font-semibold text-base mb-1 text-foreground">
+                Your Garden is ready to grow
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Start talking to Groot on WhatsApp — your memories will appear here.
+              </p>
+            </CardContent>
+          </Card>
         ) : (
           <div className="relative pl-5">
             {/* Vertical timeline line */}
-            <div
-              className="absolute left-0 top-3 bottom-3 w-[2px] rounded-full"
-              style={{ backgroundColor: "var(--color-border)" }}
-            />
+            <div className="absolute left-0 top-3 bottom-3 w-[2px] rounded-full bg-border" />
 
             <div className="space-y-3">
-              {data.recentMemories.map((m) => {
+              {data.recentMemories.map((m, i) => {
                 const time = new Date(m.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
                 const typeLabel = m.message_type === "audio" ? "Voice" : m.message_type === "image" ? "Photo" : "Text";
                 const wordCount = m.content?.split(/\s+/).length ?? 0;
 
                 return (
-                  <div
+                  <motion.div
                     key={m.id}
-                    className="p-4 transition-all duration-200"
-                    style={{
-                      backgroundColor: "var(--color-paper)",
-                      boxShadow: "var(--shadow-paper)",
-                      borderRadius: "var(--radius-lg)",
-                      border: "1px solid var(--color-border)",
-                      backgroundImage: "var(--texture-paper)",
-                    }}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, delay: i * 0.05 }}
                   >
-                    <MarkdownContent content={m.content} truncate={180} />
+                    <Card>
+                      <CardContent>
+                        <MarkdownContent content={m.content} truncate={180} />
 
-                    <div
-                      className="flex items-center gap-3 mt-3 pt-2"
-                      style={{ borderTop: "1px dashed var(--color-border)", opacity: 0.6 }}
-                    >
-                      <span className="text-[11px]" style={{ color: "var(--color-text-secondary)" }}>{time}</span>
-                      <span className="text-[11px]" style={{ color: "var(--color-text-secondary)" }}>{typeLabel}</span>
-                      {wordCount > 0 && (
-                        <span className="text-[11px]" style={{ color: "var(--color-text-secondary)" }}>{wordCount} words</span>
-                      )}
-                    </div>
-                  </div>
+                        <div className="flex items-center gap-3 mt-3 pt-2 border-t border-dashed border-border opacity-60">
+                          <span className="text-[11px] text-muted-foreground">{time}</span>
+                          <span className="text-[11px] text-muted-foreground">{typeLabel}</span>
+                          {wordCount > 0 && (
+                            <span className="text-[11px] text-muted-foreground">{wordCount} words</span>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
                 );
               })}
             </div>
@@ -237,53 +266,48 @@ export default function GardenHome() {
         )}
       </section>
 
-      {/* ─── Quick Navigation ─── */}
+      {/* Quick Navigation */}
       <section>
         <SectionLabel text="Explore" />
-        <div className="grid grid-cols-2 gap-3">
-          <QuickLink href="/garden/mood" icon="&#x1F3AD;" label="Mood Patterns" description="Your emotional journey" />
-          <QuickLink href="/garden/habits" icon="&#x1F4CA;" label="Habits" description="Streaks and progress" />
-          <QuickLink href="/garden/insights" icon="&#x1F4A1;" label="Insights" description="Weekly reflections" />
-          <QuickLink href="/garden/profile" icon="&#x1F9E0;" label="Profile" description="What Groot knows" />
-        </div>
+        <BentoGrid className="md:grid-cols-2 lg:grid-cols-2">
+          {quickLinks.map((link) => (
+            <BentoGridItem
+              key={link.href}
+              title={link.label}
+              description={link.description}
+              icon={link.icon}
+              onClick={() => router.push(link.href)}
+            />
+          ))}
+        </BentoGrid>
       </section>
     </div>
   );
 }
 
-/* ─── Sub-components ─── */
+/* Sub-components */
 
 function SectionLabel({ text }: { text: string }) {
   return (
-    <h2
-      className="text-xs uppercase tracking-[0.15em] mb-3"
-      style={{ color: "var(--color-text-secondary)", fontFamily: "var(--font-body)", fontWeight: 600 }}
-      dangerouslySetInnerHTML={{ __html: text }}
-    />
+    <h2 className="text-xs uppercase tracking-widest mb-3 font-semibold text-muted-foreground">
+      {text}
+    </h2>
   );
 }
 
-function StatCard({ value, label, href, accent }: { value: number; label: string; href?: string; accent: string }) {
+function StatCard({ value, label, href, colorClass }: { value: number; label: string; href?: string; colorClass: string }) {
   const inner = (
-    <div
-      className="p-4 rounded-xl text-center transition-all duration-200"
-      style={{
-        backgroundColor: "var(--color-paper)",
-        boxShadow: "var(--shadow-paper)",
-        border: "1px solid var(--color-border)",
-        backgroundImage: "var(--texture-paper)",
-      }}
-    >
-      <p
-        className="text-2xl font-bold"
-        style={{ color: accent, fontFamily: "var(--font-heading)", letterSpacing: "-0.02em" }}
-      >
-        {value}
-      </p>
-      <p className="text-[11px] mt-1 uppercase tracking-wide" style={{ color: "var(--color-text-secondary)" }}>
-        {label}
-      </p>
-    </div>
+    <Card className="text-center hover:shadow-md transition-shadow">
+      <CardContent className="py-4 px-3">
+        <NumberTicker
+          value={value}
+          className={cn("text-2xl font-bold tracking-tight", colorClass)}
+        />
+        <p className="text-[11px] mt-1 uppercase tracking-wide text-muted-foreground">
+          {label}
+        </p>
+      </CardContent>
+    </Card>
   );
 
   if (href) {
@@ -292,37 +316,21 @@ function StatCard({ value, label, href, accent }: { value: number; label: string
   return inner;
 }
 
-function QuickLink({ href, icon, label, description }: { href: string; icon: string; label: string; description: string }) {
-  return (
-    <Link href={href}>
-      <DiaryCard className="!p-4 hover:scale-[1.01] transition-transform">
-        <div className="flex items-center gap-3">
-          <span className="text-xl" dangerouslySetInnerHTML={{ __html: icon }} />
-          <div>
-            <p className="text-sm font-medium" style={{ color: "var(--color-text)", fontFamily: "var(--font-heading)" }}>{label}</p>
-            <p className="text-[11px]" style={{ color: "var(--color-text-secondary)" }}>{description}</p>
-          </div>
-        </div>
-      </DiaryCard>
-    </Link>
-  );
-}
-
 function LoadingSkeleton() {
   return (
-    <div className="space-y-8 animate-pulse max-w-3xl mx-auto">
+    <div className="space-y-8 max-w-3xl mx-auto">
       <div className="pt-4">
-        <div className="h-3 w-40 rounded mb-3" style={{ backgroundColor: "var(--color-surface)" }} />
-        <div className="h-10 w-64 rounded" style={{ backgroundColor: "var(--color-surface)" }} />
+        <Skeleton className="h-3 w-40 mb-3" />
+        <Skeleton className="h-10 w-64" />
       </div>
-      <div className="h-12 rounded-2xl" style={{ backgroundColor: "var(--color-surface)" }} />
+      <Skeleton className="h-10 w-full rounded-md" />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-20 rounded-xl" style={{ backgroundColor: "var(--color-surface)" }} />
+        {Array.from({ length: 4 }, (_, i) => (
+          <Skeleton key={i} className="h-20 rounded-xl" />
         ))}
       </div>
-      {[...Array(3)].map((_, i) => (
-        <div key={i} className="h-28 rounded-xl" style={{ backgroundColor: "var(--color-surface)" }} />
+      {Array.from({ length: 3 }, (_, i) => (
+        <Skeleton key={i} className="h-28 rounded-xl" />
       ))}
     </div>
   );

@@ -1,11 +1,9 @@
-import "@/styles/design-tokens.css";
-import "@/styles/powerbar.css";
 import Sidebar from "@/components/garden/sidebar";
 import BottomNav from "@/components/garden/bottom-nav";
 import Powerbar from "@/components/garden/powerbar";
 
 export const metadata = {
-  title: "The Garden — Groot Dashboard",
+  title: "The Garden -- Groot Dashboard",
   description: "Your AI second brain dashboard",
 };
 
@@ -15,15 +13,9 @@ export default function GardenLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div style={{
-      backgroundColor: "var(--color-bg)",
-      color: "var(--color-text)",
-      minHeight: "100vh",
-    }}>
+    <div className="bg-background text-foreground min-h-screen">
       <Sidebar />
-      <main
-        className="md:ml-[240px] pb-20 md:pb-0 min-h-screen overflow-x-hidden"
-      >
+      <main className="md:ml-[240px] pb-20 md:pb-0 min-h-screen overflow-x-hidden">
         <div className="p-4 md:px-10 md:py-8 max-w-5xl mx-auto">{children}</div>
       </main>
       <BottomNav />

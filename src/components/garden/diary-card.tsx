@@ -1,5 +1,8 @@
 "use client";
 
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+
 interface DiaryCardProps {
   children: React.ReactNode;
   className?: string;
@@ -9,27 +12,20 @@ interface DiaryCardProps {
 }
 
 export default function DiaryCard({ children, className = "", variant = "default", onClick, style }: DiaryCardProps) {
-  const shadow = variant === "elevated" ? "var(--shadow-elevated)" : "none";
-
   return (
-    <div
-      className={`p-5 transition-all duration-150 overflow-hidden ${onClick ? "cursor-pointer" : ""} ${className}`}
-      style={{
-        backgroundColor: "var(--color-card)",
-        border: "1px solid var(--color-border)",
-        borderRadius: "var(--radius-lg)",
-        boxShadow: shadow,
-        ...style,
-      }}
+    <Card
+      className={cn(
+        "p-5 transition-all duration-150 overflow-hidden",
+        variant === "elevated" && "shadow-lg",
+        onClick && "cursor-pointer hover:shadow-md hover:-translate-y-0.5",
+        className
+      )}
+      style={style}
       onClick={onClick}
-      onMouseEnter={(e) => {
-        if (onClick) (e.currentTarget as HTMLDivElement).style.boxShadow = "var(--shadow-card-hover)";
-      }}
-      onMouseLeave={(e) => {
-        if (onClick) (e.currentTarget as HTMLDivElement).style.boxShadow = shadow;
-      }}
     >
-      {children}
-    </div>
+      <CardContent className="p-0">
+        {children}
+      </CardContent>
+    </Card>
   );
 }

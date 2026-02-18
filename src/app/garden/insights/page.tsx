@@ -1,10 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { motion } from "motion/react";
+import { Lightbulb } from "lucide-react";
 import { cachedFetch } from "@/lib/garden/fetch-cache";
 import PageHeader from "@/components/garden/page-header";
-import DiaryCard from "@/components/garden/diary-card";
 import MarkdownContent from "@/components/garden/markdown-content";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Report {
   id: string;
@@ -17,10 +22,31 @@ interface Report {
   created_at: string;
 }
 
-const MOOD_BAR_COLORS: Record<string, string> = {
-  positive: "var(--color-mood-good)", good: "var(--color-mood-good)", great: "var(--color-mood-great)",
-  neutral: "var(--color-mood-okay)", okay: "var(--color-mood-okay)", mixed: "var(--color-mood-okay)",
-  low: "var(--color-mood-low)", negative: "var(--color-mood-low)", bad: "var(--color-mood-bad)",
+const MOOD_COLORS: Record<string, string> = {
+  positive: "#22c55e", good: "#22c55e", great: "#16a34a",
+  neutral: "#eab308", okay: "#eab308", mixed: "#eab308",
+  low: "#f97316", negative: "#ef4444", bad: "#ef4444",
+};
+
+const MOOD_BADGE_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  positive: "default", good: "default", great: "default",
+  neutral: "secondary", okay: "secondary", mixed: "secondary",
+  low: "outline", negative: "destructive", bad: "destructive",
+};
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 },
 };
 
 export default function InsightsPage() {
@@ -36,10 +62,10 @@ export default function InsightsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 animate-pulse max-w-3xl mx-auto">
-        <div className="h-8 w-32 rounded" style={{ backgroundColor: "var(--color-surface)" }} />
+      <div className="space-y-6 max-w-3xl mx-auto">
+        <Skeleton className="h-8 w-32" />
         {[...Array(2)].map((_, i) => (
-          <div key={i} className="h-40 rounded-xl" style={{ backgroundColor: "var(--color-surface)" }} />
+          <Skeleton key={i} className="h-40 rounded-xl" />
         ))}
       </div>
     );
@@ -50,103 +76,102 @@ export default function InsightsPage() {
       <PageHeader title="Insights" subtitle="Weekly reflections from your conversations" />
 
       {reports.length === 0 ? (
-        <DiaryCard variant="paper" className="text-center !py-10">
-          <span className="text-4xl block mb-3">&#x1F4A1;</span>
-          <p className="font-medium text-base mb-1" style={{ color: "var(--color-text)", fontFamily: "var(--font-heading)" }}>
-            No insights yet
-          </p>
-          <p className="text-sm" style={{ color: "var(--color-text-secondary)" }}>
-            Groot generates a weekly insight report every Sunday. Keep chatting and your first report will appear here.
-          </p>
-        </DiaryCard>
+        <Card className="py-10">
+          <CardContent className="flex flex-col items-center text-center">
+            <Lightbulb className="size-10 text-muted-foreground mb-3" />
+            <p className="font-medium text-base mb-1 text-foreground">
+              No insights yet
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Groot generates a weekly insight report every Sunday. Keep chatting and your first report will appear here.
+            </p>
+          </CardContent>
+        </Card>
       ) : (
-        <div className="space-y-6">
+        <motion.div
+          className="space-y-6"
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+        >
           {reports.map((r, index) => {
-            const moodColor = r.mood_trend ? (MOOD_BAR_COLORS[r.mood_trend.toLowerCase()] ?? "var(--color-mood-okay)") : null;
+            const moodKey = r.mood_trend?.toLowerCase() ?? "";
+            const moodColor = MOOD_COLORS[moodKey] ?? "#eab308";
+            const moodBadgeVariant = MOOD_BADGE_VARIANT[moodKey] ?? "secondary";
 
             return (
-              <div key={r.id}>
+              <motion.div key={r.id} variants={itemVariants}>
                 {/* Decorative week separator */}
-                {index > 0 && (
-                  <div className="h-px mb-6" style={{ backgroundColor: "var(--color-border)" }} />
-                )}
+                {index > 0 && <Separator className="mb-6" />}
 
-                <DiaryCard variant="paper">
-                  {/* Mood bar at top */}
-                  {moodColor && (
+                <Card className="overflow-hidden py-0">
+                  {/* Mood color top border */}
+                  {r.mood_trend && (
                     <div
-                      className="h-1 rounded-full mb-5 -mt-1"
+                      className="h-1 w-full"
                       style={{ backgroundColor: moodColor }}
                     />
                   )}
 
-                  {/* Week range in serif italic */}
-                  <p style={{
-                    fontFamily: "var(--font-heading)",
-                    color: "var(--color-primary)",
-                    fontSize: "var(--text-base)",
-                    marginBottom: "var(--space-3)",
-                  }}>
-                    {new Date(r.week_start).toLocaleDateString("en-US", { month: "long", day: "numeric" })}
-                    {" \u2014 "}
-                    {new Date(r.week_end).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
-                  </p>
+                  <CardContent className="p-6">
+                    {/* Week range */}
+                    <p className="text-base font-semibold text-primary mb-3">
+                      {new Date(r.week_start).toLocaleDateString("en-US", { month: "long", day: "numeric" })}
+                      {" \u2014 "}
+                      {new Date(r.week_end).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                    </p>
 
-                  {/* Summary in diary font */}
-                  <MarkdownContent content={r.summary} />
+                    {/* Summary */}
+                    <MarkdownContent content={r.summary} />
 
-                  {/* Insights bullets */}
-                  {r.insights && Object.keys(r.insights).length > 0 && (
-                    <ul className="mt-4 space-y-2">
-                      {Object.entries(r.insights).map(([key, val]) => (
-                        <li key={key} className="flex items-start gap-2 text-sm" style={{ color: "var(--color-text-secondary)" }}>
-                          <span style={{ color: "var(--color-accent)", marginTop: "2px" }}>&#x2022;</span>
-                          <span style={{ fontFamily: "var(--font-diary)", lineHeight: 1.5 }}>
-                            <strong style={{ color: "var(--color-text)" }}>{key}:</strong> {val}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                    {/* Insights bullets */}
+                    {r.insights && Object.keys(r.insights).length > 0 && (
+                      <ul className="mt-4 space-y-2">
+                        {Object.entries(r.insights).map(([key, val]) => (
+                          <li key={key} className="flex items-start gap-2 text-sm text-muted-foreground">
+                            <span className="text-accent mt-0.5 shrink-0">{"\u2022"}</span>
+                            <span className="leading-relaxed">
+                              <strong className="text-foreground">{key}:</strong> {val}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
 
-                  {/* Divider before metadata */}
-                  {((r.key_topics && r.key_topics.length > 0) || r.mood_trend) && (
-                    <div className="h-px mt-4 mb-3" style={{ backgroundColor: "var(--color-border)", opacity: 0.5 }} />
-                  )}
+                    {/* Divider before metadata */}
+                    {((r.key_topics && r.key_topics.length > 0) || r.mood_trend) && (
+                      <Separator className="mt-4 mb-3" />
+                    )}
 
-                  {/* Topics as warm tags */}
-                  {r.key_topics && r.key_topics.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {r.key_topics.map((topic, i) => (
-                        <span
-                          key={i}
-                          className="text-[10px] px-2.5 py-1 rounded-full"
-                          style={{
-                            backgroundColor: "var(--color-surface)",
-                            color: "var(--color-text-secondary)",
-                            fontFamily: "var(--font-body)",
-                          }}
-                        >
-                          {topic}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                    {/* Topics as badges */}
+                    {r.key_topics && r.key_topics.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {r.key_topics.map((topic, i) => (
+                          <Badge key={i} variant="secondary" className="text-[10px]">
+                            {topic}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
 
-                  {/* Mood badge */}
-                  {r.mood_trend && (
-                    <div className="mt-3 flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: moodColor ?? "var(--color-border)" }} />
-                      <span className="text-[10px] uppercase tracking-wide" style={{ color: "var(--color-text-secondary)" }}>
-                        Mood: {r.mood_trend}
-                      </span>
-                    </div>
-                  )}
-                </DiaryCard>
-              </div>
+                    {/* Mood badge */}
+                    {r.mood_trend && (
+                      <div className="mt-3 flex items-center gap-2">
+                        <div
+                          className="size-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: moodColor }}
+                        />
+                        <Badge variant={moodBadgeVariant} className="text-[10px] uppercase tracking-wide">
+                          Mood: {r.mood_trend}
+                        </Badge>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       )}
     </div>
   );
