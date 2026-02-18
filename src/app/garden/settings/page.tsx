@@ -244,8 +244,8 @@ function ToggleRow({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <div className="flex items-center justify-between">
-      <div>
+    <div className="flex items-center justify-between gap-4">
+      <div className="min-w-0">
         <p className="text-sm font-medium" style={{ color: "var(--color-text)" }}>
           {label}
         </p>
@@ -255,7 +255,7 @@ function ToggleRow({
       </div>
       <button
         onClick={() => onChange(!value)}
-        className="w-11 h-6 rounded-full transition-colors relative"
+        className="w-11 h-6 rounded-full transition-colors relative flex-shrink-0"
         style={{
           backgroundColor: value ? "var(--color-primary)" : "var(--color-border)",
         }}
