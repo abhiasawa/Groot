@@ -1,6 +1,5 @@
 import Sidebar from "@/components/garden/sidebar";
 import BottomNav from "@/components/garden/bottom-nav";
-import Powerbar from "@/components/garden/powerbar";
 import PointerEventsGuard from "@/components/garden/pointer-events-guard";
 
 export const metadata = {
@@ -14,13 +13,12 @@ export default function GardenLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-background text-foreground min-h-screen">
+    <div className="min-h-screen bg-background text-foreground">
       <Sidebar />
-      <main className="md:ml-[240px] pb-20 md:pb-0 min-h-screen overflow-x-hidden">
-        <div className="p-4 md:px-10 md:py-8 max-w-5xl mx-auto">{children}</div>
+      <main className="md:pl-64 pb-20 md:pb-0 min-h-screen">
+        <div className="mx-auto max-w-5xl px-4 py-6 md:px-8 md:py-8">{children}</div>
       </main>
       <BottomNav />
-      <Powerbar />
       <PointerEventsGuard />
     </div>
   );
