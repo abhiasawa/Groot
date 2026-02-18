@@ -1,8 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Search, Sprout, Heart, BarChart3, Lightbulb, Brain, CheckCircle2, Bell } from "lucide-react";
 import { cachedFetch } from "@/lib/garden/fetch-cache";
 import MarkdownContent from "@/components/garden/markdown-content";
@@ -51,9 +49,7 @@ export default function GardenHome() {
   const [data, setData] = useState<HomeData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
   const [now] = useState(() => Date.now());
-  const router = useRouter();
 
   const loadHomeData = useCallback(async () => {
     setLoading(true);
@@ -77,13 +73,6 @@ export default function GardenHome() {
   useEffect(() => {
     void loadHomeData();
   }, [loadHomeData]);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/garden/journal?q=${encodeURIComponent(searchQuery.trim())}`);
-    }
-  };
 
   const today = new Date(now);
   const todayFormatted = today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
@@ -137,13 +126,12 @@ export default function GardenHome() {
       </header>
 
       {/* Search Bar */}
-      <form onSubmit={handleSearch}>
+      <form action="/garden/journal" method="get">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
+            name="q"
             type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search your memories..."
             className="pl-10"
           />
@@ -172,14 +160,14 @@ export default function GardenHome() {
           <Card className="border-l-4 border-l-accent">
             <CardContent className="space-y-2">
               {data.pendingTasks > 0 && (
-                <Link href="/garden/tasks" className="flex items-center gap-3 group">
+                <a href="/garden/tasks" className="flex items-center gap-3 group">
                   <span className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center">
                     <CheckCircle2 className="size-3 text-accent" />
                   </span>
                   <span className="text-sm text-foreground group-hover:underline">
                     {data.pendingTasks} task{data.pendingTasks !== 1 ? "s" : ""} waiting for you
                   </span>
-                </Link>
+                </a>
               )}
               {data.upcomingReminders > 0 && (
                 <div className="flex items-center gap-3">
@@ -215,9 +203,9 @@ export default function GardenHome() {
       <section>
         <div className="flex items-center justify-between mb-1">
           <SectionLabel text="Recent Entries" />
-          <Link href="/garden/journal" className="text-xs underline text-primary">
+          <a href="/garden/journal" className="text-xs underline text-primary">
             View all &rarr;
-          </Link>
+          </a>
         </div>
 
         {data.recentMemories.length === 0 ? (
@@ -271,13 +259,13 @@ export default function GardenHome() {
         <SectionLabel text="Explore" />
         <BentoGrid className="md:grid-cols-2 lg:grid-cols-2">
           {quickLinks.map((link) => (
-            <Link key={link.href} href={link.href} className="block">
+            <a key={link.href} href={link.href} className="block">
               <BentoGridItem
                 title={link.label}
                 description={link.description}
                 icon={link.icon}
               />
-            </Link>
+            </a>
           ))}
         </BentoGrid>
       </section>
@@ -326,7 +314,7 @@ function StatCard({ value, label, href, colorClass }: { value: number; label: st
   );
 
   if (href) {
-    return <Link href={href} className="block hover:scale-[1.02] transition-transform">{inner}</Link>;
+    return <a href={href} className="block hover:scale-[1.02] transition-transform">{inner}</a>;
   }
   return inner;
 }
@@ -369,9 +357,9 @@ function HomeLoadError({
           <Button onClick={onRetry} size="sm">
             Retry
           </Button>
-          <Link href="/garden/journal" className="text-sm text-primary underline">
+          <a href="/garden/journal" className="text-sm text-primary underline">
             Open Journal
-          </Link>
+          </a>
         </div>
       </CardContent>
     </Card>
