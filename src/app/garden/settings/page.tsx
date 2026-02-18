@@ -255,7 +255,7 @@ function ToggleRow({
       </div>
       <button
         onClick={() => onChange(!value)}
-        className="w-11 h-6 rounded-full transition-colors relative flex-shrink-0"
+        className="w-11 h-6 rounded-full transition-colors relative shrink-0"
         style={{
           backgroundColor: value ? "var(--color-primary)" : "var(--color-border)",
         }}
