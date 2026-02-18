@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { cachedFetch } from "@/lib/garden/fetch-cache";
 import PageHeader from "@/components/garden/page-header";
 import DiaryCard from "@/components/garden/diary-card";
-import MemoryCard from "@/components/garden/memory-card";
+import MarkdownContent from "@/components/garden/markdown-content";
 
 interface Memory {
   id: string;
@@ -53,11 +53,6 @@ function JournalContent() {
   const [activeFilter, setActiveFilter] = useState("All");
   const [viewMode, setViewMode] = useState<"timeline" | "calendar">("timeline");
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-
-  const handleToggleExpand = useCallback((id: string) => {
-    setExpandedId((prev) => (prev === id ? null : id));
-  }, []);
 
   // Calendar state
   const [calendarMonth, setCalendarMonth] = useState(new Date());
@@ -281,21 +276,54 @@ function JournalContent() {
                   {dateLabel}
                 </h3>
 
-                {/* Masonry card layout */}
-                <div className="md:columns-2 gap-4 [&>*]:mb-4">
-                  {entries.map((m) => (
-                    <MemoryCard
-                      key={m.id}
-                      id={m.id}
-                      content={m.content}
-                      mediaDescription={m.media_description}
-                      messageType={m.message_type}
-                      createdAt={m.created_at}
-                      moodColor={moodColor}
-                      isExpanded={expandedId === m.id}
-                      onToggleExpand={handleToggleExpand}
-                    />
-                  ))}
+                {/* Mood-tinted timeline with left border */}
+                <div className="relative pl-5">
+                  <div
+                    className="absolute left-0 top-2 bottom-2 w-[3px] rounded-full"
+                    style={{ backgroundColor: moodColor, opacity: 0.6 }}
+                  />
+
+                  <div className="space-y-3">
+                    {entries.map((m) => (
+                      <div
+                        key={m.id}
+                        className="p-5 transition-all duration-200"
+                        style={{
+                          backgroundColor: "var(--color-paper)",
+                          boxShadow: "var(--shadow-paper)",
+                          borderRadius: "var(--radius-lg)",
+                          border: "1px solid var(--color-border)",
+                          borderLeft: `3px solid ${moodColor}`,
+                          backgroundImage: "var(--texture-paper)",
+                        }}
+                      >
+                        <MarkdownContent content={m.content} />
+
+                        {m.media_description && (
+                          <p className="text-xs mt-2 italic" style={{ color: "var(--color-text-secondary)" }}>
+                            {m.media_description}
+                          </p>
+                        )}
+
+                        <div
+                          className="flex items-center gap-3 mt-3 pt-2 flex-wrap"
+                          style={{ borderTop: "1px dashed var(--color-border)", opacity: 0.7 }}
+                        >
+                          <span className="text-[11px] flex items-center gap-1" style={{ color: "var(--color-text-secondary)" }}>
+                            {new Date(m.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                          </span>
+                          <span className="text-[11px] flex items-center gap-1" style={{ color: "var(--color-text-secondary)" }}>
+                            {m.message_type === "audio" ? "Voice note" : m.message_type === "image" ? "Photo" : "Text"}
+                          </span>
+                          {m.message_type === "text" && m.content && (
+                            <span className="text-[11px]" style={{ color: "var(--color-text-secondary)" }}>
+                              {m.content.split(/\s+/).length} words
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             );
