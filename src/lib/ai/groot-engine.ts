@@ -12,6 +12,12 @@ export interface GrootResponse {
   memoryTags: string[];
   profileUpdates: ProfileFact[];
   detectedDates: Array<{ date: string; event: string }>;
+  timings: {
+    contextMs: number;
+    llmMs: number;
+    profileUpsertMs: number;
+    totalMs: number;
+  };
 }
 
 /**
@@ -126,6 +132,12 @@ export async function generateGrootResponse(
     memoryTags: metadata?.memoryTags ?? [],
     profileUpdates: dedupedUpdates,
     detectedDates: metadata?.detectedDates ?? [],
+    timings: {
+      contextMs: t1 - t0,
+      llmMs: t2 - t1,
+      profileUpsertMs: t3 - t2,
+      totalMs: t3 - t0,
+    },
   };
 }
 

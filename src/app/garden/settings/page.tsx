@@ -5,6 +5,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { cachedFetch } from "@/lib/garden/fetch-cache";
 import PageHeader from "@/components/garden/page-header";
 import DiaryCard from "@/components/garden/diary-card";
+import ThemeToggle from "@/components/garden/theme-toggle";
 import Link from "next/link";
 
 interface Preferences {
@@ -94,6 +95,17 @@ export default function SettingsPage() {
             Knowledge Graph →
           </Link>
         </div>
+      </DiaryCard>
+
+      {/* Appearance */}
+      <DiaryCard>
+        <h2
+          className="text-base font-semibold mb-4"
+          style={{ fontFamily: "var(--font-heading)", color: "var(--color-text)" }}
+        >
+          Appearance
+        </h2>
+        <ThemeToggle />
       </DiaryCard>
 
       {/* Notifications */}

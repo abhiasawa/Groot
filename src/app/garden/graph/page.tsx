@@ -73,7 +73,14 @@ export default function GraphPage() {
               return n.type === "profile" ? "#D9730D" : "#2383E2";
             }}
             nodeVal={(node) => (node as GraphNode).size}
-            linkColor={() => "#E3E2E0"}
+            linkColor={(link) => {
+              const l = link as GraphLink;
+              return l.strength > 0.7 ? "#D9730D" : "#E3E2E0";
+            }}
+            linkWidth={(link) => {
+              const l = link as GraphLink;
+              return l.strength > 0.7 ? 2 : 1;
+            }}
             onNodeClick={(node) => setSelectedNode(node as GraphNode)}
             width={typeof window !== "undefined" ? Math.min(window.innerWidth - 40, 1100) : 800}
             height={500}

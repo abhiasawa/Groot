@@ -9,6 +9,7 @@ import { sendWhatsAppMessage, markMessageAsRead } from "@/lib/whatsapp/client";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { getOrCreateUser } from "@/lib/whatsapp/onboarding";
 import { addMemory } from "@/lib/memory/supermemory-client";
+import { detectAndLinkMemory } from "@/lib/memory/link-detector";
 import { storeOutboundMessage } from "@/lib/memory/short-term";
 import { processMedia } from "@/lib/media/media-handler";
 import { generateGrootResponse, getErrorResponse } from "@/lib/ai/groot-engine";
@@ -66,22 +67,26 @@ export async function POST(request: NextRequest) {
     }
 
     const rawBody = Buffer.from(await request.arrayBuffer());
+    const tReadBody = Date.now();
     const signature = request.headers.get("x-hub-signature-256");
 
     if (!validateWebhookSignature(rawBody, signature, appSecret)) {
       logger.warn("Invalid webhook signature");
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
+    const tSignature = Date.now();
 
     const body = JSON.parse(rawBody.toString("utf8")) as WhatsAppWebhookPayload;
     if (body.object !== "whatsapp_business_account") {
       return NextResponse.json({ error: "Not a WhatsApp event" }, { status: 404 });
     }
+    const tParse = Date.now();
 
     const parsedMessages = parseWebhookPayloads(body);
     if (parsedMessages.length === 0) {
       return NextResponse.json({ status: "ok" }, { status: 200 });
     }
+    const tFlatten = Date.now();
 
     const acceptedMessages: ParsedMessage[] = [];
     for (const parsed of parsedMessages) {
@@ -89,12 +94,18 @@ export async function POST(request: NextRequest) {
         acceptedMessages.push(parsed);
       }
     }
+    const tClaim = Date.now();
 
     logger.info(
       {
         received: parsedMessages.length,
         accepted: acceptedMessages.length,
         latencyMs: Date.now() - startTime,
+        readBodyMs: tReadBody - startTime,
+        signatureMs: tSignature - tReadBody,
+        parseJsonMs: tParse - tSignature,
+        flattenPayloadMs: tFlatten - tParse,
+        claimMs: tClaim - tFlatten,
       },
       "Webhook accepted",
     );
@@ -137,19 +148,42 @@ export async function POST(request: NextRequest) {
  */
 async function processMessage(parsed: ParsedMessage): Promise<void> {
   const pStart = Date.now();
+  const metrics: Record<string, number> = {};
+  let userId: string | null = null;
+  let outcome = "unknown";
+
+  const logSummary = (extra: Record<string, unknown> = {}) => {
+    logger.info(
+      {
+        messageId: parsed.messageId,
+        from: parsed.from,
+        type: parsed.type,
+        userId,
+        outcome,
+        totalMs: Date.now() - pStart,
+        ...metrics,
+        ...extra,
+      },
+      "Message latency summary",
+    );
+  };
+
   markMessageAsRead(parsed.messageId).catch(() => {});
 
   const { user, isNewUser } = await getOrCreateUser(parsed.from, parsed.displayName);
   const pUser = Date.now();
+  userId = user.id;
+  metrics.userLookupMs = pUser - pStart;
 
   logger.info(
-    { userId: user.id, isNewUser, type: parsed.type, hasMedia: !!parsed.mediaId, hasText: !!parsed.text, hasInteractive: !!parsed.interactiveReply, userLookupMs: pUser - pStart },
+    { userId: user.id, isNewUser, type: parsed.type, hasMedia: !!parsed.mediaId, hasText: !!parsed.text, hasInteractive: !!parsed.interactiveReply, userLookupMs: metrics.userLookupMs },
     "Processing message",
   );
 
   // Store inbound message immediately so context is available for batch detection
   await storeInboundMessage(user.id, parsed);
   const pStore = Date.now();
+  metrics.storeInboundMs = pStore - pUser;
 
   // Non-critical (fire-and-forget)
   markUserResponded(user.id).catch(() => {});
@@ -157,38 +191,58 @@ async function processMessage(parsed: ParsedMessage): Promise<void> {
   // Media processing (audio/image)
   if (parsed.mediaId && parsed.mediaMimeType) {
     logger.info({ userId: user.id, mediaType: parsed.type, mimeType: parsed.mediaMimeType }, "Routing to media handler");
+    const tMedia = Date.now();
     await handleMedia(user.id, parsed, user.display_name, isNewUser);
+    metrics.mediaHandlerMs = Date.now() - tMedia;
+    outcome = "handled_media";
+    logSummary();
     return;
   }
 
   // Interactive button/list replies (send confirmations, proactive preferences)
   if (parsed.interactiveReply?.id) {
     logger.info({ userId: user.id, buttonId: parsed.interactiveReply.id }, "Routing to interactive reply handler");
+    const tInteractive = Date.now();
     const handled = await handleInteractiveReply(
       user.id,
       parsed.from,
       parsed.interactiveReply.id,
     );
-    if (handled) return;
+    metrics.interactiveHandlerMs = Date.now() - tInteractive;
+    if (handled) {
+      outcome = "handled_interactive";
+      logSummary();
+      return;
+    }
   }
 
   const text = parsed.text;
   if (!text) {
+    const tSend = Date.now();
     await sendWhatsAppMessage(
       parsed.from,
       "_I received your message but I can only handle text for now._",
     );
+    metrics.sendWhatsAppMs = Date.now() - tSend;
+    outcome = "non_text_fallback_sent";
+    logSummary();
     return;
   }
 
   // Pending outbound follow-up (e.g., waiting for contact number)
-  if (await handlePendingOutboundReply(user.id, parsed.from, text)) {
+  const tPending = Date.now();
+  const handledPending = await handlePendingOutboundReply(user.id, parsed.from, text);
+  metrics.pendingOutboundMs = Date.now() - tPending;
+  if (handledPending) {
     logger.info({ userId: user.id }, "Message handled by pending outbound reply");
+    outcome = "handled_pending_outbound";
+    logSummary();
     return;
   }
 
   // ─── All text messages go through Groot AI ───
   try {
+    const tGroot = Date.now();
     const grootResponse = await generateGrootResponse(
       user.id,
       text,
@@ -196,20 +250,32 @@ async function processMessage(parsed: ParsedMessage): Promise<void> {
       isNewUser,
     );
     const pGroot = Date.now();
+    metrics.grootEngineMs = pGroot - tGroot;
+    metrics.grootContextMs = grootResponse.timings.contextMs;
+    metrics.grootLlmMs = grootResponse.timings.llmMs;
+    metrics.grootProfileUpsertMs = grootResponse.timings.profileUpsertMs;
+    metrics.grootTotalMs = grootResponse.timings.totalMs;
 
     // Before sending: check if a newer message arrived while we were processing.
     // If so, discard this response — the newer message's handler will generate
     // a fresher response with full conversation context.
-    if (!(await isLatestInboundMessage(user.id, parsed.messageId))) {
+    const tLatest = Date.now();
+    const isLatest = await isLatestInboundMessage(user.id, parsed.messageId);
+    metrics.latestInboundCheckMs = Date.now() - tLatest;
+    if (!isLatest) {
       logger.info(
         { messageId: parsed.messageId, userId: user.id },
         "Discarding response — newer inbound arrived during processing",
       );
+      outcome = "discarded_newer_inbound";
+      logSummary();
       return;
     }
 
+    const tSend = Date.now();
     await sendWhatsAppMessage(parsed.from, grootResponse.text);
     const pSend = Date.now();
+    metrics.sendWhatsAppMs = pSend - tSend;
 
     // Post-response actions driven by AI metadata
     const postOps: Promise<unknown>[] = [
@@ -230,8 +296,11 @@ async function processMessage(parsed: ParsedMessage): Promise<void> {
       );
     }
 
+    const tPostOps = Date.now();
     await Promise.allSettled(postOps);
     const pEnd = Date.now();
+    metrics.postOpsMs = pEnd - tPostOps;
+    outcome = "sent";
 
     logger.info(
       {
@@ -245,11 +314,20 @@ async function processMessage(parsed: ParsedMessage): Promise<void> {
       },
       "Message pipeline complete",
     );
+    logSummary({
+      shouldStoreMemory: grootResponse.shouldStoreMemory,
+      detectedDates: grootResponse.detectedDates.length,
+      responseLength: grootResponse.text.length,
+    });
   } catch (error) {
     logger.error({ error, userId: user.id }, "Groot engine failed");
     const fallback = getErrorResponse();
+    const tSend = Date.now();
     await sendWhatsAppMessage(parsed.from, fallback);
+    metrics.sendWhatsAppMs = Date.now() - tSend;
     storeOutboundMessage(user.id, fallback).catch(() => {});
+    outcome = "fallback_sent_after_error";
+    logSummary();
   }
 }
 
@@ -380,6 +458,23 @@ async function storeLongTermMemoryAndMark(
   const memoryId = await addMemory(content, userId, tags);
   if (memoryId) {
     await markInboundMessageAsSynced(userId, inboundMessageId);
+
+    // Fire-and-forget: detect and create bidirectional links
+    const supabase = getSupabaseAdmin();
+    Promise.resolve(
+      supabase
+        .from("messages")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("whatsapp_message_id", inboundMessageId)
+        .single(),
+    )
+      .then(({ data }) => {
+        if (data?.id) {
+          detectAndLinkMemory(data.id as string, content, userId).catch(() => {});
+        }
+      })
+      .catch(() => {});
   }
 }
 

@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test --experimental-strip-types \"tests/**/*.test.ts\""
+    "test": "node --test --experimental-strip-types \"tests/**/*.test.ts\"",
+    "analyze:latency": "node scripts/analyze-whatsapp-latency.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
@@ -15,6 +16,7 @@
     "@supabase/supabase-js": "^2.95.3",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.36.2",
+    "cmdk": "^1.1.1",
     "isomorphic-dompurify": "^3.0.0-rc.2",
     "next": "16.1.6",
     "openai": "^6.22.0",
@@ -22,7 +24,9 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-force-graph-2d": "^1.29.1",
+    "react-markdown": "^10.1.0",
     "recharts": "^3.7.0",
+    "remark-gfm": "^4.0.1",
     "server-only": "^0.0.1",
     "supermemory": "^4.11.1",
     "swr": "^2.4.0",

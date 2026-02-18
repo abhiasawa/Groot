@@ -1,6 +1,8 @@
 import "@/styles/design-tokens.css";
+import "@/styles/powerbar.css";
 import Sidebar from "@/components/garden/sidebar";
 import BottomNav from "@/components/garden/bottom-nav";
+import Powerbar from "@/components/garden/powerbar";
 
 export const metadata = {
   title: "The Garden — Groot Dashboard",
@@ -26,6 +28,7 @@ export default function GardenLayout({
         <div className="p-4 md:px-10 md:py-8 max-w-5xl mx-auto">{children}</div>
       </main>
       <BottomNav />
+      <Powerbar />
     </div>
   );
 }

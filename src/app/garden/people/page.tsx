@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { cachedFetch } from "@/lib/garden/fetch-cache";
 import PageHeader from "@/components/garden/page-header";
 import DiaryCard from "@/components/garden/diary-card";
+import MarkdownContent from "@/components/garden/markdown-content";
 
 interface Person {
   name: string;
@@ -165,9 +166,7 @@ export default function PeoplePage() {
                             color: "var(--color-text)",
                           }}
                         >
-                          <p className="line-clamp-2" style={{ fontFamily: "var(--font-diary)", lineHeight: 1.6 }}>
-                            {typeof m.content === "string" ? m.content : ""}
-                          </p>
+                          <MarkdownContent content={typeof m.content === "string" ? m.content : ""} className="line-clamp-2" />
                           <p className="mt-1.5 text-[10px]" style={{ color: "var(--color-text-secondary)" }}>
                             {new Date(m.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                           </p>

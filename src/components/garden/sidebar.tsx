@@ -66,9 +66,27 @@ export default function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="px-4 py-3">
+      <div className="px-3 py-3 space-y-2">
+        <button
+          onClick={() => document.dispatchEvent(new CustomEvent("open-powerbar"))}
+          className="flex items-center gap-2 w-full px-3 py-1.5 rounded-md text-xs transition-colors"
+          style={{
+            backgroundColor: "transparent",
+            color: "var(--color-text-secondary)",
+            border: "1px solid var(--color-border)",
+          }}
+        >
+          <span style={{ opacity: 0.6 }}>{"\uD83D\uDD0D"}</span>
+          <span className="flex-1 text-left">Search...</span>
+          <kbd
+            className="text-[10px] px-1.5 py-0.5 rounded"
+            style={{ backgroundColor: "var(--color-bg)", border: "1px solid var(--color-border)" }}
+          >
+            {"\u2318"}K
+          </kbd>
+        </button>
         <p
-          className="text-[11px]"
+          className="text-[11px] px-1"
           style={{ color: "var(--color-text-secondary)" }}
         >
           Your AI second brain

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { cachedFetch } from "@/lib/garden/fetch-cache";
 import PageHeader from "@/components/garden/page-header";
 import DiaryCard from "@/components/garden/diary-card";
+import MarkdownContent from "@/components/garden/markdown-content";
 
 interface Report {
   id: string;
@@ -92,17 +93,7 @@ export default function InsightsPage() {
                   </p>
 
                   {/* Summary in diary font */}
-                  <p
-                    className="whitespace-pre-line"
-                    style={{
-                      color: "var(--color-text)",
-                      fontFamily: "var(--font-diary)",
-                      fontSize: "var(--text-sm)",
-                      lineHeight: 1.75,
-                    }}
-                  >
-                    {r.summary}
-                  </p>
+                  <MarkdownContent content={r.summary} />
 
                   {/* Insights bullets */}
                   {r.insights && Object.keys(r.insights).length > 0 && (

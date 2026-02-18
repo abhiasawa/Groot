@@ -23,6 +23,7 @@ export async function sendWhatsAppMessage(
   text: string,
 ): Promise<WhatsAppSendResult> {
   const { phoneNumberId, accessToken } = getConfig();
+  const t0 = Date.now();
 
   const response = await fetch(
     `${WHATSAPP_API_URL}/${phoneNumberId}/messages`,
@@ -44,12 +45,15 @@ export async function sendWhatsAppMessage(
 
   if (!response.ok) {
     const error = await response.json();
-    logger.error({ error, to }, "WhatsApp send failed");
+    logger.error({ error, to, apiMs: Date.now() - t0 }, "WhatsApp send failed");
     throw new Error(`WhatsApp API error: ${JSON.stringify(error)}`);
   }
 
   const result = await response.json() as WhatsAppSendResult;
-  logger.info({ to, messageId: result.messages?.[0]?.id, textLength: text.length }, "WhatsApp message sent");
+  logger.info(
+    { to, messageId: result.messages?.[0]?.id, textLength: text.length, apiMs: Date.now() - t0 },
+    "WhatsApp message sent",
+  );
   return result;
 }
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { cachedFetch } from "@/lib/garden/fetch-cache";
 import DiaryCard from "@/components/garden/diary-card";
+import MarkdownContent from "@/components/garden/markdown-content";
 import Link from "next/link";
 
 interface HomeData {
@@ -160,15 +161,7 @@ export default function GardenHome() {
         <section>
           <SectionLabel text="30 Days Ago" />
           <DiaryCard variant="paper">
-            <p
-              className="text-sm leading-relaxed"
-              style={{
-                color: "var(--color-text)",
-                lineHeight: 1.75,
-              }}
-            >
-              &ldquo;{data.flashback.content.slice(0, 250)}{data.flashback.content.length > 250 ? "..." : ""}&rdquo;
-            </p>
+            <MarkdownContent content={data.flashback.content} truncate={250} />
             <p className="text-[11px] mt-3" style={{ color: "var(--color-text-secondary)" }}>
               {new Date(data.flashback.created_at).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
             </p>
@@ -224,16 +217,7 @@ export default function GardenHome() {
                       backgroundImage: "var(--texture-paper)",
                     }}
                   >
-                    <p
-                      className="text-sm leading-relaxed"
-                      style={{
-                        color: "var(--color-text)",
-                        fontFamily: "var(--font-diary)",
-                        lineHeight: 1.7,
-                      }}
-                    >
-                      {m.content.slice(0, 180)}{m.content.length > 180 ? "..." : ""}
-                    </p>
+                    <MarkdownContent content={m.content} truncate={180} />
 
                     <div
                       className="flex items-center gap-3 mt-3 pt-2"

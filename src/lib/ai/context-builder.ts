@@ -28,14 +28,35 @@ export async function buildContext(
   const recentLimit = parsePositiveInt(process.env.WHATSAPP_CONTEXT_RECENT_LIMIT, 6);
   const memoryLimit = parsePositiveInt(process.env.WHATSAPP_MEMORY_SEARCH_LIMIT, 2);
 
-  // Fetch all context sources in parallel (lean defaults keep WhatsApp replies fast)
-  const [recentMessages, relevantMemories, profileSummary] = await Promise.all([
-    getRecentMessages(userId, recentLimit),
-    searchMemories(currentMessage, userId, memoryLimit).catch((error) => {
+  const tRecent = Date.now();
+  const recentPromise = getRecentMessages(userId, recentLimit).then((recentMessages) => ({
+    recentMessages,
+    recentMs: Date.now() - tRecent,
+  }));
+  const tMemory = Date.now();
+  const memoryPromise = searchMemories(currentMessage, userId, memoryLimit)
+    .then((relevantMemories) => ({
+      relevantMemories,
+      memoryMs: Date.now() - tMemory,
+    }))
+    .catch((error) => {
       logger.warn({ error }, "Supermemory search failed, continuing without long-term context");
-      return [];
-    }),
-    getUserProfileSummary(userId),
+      return {
+        relevantMemories: [],
+        memoryMs: Date.now() - tMemory,
+      };
+    });
+  const tProfile = Date.now();
+  const profilePromise = getUserProfileSummary(userId).then((profileSummary) => ({
+    profileSummary,
+    profileMs: Date.now() - tProfile,
+  }));
+
+  // Fetch all context sources in parallel (lean defaults keep WhatsApp replies fast)
+  const [{ recentMessages, recentMs }, { relevantMemories, memoryMs }, { profileSummary, profileMs }] = await Promise.all([
+    recentPromise,
+    memoryPromise,
+    profilePromise,
   ]);
 
   // Build conversation messages for the LLM
@@ -75,6 +96,9 @@ export async function buildContext(
       longTermMemories: relevantMemories.length,
       profileLength: profileSummary.length,
       totalLLMMessages: messages.length,
+      recentFetchMs: recentMs,
+      memorySearchMs: memoryMs,
+      profileFetchMs: profileMs,
     },
     "Context built",
   );
