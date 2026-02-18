@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { Home, BookOpen, Users, Heart, Settings } from "lucide-react";
 
@@ -36,11 +35,7 @@ export default function BottomNav() {
             className="relative flex flex-col items-center gap-0.5 py-1.5 min-w-[44px] min-h-[44px] justify-center"
           >
             {isActive && (
-              <motion.div
-                layoutId="bottomnav-active"
-                className="absolute -top-px left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-primary"
-                transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
-              />
+              <div className="absolute -top-px left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-primary" />
             )}
             <Icon className={cn(
               "h-5 w-5 transition-colors",

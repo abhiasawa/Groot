@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { Home, BookOpen, Users, Heart, BarChart3, CheckSquare, Lightbulb, Settings, Search, Sprout } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,25 +44,18 @@ export default function Sidebar() {
             const Icon = item.icon;
 
             return (
-              <Link key={item.href} href={item.href} className="block relative">
-                {isActive && (
-                  <motion.div
-                    layoutId="sidebar-active"
-                    className="absolute inset-0 rounded-md bg-secondary"
-                    transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
-                  />
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors",
+                  isActive
+                    ? "bg-secondary text-foreground font-medium"
+                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
                 )}
-                <div
-                  className={cn(
-                    "relative flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors",
-                    isActive
-                      ? "text-foreground font-medium"
-                      : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
-                  )}
-                >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  {item.label}
-                </div>
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                {item.label}
               </Link>
             );
           })}
