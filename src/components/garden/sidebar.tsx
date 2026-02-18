@@ -6,7 +6,6 @@ import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { Home, BookOpen, Users, Heart, BarChart3, CheckSquare, Lightbulb, Settings, Search, Sprout } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
 const NAV_ITEMS = [
@@ -38,7 +37,7 @@ export default function Sidebar() {
       <Separator />
 
       {/* Nav */}
-      <ScrollArea className="flex-1 px-2 py-2">
+      <div className="flex-1 overflow-y-auto px-2 py-2">
         <nav className="space-y-1">
           {NAV_ITEMS.map((item) => {
             const isActive = pathname === item.href ||
@@ -69,7 +68,7 @@ export default function Sidebar() {
             );
           })}
         </nav>
-      </ScrollArea>
+      </div>
 
       {/* Footer */}
       <div className="px-3 py-3 space-y-2">
