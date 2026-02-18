@@ -31,6 +31,22 @@ export async function cachedFetch<T>(url: string, maxAge = STALE_MS): Promise<T>
 
 async function fetchAndCache<T>(url: string): Promise<T> {
   const res = await fetch(url);
+
+  if (!res.ok) {
+    let message = `Request failed (${res.status})`;
+    try {
+      const payload = await res.json() as { error?: unknown; message?: unknown };
+      if (typeof payload.error === "string" && payload.error.trim()) {
+        message = payload.error;
+      } else if (typeof payload.message === "string" && payload.message.trim()) {
+        message = payload.message;
+      }
+    } catch {
+      // Ignore JSON parsing errors and keep generic message.
+    }
+    throw new Error(message);
+  }
+
   const data = await res.json();
   cache.set(url, { data, timestamp: Date.now() });
   return data as T;

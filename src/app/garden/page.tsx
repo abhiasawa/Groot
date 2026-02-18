@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Search, Sprout, Heart, BarChart3, Lightbulb, Brain, CheckCircle2, Bell } from "lucide-react";
 import { cachedFetch } from "@/lib/garden/fetch-cache";
 import MarkdownContent from "@/components/garden/markdown-content";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
@@ -28,14 +29,6 @@ interface HomeData {
   habitsCount: number;
 }
 
-const MOOD_ACCENTS: Record<string, string> = {
-  positive: "var(--color-mood-good)", good: "var(--color-mood-good)", great: "var(--color-mood-great)",
-  happy: "var(--color-mood-great)", calm: "var(--color-mood-good)", motivated: "var(--color-mood-good)",
-  neutral: "var(--color-mood-okay)", okay: "var(--color-mood-okay)", fine: "var(--color-mood-okay)",
-  low: "var(--color-mood-low)", tired: "var(--color-mood-low)", anxious: "var(--color-mood-low)",
-  stressed: "var(--color-mood-low)", bad: "var(--color-mood-bad)", sad: "var(--color-mood-bad)",
-};
-
 const MOOD_TW: Record<string, string> = {
   positive: "text-mood-good", good: "text-mood-good", great: "text-mood-great",
   happy: "text-mood-great", calm: "text-mood-good", motivated: "text-mood-good",
@@ -56,17 +49,34 @@ const STAT_COLORS = ["text-primary", "text-accent", "text-muted-foreground", "te
 
 export default function GardenHome() {
   const [data, setData] = useState<HomeData | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [now] = useState(() => Date.now());
   const router = useRouter();
+
+  const loadHomeData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const payload = await cachedFetch<HomeData>("/api/garden/home");
+      if (!isHomeData(payload)) {
+        throw new Error("Received unexpected home data shape");
+      }
+      setData(payload);
+    } catch (err) {
+      setData(null);
+      const message = err instanceof Error && err.message ? err.message : "Could not load your dashboard";
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // Single consolidated API call — replaces 6 separate requests
   useEffect(() => {
-    cachedFetch<HomeData>("/api/garden/home")
-      .then((d) => setData(d))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+    void loadHomeData();
+  }, [loadHomeData]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,11 +85,12 @@ export default function GardenHome() {
     }
   };
 
-  const today = new Date();
+  const today = new Date(now);
   const todayFormatted = today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
-  const memberDays = data?.createdAt ? Math.max(1, Math.floor((Date.now() - new Date(data.createdAt).getTime()) / (1000 * 60 * 60 * 24))) : 0;
+  const memberDays = data?.createdAt ? Math.max(1, Math.floor((now - new Date(data.createdAt).getTime()) / (1000 * 60 * 60 * 24))) : 0;
 
-  if (loading || !data) return <LoadingSkeleton />;
+  if (loading) return <LoadingSkeleton />;
+  if (!data) return <HomeLoadError message={error} onRetry={loadHomeData} />;
 
   const displayName = data.displayName || "friend";
   const hour = new Date().getHours();
@@ -227,7 +238,7 @@ export default function GardenHome() {
             <div className="absolute left-0 top-3 bottom-3 w-[2px] rounded-full bg-border" />
 
             <div className="space-y-3">
-              {data.recentMemories.map((m, i) => {
+              {data.recentMemories.map((m) => {
                 const time = new Date(m.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
                 const typeLabel = m.message_type === "audio" ? "Voice" : m.message_type === "image" ? "Photo" : "Text";
                 const wordCount = m.content?.split(/\s+/).length ?? 0;
@@ -260,13 +271,13 @@ export default function GardenHome() {
         <SectionLabel text="Explore" />
         <BentoGrid className="md:grid-cols-2 lg:grid-cols-2">
           {quickLinks.map((link) => (
-            <BentoGridItem
-              key={link.href}
-              title={link.label}
-              description={link.description}
-              icon={link.icon}
-              onClick={() => router.push(link.href)}
-            />
+            <Link key={link.href} href={link.href} className="block">
+              <BentoGridItem
+                title={link.label}
+                description={link.description}
+                icon={link.icon}
+              />
+            </Link>
           ))}
         </BentoGrid>
       </section>
@@ -275,6 +286,21 @@ export default function GardenHome() {
 }
 
 /* Sub-components */
+
+function isHomeData(value: unknown): value is HomeData {
+  if (!value || typeof value !== "object") return false;
+  const data = value as Partial<HomeData>;
+  return (
+    typeof data.displayName === "string" &&
+    typeof data.createdAt === "string" &&
+    typeof data.memoriesCount === "number" &&
+    Array.isArray(data.recentMemories) &&
+    typeof data.pendingTasks === "number" &&
+    typeof data.upcomingReminders === "number" &&
+    typeof data.peopleCount === "number" &&
+    typeof data.habitsCount === "number"
+  );
+}
 
 function SectionLabel({ text }: { text: string }) {
   return (
@@ -322,5 +348,32 @@ function LoadingSkeleton() {
         <Skeleton key={i} className="h-28 rounded-xl" />
       ))}
     </div>
+  );
+}
+
+function HomeLoadError({
+  message,
+  onRetry,
+}: {
+  message: string | null;
+  onRetry: () => void;
+}) {
+  return (
+    <Card className="max-w-3xl mx-auto mt-6">
+      <CardContent className="space-y-4">
+        <h2 className="text-lg font-semibold text-foreground">Couldn&apos;t load your Garden home</h2>
+        <p className="text-sm text-muted-foreground">
+          {message ?? "Something went wrong while loading your dashboard."}
+        </p>
+        <div className="flex items-center gap-2">
+          <Button onClick={onRetry} size="sm">
+            Retry
+          </Button>
+          <Link href="/garden/journal" className="text-sm text-primary underline">
+            Open Journal
+          </Link>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

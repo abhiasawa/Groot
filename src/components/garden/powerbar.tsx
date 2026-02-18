@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/contexts/theme-context";
 import {
@@ -29,8 +29,6 @@ interface PowerbarCommand {
 export default function Powerbar() {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const searchRef = useRef(search);
-  searchRef.current = search;
   const router = useRouter();
   const { resolvedTheme, toggleTheme } = useTheme();
 
@@ -50,6 +48,16 @@ export default function Powerbar() {
     };
   }, []);
 
+  useEffect(() => {
+    // Defensive cleanup for rare dialog unmount paths that can leave body non-interactive.
+    if (!open && document.body.style.pointerEvents === "none") {
+      document.body.style.pointerEvents = "";
+    }
+    return () => {
+      document.body.style.pointerEvents = "";
+    };
+  }, [open]);
+
   const navigate = useCallback((href: string) => {
     router.push(href);
     setOpen(false);
@@ -68,13 +76,23 @@ export default function Powerbar() {
     { id: "graph", label: "Knowledge Graph", icon: Network, section: "navigation", action: () => navigate("/garden/graph"), keywords: ["connections", "links"] },
     { id: "settings", label: "Settings", icon: Settings, section: "navigation", action: () => navigate("/garden/settings"), keywords: ["preferences"] },
     { id: "toggle-theme", label: `Toggle dark mode (${resolvedTheme})`, icon: resolvedTheme === "dark" ? Sun : Moon, section: "actions", action: () => { toggleTheme(); setOpen(false); }, keywords: ["theme", "light", "dark", "appearance"] },
-    { id: "search-memories", label: "Search memories...", icon: Search, section: "actions", action: () => navigate(`/garden/journal?q=${encodeURIComponent(searchRef.current)}`), keywords: ["find", "query"] },
+    {
+      id: "search-memories",
+      label: "Search memories...",
+      icon: Search,
+      section: "actions",
+      action: () => {
+        const query = search.trim();
+        navigate(query ? `/garden/journal?q=${encodeURIComponent(query)}` : "/garden/journal");
+      },
+      keywords: ["find", "query"],
+    },
   ];
 
   if (!open) return null;
 
   return (
-    <CommandDialog open={open} onOpenChange={setOpen}>
+    <CommandDialog open={open} onOpenChange={setOpen} modal={false}>
       <CommandInput
         value={search}
         onValueChange={setSearch}

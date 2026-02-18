@@ -114,13 +114,15 @@ export async function GET() {
     "boss", "colleague", "roommate", "girlfriend", "boyfriend", "relationship"];
   const seen = new Set<string>();
   for (const fact of peopleProfileRes.data ?? []) {
-    const key = (fact.key as string).toLowerCase();
-    if (PEOPLE_KEYS.some(pk => key.includes(pk))) {
-      seen.add((fact.value as string).toLowerCase().trim());
-    }
+    const key = typeof fact.key === "string" ? fact.key.toLowerCase() : "";
+    if (!key || !PEOPLE_KEYS.some((pk) => key.includes(pk))) continue;
+
+    const value = typeof fact.value === "string" ? fact.value.toLowerCase().trim() : "";
+    if (value) seen.add(value);
   }
   for (const c of contactsRes.data ?? []) {
-    seen.add((c.name as string).toLowerCase().trim());
+    const name = typeof c.name === "string" ? c.name.toLowerCase().trim() : "";
+    if (name) seen.add(name);
   }
 
   const response = NextResponse.json({
