@@ -1,6 +1,7 @@
 import Sidebar from "@/components/garden/sidebar";
 import BottomNav from "@/components/garden/bottom-nav";
 import Powerbar from "@/components/garden/powerbar";
+import PointerEventsGuard from "@/components/garden/pointer-events-guard";
 
 export const metadata = {
   title: "The Garden -- Groot Dashboard",
@@ -20,6 +21,7 @@ export default function GardenLayout({
       </main>
       <BottomNav />
       <Powerbar />
+      <PointerEventsGuard />
     </div>
   );
 }
