@@ -71,6 +71,8 @@ export default function Powerbar() {
     { id: "search-memories", label: "Search memories...", icon: Search, section: "actions", action: () => navigate(`/garden/journal?q=${encodeURIComponent(searchRef.current)}`), keywords: ["find", "query"] },
   ];
 
+  if (!open) return null;
+
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
       <CommandInput

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { motion } from "motion/react";
 import { Search, Sprout, Heart, BarChart3, Lightbulb, Brain, CheckCircle2, Bell } from "lucide-react";
 import { cachedFetch } from "@/lib/garden/fetch-cache";
 import MarkdownContent from "@/components/garden/markdown-content";
@@ -147,14 +146,9 @@ export default function GardenHome() {
           {stats.map((s, i) => {
             const colorClass = STAT_COLORS[i] ?? "text-muted-foreground";
             return (
-              <motion.div
-                key={s.label}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: i * 0.1 }}
-              >
+              <div key={s.label}>
                 <StatCard value={s.value} label={s.label} href={"href" in s ? s.href : undefined} colorClass={colorClass} />
-              </motion.div>
+              </div>
             );
           })}
         </div>
@@ -239,12 +233,7 @@ export default function GardenHome() {
                 const wordCount = m.content?.split(/\s+/).length ?? 0;
 
                 return (
-                  <motion.div
-                    key={m.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3, delay: i * 0.05 }}
-                  >
+                  <div key={m.id}>
                     <Card>
                       <CardContent>
                         <MarkdownContent content={m.content} truncate={180} />
@@ -258,7 +247,7 @@ export default function GardenHome() {
                         </div>
                       </CardContent>
                     </Card>
-                  </motion.div>
+                  </div>
                 );
               })}
             </div>
