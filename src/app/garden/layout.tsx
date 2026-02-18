@@ -1,6 +1,5 @@
 import Sidebar from "@/components/garden/sidebar";
 import BottomNav from "@/components/garden/bottom-nav";
-import PointerEventsGuard from "@/components/garden/pointer-events-guard";
 
 export const metadata = {
   title: "The Garden -- Groot Dashboard",
@@ -19,7 +18,6 @@ export default function GardenLayout({
         <div className="mx-auto max-w-5xl px-4 py-6 md:px-8 md:py-8">{children}</div>
       </main>
       <BottomNav />
-      <PointerEventsGuard />
     </div>
   );
 }

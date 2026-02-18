@@ -48,16 +48,6 @@ export default function Powerbar() {
     };
   }, []);
 
-  useEffect(() => {
-    // Defensive cleanup for rare dialog unmount paths that can leave body non-interactive.
-    if (!open && document.body.style.pointerEvents === "none") {
-      document.body.style.pointerEvents = "";
-    }
-    return () => {
-      document.body.style.pointerEvents = "";
-    };
-  }, [open]);
-
   const navigate = useCallback((href: string) => {
     router.push(href);
     setOpen(false);

@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { motion } from "motion/react";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 
 interface Sparkle {
   id: string;
@@ -16,8 +16,10 @@ interface Sparkle {
 const random = (min: number, max: number) =>
   Math.floor(Math.random() * (max - min + 1)) + min;
 
+let idCounter = 0;
+
 const generateSparkle = (colors: string[]): Sparkle => ({
-  id: crypto.randomUUID(),
+  id: String(idCounter++),
   x: `${random(-10, 110)}%`,
   y: `${random(-10, 110)}%`,
   color: colors[random(0, colors.length - 1)] ?? colors[0] ?? "#2383E2",
@@ -25,11 +27,13 @@ const generateSparkle = (colors: string[]): Sparkle => ({
   scale: random(50, 100) / 100,
 });
 
+const DEFAULT_COLORS = ["#2383E2", "#D9730D", "#0F7B6C"];
+
 export function SparklesText({
   children,
   className,
   sparklesCount = 10,
-  colors = ["#2383E2", "#D9730D", "#0F7B6C"],
+  colors = DEFAULT_COLORS,
 }: {
   children: React.ReactNode;
   className?: string;
@@ -38,17 +42,14 @@ export function SparklesText({
 }) {
   const [sparkles, setSparkles] = useState<Sparkle[]>([]);
 
-  const updateSparkles = useCallback(() => {
-    setSparkles(
-      Array.from({ length: sparklesCount }, () => generateSparkle(colors)),
-    );
-  }, [sparklesCount, colors]);
-
   useEffect(() => {
-    updateSparkles();
-    const interval = setInterval(updateSparkles, 3000);
+    const generate = () =>
+      setSparkles(Array.from({ length: sparklesCount }, () => generateSparkle(colors)));
+    generate();
+    const interval = setInterval(generate, 3000);
     return () => clearInterval(interval);
-  }, [updateSparkles]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- colors reference is stable (DEFAULT_COLORS)
+  }, [sparklesCount]);
 
   return (
     <span className={cn("relative inline-block", className)}>
