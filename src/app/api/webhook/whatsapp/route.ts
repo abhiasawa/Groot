@@ -375,11 +375,11 @@ async function handleMedia(
   }
   const result = await processMedia(parsed.mediaId!, parsed.type, parsed.mediaMimeType!);
 
-  if (result?.text) {
+  if (result && (result.text || result.description)) {
     const supabase = getSupabaseAdmin();
     await supabase
       .from("messages")
-      .update({ media_description: result.text })
+      .update({ media_description: result.description || result.text })
       .eq("user_id", userId)
       .eq("whatsapp_message_id", parsed.messageId);
 
@@ -414,9 +414,41 @@ async function handleMedia(
         await storeOutboundMessage(userId, fallback);
       }
     } else if (result.type === "vision") {
-      const response = `_I see:_ ${result.description || result.text}`;
-      await sendWhatsAppMessage(parsed.from, response);
-      await storeOutboundMessage(userId, response);
+      // Route image analysis through Groot so it responds naturally
+      const imageContext = [
+        result.description ? `[Image: ${result.description}]` : null,
+        result.text ? `[Text in image: ${result.text}]` : null,
+        parsed.caption ? `[User caption: ${parsed.caption}]` : null,
+      ].filter(Boolean).join("\n");
+
+      try {
+        const grootResponse = await generateGrootResponse(userId, imageContext, displayName, isNewUser);
+        await sendWhatsAppMessage(parsed.from, grootResponse.text);
+
+        const postOps: Promise<unknown>[] = [
+          storeOutboundMessage(userId, grootResponse.text, {
+            mood: grootResponse.detectedMood,
+            source: "image",
+          }),
+          enrichInboundMessageMetadata(userId, parsed.messageId, {
+            memoryTags: grootResponse.memoryTags.length > 0 ? grootResponse.memoryTags : ["general"],
+            detectedMood: grootResponse.detectedMood ?? null,
+          }),
+        ];
+
+        if (grootResponse.shouldStoreMemory) {
+          postOps.push(
+            storeLongTermMemoryAndMark(userId, parsed.messageId, imageContext, grootResponse.memoryTags),
+          );
+        }
+
+        await Promise.allSettled(postOps);
+      } catch (error) {
+        logger.error({ error, userId }, "Groot engine failed for image");
+        const fallback = getErrorResponse();
+        await sendWhatsAppMessage(parsed.from, fallback);
+        await storeOutboundMessage(userId, fallback);
+      }
     }
   } else {
     await sendWhatsAppMessage(
