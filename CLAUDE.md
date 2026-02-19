@@ -2,16 +2,16 @@
 
 ## Project Overview
 
-Groot is an AI Second Brain & Empathetic Life Companion that lives on WhatsApp. It combines knowledge management, emotional companionship, and a WhatsApp-native experience — something no existing app does.
+Groot is an AI Second Brain & Empathetic Life Companion. It combines knowledge management, emotional companionship, and multi-platform messaging — accessible through WhatsApp, Telegram, or the web portal.
 
-**Primary Interface:** WhatsApp (via Meta Cloud API)
-**Web Portal:** "The Garden" — a Next.js dashboard for memories, knowledge graph, habits, and reports
+**Messaging:** WhatsApp (Meta Cloud API), Telegram (Bot API)
+**Web Portal:** "The Garden" — a Next.js dashboard for memories, topics, habits, and reports
 **Personality:** Empathetic, supportive, disciplined (J.A.R.V.I.S. vibe)
 
 ## Tech Stack
 
 - **Framework:** Next.js 14+ (App Router, TypeScript strict mode)
-- **Messaging:** Meta WhatsApp Cloud API (free, official, no Twilio)
+- **Messaging:** WhatsApp (Meta Cloud API), Telegram (Bot API)
 - **AI Engine:** Claude Sonnet (default) — swappable to OpenAI/Gemini via provider abstraction
 - **Long-term Memory:** Supermemory.ai SDK
 - **Voice:** OpenAI Whisper (transcription), OpenAI TTS (voice replies)
@@ -37,7 +37,7 @@ WhatsApp webhook validates signature, deduplicates, returns 200 immediately. Pro
 
 ```
 src/
-  app/api/webhook/whatsapp/   # WhatsApp webhook (heart of the app)
+  app/api/webhook/            # WhatsApp + Telegram webhooks
   app/api/cron/               # Scheduled jobs (check-ins, reports, reminders)
   app/garden/                 # The Garden web portal
   lib/ai/                     # Groot persona, context builder, intent classifier
@@ -45,7 +45,7 @@ src/
   lib/memory/                 # Supermemory + Supabase memory layer
   lib/whatsapp/               # WhatsApp Cloud API client
   lib/habits/                 # Habit tracking logic
-  lib/capture/                # Quick capture shortcuts, link summarization
+  lib/capture/                # Link summarization
   lib/reminders/              # Smart reminder system
   types/                      # TypeScript type definitions
 supabase/migrations/          # Database schema (version-controlled)

@@ -9,7 +9,6 @@ Send a text, voice note, or image and Groot remembers it. Ask it anything you've
 **Conversational AI with Long-Term Memory**
 - Full conversational AI powered by Supermemory for semantic long-term recall
 - Voice note transcription (Whisper) and image analysis (Vision)
-- Quick capture shortcuts: `note:`, `todo:`, `idea:`, `remind:`
 - Link/article saving with auto-summarization
 - Smart reminders with context from your memories
 

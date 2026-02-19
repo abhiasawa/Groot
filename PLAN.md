@@ -43,7 +43,7 @@ Groot is an AI Second Brain that lives on WhatsApp. You talk to it like a friend
 
 ## Phase 2: Onboarding Flow
 
-**Goal:** First-time user experience — 5 messages that establish personality, capture name + goal, teach a shortcut
+**Goal:** First-time user experience — 5 messages that establish personality and capture name + goal
 
 **Steps:**
 1. Create `src/lib/whatsapp/onboarding.ts` — State machine tracking onboarding progress per user
@@ -55,7 +55,7 @@ Groot is an AI Second Brain that lives on WhatsApp. You talk to it like a friend
 1. "Hey, I'm Groot." — personality intro (4 lines)
 2. "What should I call you?" — capture name
 3. "What's one goal you're working on?" — capture first goal
-4. Teach shortcut + prompt: "Try: *note: My current weight is 82kg*"
+4. "Tell me something about yourself." — capture first memory
 5. "Saved. Your first memory is planted." — confirmation
 
 ---
@@ -139,19 +139,6 @@ Groot is an AI Second Brain that lives on WhatsApp. You talk to it like a friend
 5. For unknown contacts: ask for number, store, then confirm
 
 **Safety:** Never auto-send. Always show preview. Log as `direction = 'outbound_proxy'`.
-
----
-
-## Phase 8: Quick Capture Shortcuts
-
-**Goal:** `todo:`, `idea:`, `note:`, `remind:` prefix commands for instant capture
-
-**Steps:**
-1. Create `src/lib/capture/shortcut-parser.ts` — Detect and parse prefixes
-2. Create `src/lib/capture/task-manager.ts` — CRUD for tasks
-3. Wire shortcut parser BEFORE intent classifier (skip AI for faster response)
-
-**Test:** "todo: buy milk" → "Got it, added to your tasks."
 
 ---
 

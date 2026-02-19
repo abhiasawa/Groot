@@ -1,9 +1,7 @@
 /**
  * Date/time detector — extracts temporal references from messages.
  *
- * Used by both:
- * - AI metadata extraction (Phase 5 LLM response)
- * - Rule-based detection (this file) for explicit "remind:" shortcuts
+ * Used by AI metadata extraction to parse reminder times.
  */
 
 export interface DetectedReminder {
@@ -13,11 +11,7 @@ export interface DetectedReminder {
 }
 
 /**
- * Parse a remind: shortcut into a structured reminder.
- * Examples:
- * - "remind: call dentist tomorrow at 3pm"
- * - "remind: team meeting friday 2pm"
- * - "remind: buy groceries in 2 hours"
+ * Parse reminder text into a structured reminder with a resolved date.
  */
 export function parseReminderText(text: string): DetectedReminder | null {
   const now = new Date();
