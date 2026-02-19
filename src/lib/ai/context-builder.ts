@@ -75,7 +75,19 @@ export async function buildContext(
 
   // Add recent conversation history
   for (const msg of recentMessages) {
-    const content = msg.content || msg.media_description || "";
+    let content: string;
+
+    if (msg.media_description && msg.direction === "inbound") {
+      // For media messages, include the AI-generated description so Groot
+      // knows what the image/audio contains, plus any user caption
+      const parts: string[] = [];
+      parts.push(`[Image: ${msg.media_description}]`);
+      if (msg.content) parts.push(`[User caption: ${msg.content}]`);
+      content = parts.join("\n");
+    } else {
+      content = msg.content || msg.media_description || "";
+    }
+
     if (!content) continue;
 
     messages.push({
