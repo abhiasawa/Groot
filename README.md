@@ -56,7 +56,6 @@ Send a text, voice note, or image to Groot on WhatsApp and it remembers everythi
 | Vision | OpenAI Vision / Claude Vision |
 | Hosting | Vercel |
 | Styling | Tailwind CSS |
-| Graph | react-force-graph-2d |
 | Charts | Recharts |
 
 ## Deploy to Vercel

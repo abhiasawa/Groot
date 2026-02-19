@@ -283,6 +283,11 @@ async function processMessage(parsed: ParsedMessage): Promise<void> {
         mood: grootResponse.detectedMood,
       }),
       createRemindersFromDetectedDates(user.id, grootResponse.detectedDates),
+      // Persist AI-extracted tags + mood onto the inbound message for the Topics page
+      enrichInboundMessageMetadata(user.id, parsed.messageId, {
+        memoryTags: grootResponse.memoryTags.length > 0 ? grootResponse.memoryTags : ["general"],
+        detectedMood: grootResponse.detectedMood ?? null,
+      }),
     ];
 
     if (grootResponse.shouldStoreMemory) {
@@ -389,6 +394,10 @@ async function handleMedia(
             source: "voice_note",
           }),
           createRemindersFromDetectedDates(userId, grootResponse.detectedDates),
+          enrichInboundMessageMetadata(userId, parsed.messageId, {
+            memoryTags: grootResponse.memoryTags.length > 0 ? grootResponse.memoryTags : ["general"],
+            detectedMood: grootResponse.detectedMood ?? null,
+          }),
         ];
 
         if (grootResponse.shouldStoreMemory) {
@@ -432,6 +441,19 @@ async function storeInboundMessage(userId: string, parsed: ParsedMessage): Promi
       ? { interactive_reply: parsed.interactiveReply }
       : {},
   });
+}
+
+async function enrichInboundMessageMetadata(
+  userId: string,
+  whatsappMessageId: string,
+  aiMetadata: { memoryTags: string[]; detectedMood: string | null },
+): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  await supabase
+    .from("messages")
+    .update({ metadata: aiMetadata })
+    .eq("user_id", userId)
+    .eq("whatsapp_message_id", whatsappMessageId);
 }
 
 async function claimMessageForProcessing(messageId: string): Promise<boolean> {

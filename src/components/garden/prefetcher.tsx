@@ -17,6 +17,7 @@ const PREFETCH_ROUTES = [
   "/api/people",
   "/api/reports",
   "/api/profile",
+  "/api/topics",
 ];
 
 export default function Prefetcher() {

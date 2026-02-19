@@ -107,9 +107,6 @@ export default function SettingsPage() {
           <Button variant="link" asChild className="h-auto p-0">
             <Link href="/garden/profile">View Profile &rarr;</Link>
           </Button>
-          <Button variant="link" asChild className="h-auto p-0">
-            <Link href="/garden/graph">Knowledge Graph &rarr;</Link>
-          </Button>
         </CardContent>
       </Card>
 

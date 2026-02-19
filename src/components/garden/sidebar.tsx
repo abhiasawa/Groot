@@ -10,6 +10,7 @@ import {
   BarChart3,
   CheckSquare,
   Lightbulb,
+  Tag,
   Settings,
   Sprout,
 } from "lucide-react";
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { href: "/garden/habits", label: "Habits", icon: BarChart3 },
   { href: "/garden/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/garden/insights", label: "Insights", icon: Lightbulb },
+  { href: "/garden/topics", label: "Topics", icon: Tag },
   { href: "/garden/settings", label: "Settings", icon: Settings },
 ] as const;
 

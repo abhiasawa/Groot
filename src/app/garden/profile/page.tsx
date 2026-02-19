@@ -161,11 +161,11 @@ export default function ProfilePage() {
         })
       )}
 
-      {/* Link to Knowledge Graph */}
+      {/* Link to Topics */}
       <div className="pt-4">
         <Button variant="link" asChild className="px-0">
-          <Link href="/garden/graph">
-            View your knowledge graph &rarr;
+          <Link href="/garden/topics">
+            Browse your topics &rarr;
           </Link>
         </Button>
       </div>

@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/command";
 import {
   Home, BookOpen, Users, Heart, BarChart3, CheckSquare,
-  Lightbulb, Brain, Network, Settings, Sun, Moon, Search,
+  Lightbulb, Brain, Tag, Settings, Sun, Moon, Search,
 } from "lucide-react";
 
 interface PowerbarCommand {
@@ -63,7 +63,7 @@ export default function Powerbar() {
     { id: "tasks", label: "Tasks", icon: CheckSquare, section: "navigation", action: () => navigate("/garden/tasks"), keywords: ["todo", "pending"] },
     { id: "insights", label: "Insights", icon: Lightbulb, section: "navigation", action: () => navigate("/garden/insights"), keywords: ["reports", "weekly"] },
     { id: "profile", label: "Profile", icon: Brain, section: "navigation", action: () => navigate("/garden/profile"), keywords: ["about me"] },
-    { id: "graph", label: "Knowledge Graph", icon: Network, section: "navigation", action: () => navigate("/garden/graph"), keywords: ["connections", "links"] },
+    { id: "topics", label: "Topics", icon: Tag, section: "navigation", action: () => navigate("/garden/topics"), keywords: ["tags", "categories", "topics"] },
     { id: "settings", label: "Settings", icon: Settings, section: "navigation", action: () => navigate("/garden/settings"), keywords: ["preferences"] },
     { id: "toggle-theme", label: `Toggle dark mode (${resolvedTheme})`, icon: resolvedTheme === "dark" ? Sun : Moon, section: "actions", action: () => { toggleTheme(); setOpen(false); }, keywords: ["theme", "light", "dark", "appearance"] },
     {
