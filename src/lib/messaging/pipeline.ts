@@ -13,7 +13,8 @@ import {
   markUserResponded,
   updateProactivePreference,
 } from "@/lib/proactive/scheduler";
-import { sendMessage, sendButtons } from "./dispatcher";
+import { sendMessage, sendImage } from "./dispatcher";
+import { isLastImageRequest, extractStoredMediaId } from "./last-image";
 import { logger } from "@/lib/logger";
 import type { ParsedMessage } from "@/types/whatsapp";
 
@@ -131,6 +132,15 @@ export async function processMessage(
     );
     metrics.sendMs = Date.now() - tSend;
     outcome = "non_text_fallback_sent";
+    logSummary();
+    return;
+  }
+
+  if (isLastImageRequest(text)) {
+    const tRecall = Date.now();
+    await handleLastImageRecall(user.id, parsed.platform, parsed.from);
+    metrics.lastImageRecallMs = Date.now() - tRecall;
+    outcome = "handled_last_image_recall";
     logSummary();
     return;
   }
@@ -259,6 +269,68 @@ async function handleInteractiveReply(
   }
 
   return false;
+}
+
+interface LastImageMessageRow {
+  media_url: string | null;
+}
+
+async function handleLastImageRecall(
+  userId: string,
+  platform: ParsedMessage["platform"],
+  from: string,
+): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("messages")
+    .select("media_url")
+    .eq("user_id", userId)
+    .eq("direction", "inbound")
+    .eq("platform", platform)
+    .eq("message_type", "image")
+    .not("media_url", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<LastImageMessageRow>();
+
+  if (error) {
+    logger.error({ error, userId, platform }, "Failed to fetch last inbound image");
+    const fallback = "_I hit a snag while finding your last image. Try again in a moment._";
+    await sendMessage(platform, from, fallback);
+    await storeOutboundMessage(userId, fallback, {
+      action: "last_image_recall",
+      status: "lookup_error",
+    });
+    return;
+  }
+
+  const mediaId = extractStoredMediaId(data?.media_url ?? null);
+  if (!mediaId) {
+    const notFound = "_I couldn't find a previous image from you yet._";
+    await sendMessage(platform, from, notFound);
+    await storeOutboundMessage(userId, notFound, {
+      action: "last_image_recall",
+      status: "not_found",
+    });
+    return;
+  }
+
+  try {
+    await sendImage(platform, from, mediaId, "Here is your last image.");
+    await storeOutboundMessage(userId, "Sent your last image back.", {
+      action: "last_image_recall",
+      status: "sent",
+    });
+  } catch (sendError) {
+    logger.warn({ sendError, userId, platform, mediaId }, "Failed to resend last image");
+    const fallback =
+      "_I found your last image but couldn't resend it right now. It may have expired. Send it again and I'll try once more._";
+    await sendMessage(platform, from, fallback);
+    await storeOutboundMessage(userId, fallback, {
+      action: "last_image_recall",
+      status: "send_failed",
+    });
+  }
 }
 
 async function handleMedia(

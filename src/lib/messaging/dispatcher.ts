@@ -1,6 +1,14 @@
 import type { Platform } from "@/types/whatsapp";
-import { sendWhatsAppMessage, sendWhatsAppButtons } from "@/lib/whatsapp/client";
-import { sendTelegramMessage, sendTelegramButtons } from "@/lib/telegram/client";
+import {
+  sendWhatsAppMessage,
+  sendWhatsAppButtons,
+  sendWhatsAppImage,
+} from "@/lib/whatsapp/client";
+import {
+  sendTelegramMessage,
+  sendTelegramButtons,
+  sendTelegramPhoto,
+} from "@/lib/telegram/client";
 import { logger } from "@/lib/logger";
 
 /**
@@ -34,6 +42,21 @@ export async function sendButtons(
     await sendTelegramButtons(to, bodyText, buttons);
   } else {
     logger.error({ platform, to }, "Unknown platform for sendButtons");
+  }
+}
+
+export async function sendImage(
+  platform: Platform,
+  to: string,
+  mediaId: string,
+  caption?: string,
+): Promise<void> {
+  if (platform === "whatsapp") {
+    await sendWhatsAppImage(to, mediaId, caption);
+  } else if (platform === "telegram") {
+    await sendTelegramPhoto(to, mediaId, caption);
+  } else {
+    logger.error({ platform, to }, "Unknown platform for sendImage");
   }
 }
 

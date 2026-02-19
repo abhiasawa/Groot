@@ -43,6 +43,39 @@ export async function sendTelegramMessage(
 }
 
 /**
+ * Send a photo via Telegram using an existing file_id.
+ */
+export async function sendTelegramPhoto(
+  chatId: string,
+  fileId: string,
+  caption?: string,
+): Promise<void> {
+  const token = getBotToken();
+  const t0 = Date.now();
+
+  const response = await fetch(`${TELEGRAM_API}/bot${token}/sendPhoto`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      photo: fileId,
+      ...(caption ? { caption } : {}),
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    logger.error({ error, chatId, fileId, apiMs: Date.now() - t0 }, "Telegram photo send failed");
+    throw new Error(`Telegram API error: ${JSON.stringify(error)}`);
+  }
+
+  logger.info(
+    { chatId, fileId, apiMs: Date.now() - t0 },
+    "Telegram photo sent",
+  );
+}
+
+/**
  * Send a message with inline keyboard buttons.
  */
 export async function sendTelegramButtons(

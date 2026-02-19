@@ -58,6 +58,52 @@ export async function sendWhatsAppMessage(
 }
 
 /**
+ * Send an image via WhatsApp Cloud API using an existing media ID.
+ */
+export async function sendWhatsAppImage(
+  to: string,
+  mediaId: string,
+  caption?: string,
+): Promise<WhatsAppSendResult> {
+  const { phoneNumberId, accessToken } = getConfig();
+  const t0 = Date.now();
+
+  const response = await fetch(
+    `${WHATSAPP_API_URL}/${phoneNumberId}/messages`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to,
+        type: "image",
+        image: {
+          id: mediaId,
+          ...(caption ? { caption } : {}),
+        },
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    logger.error({ error, to, mediaId, apiMs: Date.now() - t0 }, "WhatsApp image send failed");
+    throw new Error(`WhatsApp API error: ${JSON.stringify(error)}`);
+  }
+
+  const result = await response.json() as WhatsAppSendResult;
+  logger.info(
+    { to, mediaId, messageId: result.messages?.[0]?.id, apiMs: Date.now() - t0 },
+    "WhatsApp image sent",
+  );
+  return result;
+}
+
+/**
  * Send interactive button message (up to 3 buttons).
  */
 export async function sendWhatsAppButtons(
