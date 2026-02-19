@@ -1,54 +1,67 @@
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
+import type { Platform } from "@/types/whatsapp";
 
-interface UserRecord {
+export interface UserRecord {
   id: string;
-  whatsapp_number: string;
+  whatsapp_number: string | null;
+  telegram_chat_id: number | null;
   display_name: string | null;
   onboarding_step: number;
   onboarding_completed_at: string | null;
 }
 
 /**
- * Check if a user exists. If not, create them with onboarding already complete.
+ * Check if a user exists by platform identifier. If not, create them.
  * Returns the user record and whether they were just created (first message ever).
  */
 export async function getOrCreateUser(
-  whatsappNumber: string,
+  platform: Platform,
+  platformId: string,
   displayName: string,
 ): Promise<{ user: UserRecord; isNewUser: boolean }> {
   const supabase = getSupabaseAdmin();
 
+  const column = platform === "whatsapp" ? "whatsapp_number" : "telegram_chat_id";
+  const value = platform === "telegram" ? Number.parseInt(platformId, 10) : platformId;
+
   // Try to fetch existing user
   const { data: existing } = await supabase
     .from("users")
-    .select("id, whatsapp_number, display_name, onboarding_step, onboarding_completed_at")
-    .eq("whatsapp_number", whatsappNumber)
+    .select("id, whatsapp_number, telegram_chat_id, display_name, onboarding_step, onboarding_completed_at")
+    .eq(column, value)
     .single();
 
   if (existing) {
-    logger.info({ userId: existing.id, displayName: existing.display_name }, "Existing user found");
+    logger.info({ userId: existing.id, displayName: existing.display_name, platform }, "Existing user found");
     return { user: existing as UserRecord, isNewUser: false };
   }
 
   // Create new user — onboarding complete from the start
+  const insertData: Record<string, unknown> = {
+    display_name: displayName || null,
+    onboarding_step: 4,
+    onboarding_completed_at: new Date().toISOString(),
+  };
+
+  if (platform === "whatsapp") {
+    insertData.whatsapp_number = platformId;
+  } else {
+    insertData.telegram_chat_id = Number.parseInt(platformId, 10);
+  }
+
   const { data: newUser, error } = await supabase
     .from("users")
-    .insert({
-      whatsapp_number: whatsappNumber,
-      display_name: displayName || null,
-      onboarding_step: 4,
-      onboarding_completed_at: new Date().toISOString(),
-    })
-    .select("id, whatsapp_number, display_name, onboarding_step, onboarding_completed_at")
+    .insert(insertData)
+    .select("id, whatsapp_number, telegram_chat_id, display_name, onboarding_step, onboarding_completed_at")
     .single();
 
   if (error || !newUser) {
-    logger.error({ error, whatsappNumber }, "Failed to create user");
+    logger.error({ error, platform, platformId }, "Failed to create user");
     throw new Error("Failed to create user");
   }
 
-  logger.info({ userId: newUser.id, whatsappNumber }, "New user created");
+  logger.info({ userId: newUser.id, platform, platformId }, "New user created");
   return { user: newUser as UserRecord, isNewUser: true };
 }
 

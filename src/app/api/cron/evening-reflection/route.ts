@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getEligibleUsers } from "@/lib/proactive/scheduler";
 import { generateReflectionPrompt } from "@/lib/journal/prompt-generator";
-import { sendWhatsAppMessage } from "@/lib/whatsapp/client";
+import { sendMessage, getUserPlatform } from "@/lib/messaging/dispatcher";
 import { logger } from "@/lib/logger";
 
 /**
@@ -25,11 +25,12 @@ export async function GET(request: NextRequest) {
 
     for (const user of users) {
       try {
+        const { platform, platformId } = getUserPlatform(user);
         const prompt = await generateReflectionPrompt(
           user.id,
           user.display_name,
         );
-        await sendWhatsAppMessage(user.whatsapp_number, prompt);
+        await sendMessage(platform, platformId, prompt);
         sent++;
       } catch (error) {
         logger.error(

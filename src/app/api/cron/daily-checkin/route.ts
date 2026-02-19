@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getEligibleUsers, getDeEscalationLevel, sendDeEscalationPrompt } from "@/lib/proactive/scheduler";
 import { getActiveHabits, getStreakInfo } from "@/lib/habits/tracker";
-import { sendWhatsAppMessage } from "@/lib/whatsapp/client";
+import { sendMessage, getUserPlatform } from "@/lib/messaging/dispatcher";
 import { logger } from "@/lib/logger";
 
 /**
@@ -35,17 +35,20 @@ export async function GET(request: NextRequest) {
         const level = await getDeEscalationLevel(user.id);
         const name = user.display_name ?? "there";
 
+        const { platform, platformId } = getUserPlatform(user);
+
         if (level >= 3) {
           // Ask about preferences
-          await sendDeEscalationPrompt(user.whatsapp_number, user.display_name);
+          await sendDeEscalationPrompt(user);
           sent++;
           continue;
         }
 
         if (level === 2) {
           // Minimal message
-          await sendWhatsAppMessage(
-            user.whatsapp_number,
+          await sendMessage(
+            platform,
+            platformId,
             `Hey ${name}. I'm here if you need me. 🌱`,
           );
           sent++;
@@ -70,14 +73,14 @@ export async function GET(request: NextRequest) {
             ? `Good morning, *${name}*! 🌅\n\nHere are your habits today:\n${habitLines.join("\n")}\n\n_Quick log: just send the number (e.g., 80.2 for weight)_`
             : `Morning, ${name}. Your habits:\n${habitLines.join("\n")}`;
 
-          await sendWhatsAppMessage(user.whatsapp_number, greeting);
+          await sendMessage(platform, platformId, greeting);
         } else {
           // No habits — general greeting
           const greeting = level === 0
             ? `Good morning, *${name}*! 🌅\n\nAnything on your mind today? I'm here to help.`
             : `Morning, ${name}. I'm here if you need anything.`;
 
-          await sendWhatsAppMessage(user.whatsapp_number, greeting);
+          await sendMessage(platform, platformId, greeting);
         }
 
         sent++;

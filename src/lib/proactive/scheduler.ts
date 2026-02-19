@@ -1,14 +1,15 @@
 import { getSupabaseAdmin } from "@/lib/supabase/server";
-import { sendWhatsAppButtons } from "@/lib/whatsapp/client";
+import { sendButtons, getUserPlatform } from "@/lib/messaging/dispatcher";
 import { logger } from "@/lib/logger";
 
 /**
  * Proactive message scheduler with de-escalation logic.
  */
 
-interface UserProactiveState {
+export interface UserProactiveState {
   id: string;
-  whatsapp_number: string;
+  whatsapp_number: string | null;
+  telegram_chat_id: number | null;
   display_name: string | null;
   proactive_preference: string;
   last_responded_at: string | null;
@@ -37,7 +38,7 @@ export async function getEligibleUsers(
   const { data: users } = await supabase
     .from("users")
     .select(
-      "id, whatsapp_number, display_name, proactive_preference, last_responded_at, timezone",
+      "id, whatsapp_number, telegram_chat_id, display_name, proactive_preference, last_responded_at, timezone",
     )
     .not("onboarding_completed_at", "is", null)
     .neq("proactive_preference", "paused");
@@ -114,12 +115,13 @@ export async function getDeEscalationLevel(userId: string): Promise<number> {
  * Send the de-escalation preference prompt.
  */
 export async function sendDeEscalationPrompt(
-  userPhone: string,
-  userName: string | null,
+  user: UserProactiveState,
 ): Promise<void> {
-  const name = userName ?? "there";
-  await sendWhatsAppButtons(
-    userPhone,
+  const { platform, platformId } = getUserPlatform(user);
+  const name = user.display_name ?? "there";
+  await sendButtons(
+    platform,
+    platformId,
     `Hey ${name}, I notice you've been quiet. No pressure — I'm here when you need me.\n\nHow would you like me to check in?`,
     [
       { id: "proactive_daily", title: "Keep Daily" },

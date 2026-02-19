@@ -21,8 +21,41 @@ export interface MediaProcessingResult {
 }
 
 /**
- * Download and process WhatsApp media.
- * Returns extracted text/description or null if processing fails.
+ * Process media from an already-downloaded buffer (platform-agnostic).
+ * Both WhatsApp and Telegram webhooks call this after downloading media.
+ */
+export async function processMediaFromBuffer(
+  buffer: Buffer,
+  mediaType: string,
+  mimeType: string,
+): Promise<MediaProcessingResult | null> {
+  try {
+    logger.info(
+      { size: buffer.length, mediaType, mimeType },
+      "Processing media from buffer",
+    );
+
+    if (isAudioType(mimeType)) {
+      return await processAudio(buffer, mimeType);
+    }
+
+    if (isImageType(mimeType)) {
+      return await processImage(buffer, mimeType);
+    }
+
+    logger.warn({ mediaType, mimeType }, "Unsupported media type");
+    return {
+      type: "unsupported",
+      text: "",
+    };
+  } catch (error) {
+    logger.error({ error, mediaType }, "Media processing failed");
+    return null;
+  }
+}
+
+/**
+ * Download and process WhatsApp media (convenience wrapper).
  */
 export async function processMedia(
   mediaId: string,
@@ -40,19 +73,7 @@ export async function processMedia(
       "Media downloaded",
     );
 
-    if (isAudioType(mime)) {
-      return await processAudio(buffer, mime);
-    }
-
-    if (isImageType(mime)) {
-      return await processImage(buffer, mime);
-    }
-
-    logger.warn({ mediaId, mimeType: mime }, "Unsupported media type");
-    return {
-      type: "unsupported",
-      text: "",
-    };
+    return await processMediaFromBuffer(buffer, mediaType, mime);
   } catch (error) {
     logger.error({ error, mediaId }, "Media processing failed");
     return null;

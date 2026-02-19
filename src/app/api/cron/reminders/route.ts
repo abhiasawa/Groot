@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDueReminders, markReminderSent } from "@/lib/reminders/scheduler";
 import { searchMemories } from "@/lib/memory/supermemory-client";
-import { sendWhatsAppMessage } from "@/lib/whatsapp/client";
+import { sendMessage, getUserPlatform } from "@/lib/messaging/dispatcher";
 import { logger } from "@/lib/logger";
 
 /**
@@ -38,8 +38,9 @@ export async function GET(request: NextRequest) {
         }
 
         const message = `⏰ *Reminder:* ${reminder.content}${contextLine}`;
+        const { platform, platformId } = getUserPlatform(reminder);
 
-        await sendWhatsAppMessage(reminder.whatsapp_number, message);
+        await sendMessage(platform, platformId, message);
         await markReminderSent(reminder.id);
         sent++;
       } catch (error) {

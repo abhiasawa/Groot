@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getEligibleUsers } from "@/lib/proactive/scheduler";
 import { generateWeeklyReport } from "@/lib/reports/weekly-synthesis";
-import { sendWhatsAppMessage } from "@/lib/whatsapp/client";
+import { sendMessage, getUserPlatform } from "@/lib/messaging/dispatcher";
 import { logger } from "@/lib/logger";
 
 /**
@@ -25,26 +25,21 @@ export async function GET(request: NextRequest) {
 
     for (const user of users) {
       try {
+        const { platform, platformId } = getUserPlatform(user);
         const report = await generateWeeklyReport(user.id, user.display_name);
 
         // Split into 2 messages if too long (>1000 chars)
         if (report.length > 1000) {
           const midpoint = report.lastIndexOf("\n", Math.floor(report.length / 2));
           if (midpoint > 0) {
-            await sendWhatsAppMessage(
-              user.whatsapp_number,
-              report.substring(0, midpoint),
-            );
+            await sendMessage(platform, platformId, report.substring(0, midpoint));
             await new Promise((r) => setTimeout(r, 1500));
-            await sendWhatsAppMessage(
-              user.whatsapp_number,
-              report.substring(midpoint + 1),
-            );
+            await sendMessage(platform, platformId, report.substring(midpoint + 1));
           } else {
-            await sendWhatsAppMessage(user.whatsapp_number, report);
+            await sendMessage(platform, platformId, report);
           }
         } else {
-          await sendWhatsAppMessage(user.whatsapp_number, report);
+          await sendMessage(platform, platformId, report);
         }
 
         sent++;

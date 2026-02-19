@@ -1,3 +1,5 @@
+export type Platform = "whatsapp" | "telegram";
+
 export interface WhatsAppWebhookPayload {
   object: string;
   entry: Array<{
@@ -49,6 +51,7 @@ export interface WhatsAppRawMessage {
 }
 
 export interface ParsedMessage {
+  platform: Platform;
   messageId: string;
   from: string;
   displayName: string;

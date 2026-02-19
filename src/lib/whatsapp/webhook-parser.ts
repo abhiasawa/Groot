@@ -54,6 +54,7 @@ export function parseWebhookPayloads(
           }
 
           parsedMessages.push({
+            platform: "whatsapp",
             messageId: message.id,
             from: message.from,
             displayName: contact?.profile?.name ?? "Unknown",

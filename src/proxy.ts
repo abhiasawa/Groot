@@ -4,9 +4,9 @@ import type { NextRequest } from "next/server";
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Never rate-limit WhatsApp webhooks. A 429 here causes Meta retries,
+  // Never rate-limit messaging webhooks. A 429 causes platform retries,
   // which shows up as delayed bot responses to end users.
-  if (pathname === "/api/webhook/whatsapp") {
+  if (pathname === "/api/webhook/whatsapp" || pathname === "/api/webhook/telegram") {
     return NextResponse.next();
   }
 
