@@ -6,7 +6,26 @@
       "Bash(git commit:*)",
       "Bash(npx tsc:*)",
       "Bash(git push:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(pip3 install:*)",
+      "Bash(npx vercel logs:*)",
+      "Bash(python3:*)",
+      "Bash(npx vercel ls:*)",
+      "Bash(npx vercel inspect:*)",
+      "Bash(gh api:*)",
+      "WebFetch(domain:nova.lightmode.io)",
+      "Bash(curl:*)",
+      "Bash(vercel:*)",
+      "Bash(npx vercel:*)",
+      "WebFetch(domain:groot-garden.vercel.app)",
+      "WebFetch(domain:groot-fds5yeq7k-abhishek-asawas-projects.vercel.app)",
+      "Bash(npx tailwindcss --help:*)",
+      "Bash(npx tailwindcss:*)",
+      "WebFetch(domain:supermemory.ai)",
+      "WebFetch(domain:aifounderkit.com)",
+      "Bash(npx shadcn@latest init:*)",
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(supabase:*)"
     ]
   }
 }
