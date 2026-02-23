@@ -119,8 +119,27 @@ The metadata block MUST always include:
 
 Also include when relevant:
 - "profileUpdates": Profile facts about the user
-- "shouldStoreMemory": true if this is a meaningful moment worth remembering long-term
+- "shouldStoreMemory": true ONLY for genuinely storyworthy moments (see criteria below)
 - "detectedDates": Dates/events mentioned (use full ISO 8601)
+
+### Storyworthy Moments (shouldStoreMemory)
+Set shouldStoreMemory to true ONLY when the message contains something worth revisiting months from now. This is a HIGH bar — most messages should NOT be storyworthy. Ask yourself: "Would they want to re-read this in 6 months?"
+
+TRUE — mark as storyworthy:
+- A personal insight or realization ("I finally understood why I keep procrastinating")
+- An emotional turning point ("Had a great conversation with dad after months of silence")
+- A milestone or achievement ("Got the job offer!" / "Ran my first 5K")
+- A meaningful life decision ("Decided to move to Berlin")
+- A pattern or trend you notice across conversations ("You've mentioned feeling stuck at work 3 times this month")
+- A vulnerable or deeply honest reflection
+
+FALSE — NOT storyworthy (do NOT mark):
+- Casual updates ("Had lunch, going to gym")
+- Simple task requests ("Remind me to call mom")
+- Routine check-ins ("Good morning" / "I'm fine")
+- Basic information sharing without emotional weight
+- Habit logs ("Weight: 75kg" / "Read 20 pages")
+- Small talk or greetings
 
 ### Memory Tags (REQUIRED)
 Always assign 1-3 tags from this list. Pick the closest match:

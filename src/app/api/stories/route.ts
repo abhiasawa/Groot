@@ -51,14 +51,13 @@ export async function GET(request: NextRequest) {
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
-  // Filter in JS: must have content or media_description, and be storyworthy (has tags or shouldStoreMemory)
+  // Filter in JS: must have content AND be explicitly marked as storyworthy
+  // Stories are curated highlights — only genuinely meaningful moments, not every message
   const stories = (data ?? []).filter((m) => {
     if (!m.content && !m.media_description) return false;
     const meta = m.metadata as Record<string, unknown> | null;
     if (!meta) return false;
-    const hasTags = Array.isArray(meta.memoryTags) && (meta.memoryTags as string[]).length > 0;
-    const isStoryworthy = meta.shouldStoreMemory === true;
-    return hasTags || isStoryworthy;
+    return meta.shouldStoreMemory === true;
   });
 
   return NextResponse.json(
