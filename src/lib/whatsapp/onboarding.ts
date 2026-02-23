@@ -37,6 +37,39 @@ export async function getOrCreateUser(
     return { user: existing as UserRecord, isNewUser: false };
   }
 
+  // Cross-platform lookup: check if a user exists on a DIFFERENT platform
+  // This prevents duplicate users when the same person messages from both WhatsApp and Telegram
+  const otherColumn = platform === "whatsapp" ? "telegram_chat_id" : "whatsapp_number";
+  const { data: crossPlatformUser } = await supabase
+    .from("users")
+    .select("id, whatsapp_number, telegram_chat_id, display_name, onboarding_step, onboarding_completed_at")
+    .not(otherColumn, "is", null)
+    .limit(1)
+    .single();
+
+  if (crossPlatformUser) {
+    // Link this platform to the existing user
+    const updateData: Record<string, unknown> = {};
+    if (platform === "whatsapp") {
+      updateData.whatsapp_number = platformId;
+    } else {
+      updateData.telegram_chat_id = Number.parseInt(platformId, 10);
+    }
+    if (displayName) updateData.display_name = displayName;
+
+    const { data: updated } = await supabase
+      .from("users")
+      .update(updateData)
+      .eq("id", crossPlatformUser.id)
+      .select("id, whatsapp_number, telegram_chat_id, display_name, onboarding_step, onboarding_completed_at")
+      .single();
+
+    if (updated) {
+      logger.info({ userId: updated.id, platform, linkedFrom: otherColumn }, "Cross-platform user linked");
+      return { user: updated as UserRecord, isNewUser: false };
+    }
+  }
+
   // Create new user — onboarding complete from the start
   const insertData: Record<string, unknown> = {
     display_name: displayName || null,
