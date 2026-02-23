@@ -350,14 +350,13 @@ function StatCard({
   trend?: number;
 }) {
   return (
-    <Card>
-      <CardContent className="py-4 px-4">
-        <div className="flex items-center gap-2 mb-1.5">
+    <Card className="text-center">
+      <CardContent className="py-4 px-3">
+        <div className="flex items-center justify-center gap-2 mb-1.5">
           {icon}
-          <span className="text-[11px] text-muted-foreground">{label}</span>
         </div>
-        <div className="flex items-baseline gap-2">
-          <span className="text-xl font-bold tracking-tight text-foreground">{value}</span>
+        <div className="flex items-baseline justify-center gap-2">
+          <span className="text-2xl font-bold tracking-tight text-foreground">{value}</span>
           {trend !== undefined && trend !== 0 && (
             <span
               className={cn(
@@ -370,6 +369,9 @@ function StatCard({
             </span>
           )}
         </div>
+        <p className="text-[11px] mt-1 uppercase tracking-wide text-muted-foreground">
+          {label}
+        </p>
       </CardContent>
     </Card>
   );
