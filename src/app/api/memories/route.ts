@@ -49,7 +49,6 @@ export async function GET(request: NextRequest) {
       .select("created_at")
       .eq("user_id", userId)
       .eq("direction", "inbound")
-      .or("content.not.is.null,media_description.not.is.null")
       .gte("created_at", startOfMonth)
       .lte("created_at", endOfMonth);
 
@@ -78,13 +77,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ memories: fallbackData ?? [], total: fallbackCount ?? 0 }, { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" } });
   }
 
-  // List from Supabase messages
+  // List from Supabase messages — includes voice (media_description) and text (content)
   let queryBuilder = supabase
     .from("messages")
     .select("id, direction, message_type, content, media_description, metadata, created_at", { count: "exact" })
     .eq("user_id", userId)
     .eq("direction", "inbound")
-    .or("content.not.is.null,media_description.not.is.null")
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
@@ -101,5 +99,37 @@ export async function GET(request: NextRequest) {
 
   const { data, count } = await queryBuilder;
 
-  return NextResponse.json({ memories: data ?? [], total: count ?? 0 }, { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" } });
+  // Filter out truly empty messages (no content and no media_description)
+  const filtered = (data ?? []).filter(m => m.content || m.media_description);
+
+  // Attach conversation context: for each inbound message, find Groot's preceding question
+  if (filtered.length > 0) {
+    const oldest = filtered[filtered.length - 1]!;
+    const oldestTime = new Date(new Date(oldest.created_at).getTime() - 30 * 60 * 1000).toISOString();
+
+    const { data: outbound } = await supabase
+      .from("messages")
+      .select("content, created_at")
+      .eq("user_id", userId)
+      .eq("direction", "outbound")
+      .gte("created_at", oldestTime)
+      .order("created_at", { ascending: false });
+
+    if (outbound && outbound.length > 0) {
+      const THIRTY_MIN_MS = 30 * 60 * 1000;
+      for (const entry of filtered) {
+        const entryTime = new Date(entry.created_at).getTime();
+        // Find the most recent outbound message before this inbound, within 30 min
+        const preceding = outbound.find((o) => {
+          const oTime = new Date(o.created_at).getTime();
+          return oTime < entryTime && entryTime - oTime < THIRTY_MIN_MS;
+        });
+        if (preceding?.content) {
+          (entry as Record<string, unknown>).context_message = preceding.content;
+        }
+      }
+    }
+  }
+
+  return NextResponse.json({ memories: filtered, total: count ?? 0 }, { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" } });
 }

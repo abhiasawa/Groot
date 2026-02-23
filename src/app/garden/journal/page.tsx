@@ -20,6 +20,7 @@ interface Memory {
   message_type: string;
   metadata?: Record<string, unknown>;
   created_at: string;
+  context_message?: string | null;
 }
 
 const FILTERS = ["All", "Notes", "Voice", "Images"] as const;
@@ -297,6 +298,16 @@ function JournalContent() {
                         className={cn("border-l-[3px]", borderClass)}
                       >
                         <CardContent>
+                          {/* Groot's preceding question for context */}
+                          {m.context_message && (
+                            <div className="mb-3 pb-2 border-b border-dashed border-border">
+                              <p className="text-[11px] font-medium text-muted-foreground mb-1">Groot asked:</p>
+                              <p className="text-xs text-muted-foreground/80 leading-relaxed pl-2 border-l-2 border-primary/30">
+                                {m.context_message}
+                              </p>
+                            </div>
+                          )}
+
                           <MarkdownContent content={m.content || m.media_description || ""} />
 
                           {m.content && m.media_description && (

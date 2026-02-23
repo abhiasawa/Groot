@@ -36,13 +36,12 @@ export async function GET(request: NextRequest) {
 
   const supabase = getSupabaseAdmin();
 
-  // Fetch inbound messages that have memoryTags in metadata
+  // Fetch inbound messages that have memoryTags in metadata (text + voice)
   const { data: messages } = await supabase
     .from("messages")
-    .select("id, content, message_type, metadata, created_at")
+    .select("id, content, media_description, message_type, metadata, created_at")
     .eq("user_id", userId)
     .eq("direction", "inbound")
-    .not("content", "is", null)
     .not("metadata", "is", null)
     .order("created_at", { ascending: false })
     .limit(500);
@@ -63,6 +62,9 @@ export async function GET(request: NextRequest) {
   let taggedCount = 0;
 
   for (const msg of messages) {
+    // Skip truly empty messages (no content and no media_description)
+    if (!msg.content && !msg.media_description) continue;
+
     const metadata = msg.metadata as Record<string, unknown> | null;
     const tags = metadata?.memoryTags as string[] | undefined;
     if (!tags || !Array.isArray(tags) || tags.length === 0) continue;
@@ -71,8 +73,10 @@ export async function GET(request: NextRequest) {
     const mood = (metadata?.detectedMood as string) ?? null;
 
     for (const tag of tags) {
-      const normalized = tag.toLowerCase().trim();
+      // Remap "general" → "daily-life" for legacy messages
+      let normalized = tag.toLowerCase().trim();
       if (!normalized) continue;
+      if (normalized === "general") normalized = "daily-life";
 
       if (!tagMap.has(normalized)) {
         tagMap.set(normalized, { messages: [], moods: new Map() });
@@ -104,7 +108,7 @@ export async function GET(request: NextRequest) {
         dominantMood,
         sampleMemories: msgs.slice(0, 5).map((m) => ({
           id: m.id as string,
-          content: ((m.content as string) ?? "").substring(0, 200),
+          content: ((m.content as string) || (m.media_description as string) || "").substring(0, 200),
           message_type: m.message_type as string,
           created_at: m.created_at as string,
           mood: ((m.metadata as Record<string, unknown>)?.detectedMood as string) ?? null,

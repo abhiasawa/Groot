@@ -200,7 +200,7 @@ export async function processMessage(
       }),
       createRemindersFromDetectedDates(user.id, grootResponse.detectedDates),
       enrichInboundMessageMetadata(user.id, parsed.messageId, {
-        memoryTags: grootResponse.memoryTags.length > 0 ? grootResponse.memoryTags : ["general"],
+        memoryTags: grootResponse.memoryTags.length > 0 ? grootResponse.memoryTags : ["daily-life"],
         detectedMood: grootResponse.detectedMood ?? null,
       }),
     ];
@@ -211,7 +211,7 @@ export async function processMessage(
           user.id,
           parsed.messageId,
           text,
-          grootResponse.memoryTags.length > 0 ? grootResponse.memoryTags : ["general"],
+          grootResponse.memoryTags.length > 0 ? grootResponse.memoryTags : ["daily-life"],
         ),
       );
     }
@@ -381,7 +381,7 @@ async function handleMedia(
           }),
           createRemindersFromDetectedDates(userId, grootResponse.detectedDates),
           enrichInboundMessageMetadata(userId, parsed.messageId, {
-            memoryTags: grootResponse.memoryTags.length > 0 ? grootResponse.memoryTags : ["general"],
+            memoryTags: grootResponse.memoryTags.length > 0 ? grootResponse.memoryTags : ["daily-life"],
             detectedMood: grootResponse.detectedMood ?? null,
           }),
         ];
@@ -416,7 +416,7 @@ async function handleMedia(
             source: "image",
           }),
           enrichInboundMessageMetadata(userId, parsed.messageId, {
-            memoryTags: grootResponse.memoryTags.length > 0 ? grootResponse.memoryTags : ["general"],
+            memoryTags: grootResponse.memoryTags.length > 0 ? grootResponse.memoryTags : ["daily-life"],
             detectedMood: grootResponse.detectedMood ?? null,
           }),
         ];
