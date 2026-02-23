@@ -1,23 +1,30 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
   ScrollView,
+  FlatList,
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
   Pressable,
   TextInput,
-  FlatList,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Search, FileText, Mic, Camera, X } from "lucide-react-native";
+import Animated, { FadeIn } from "react-native-reanimated";
+import { Search, X, BookOpen } from "lucide-react-native";
 
 import { useTheme } from "../../lib/theme/provider";
 import { useMemories, type MemoriesParams } from "../../lib/api/queries";
 import { getMoodColorFromName } from "../../constants/mood";
 import { typography } from "../../constants/typography";
 import type { Memory } from "../../../shared/types/api";
+
+import { GlassCard } from "../../components/ui/glass-card";
+import { GradientBackground } from "../../components/ui/gradient-background";
+import { PressScale } from "../../components/ui/press-scale";
+import { PillBadge } from "../../components/ui/pill-badge";
 
 // ── Constants ────────────────────────────────
 
@@ -40,23 +47,12 @@ function formatTime(dateStr: string): string {
   });
 }
 
-function groupByDate(memories: Memory[]): { date: string; items: Memory[] }[] {
-  const map = new Map<string, Memory[]>();
-  for (const m of memories) {
-    const day = new Date(m.created_at).toLocaleDateString("en-US", {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    });
-    const existing = map.get(day);
-    if (existing) {
-      existing.push(m);
-    } else {
-      map.set(day, [m]);
-    }
-  }
-  return Array.from(map.entries()).map(([date, items]) => ({ date, items }));
+function formatDateHeading(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function getTypeBadge(type: string): { label: string; icon: string } {
@@ -87,6 +83,9 @@ export default function JournalScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<string>("all");
   const [offset, setOffset] = useState(0);
+  const [memoryPages, setMemoryPages] = useState<Memory[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
 
   const params: MemoriesParams = useMemo(
     () => ({
@@ -101,348 +100,614 @@ export default function JournalScreen() {
   const { data, isLoading, isRefetching, refetch } = useMemories(params);
 
   const onRefresh = useCallback(() => {
+    setMemoryPages([]);
+    setTotalCount(0);
     setOffset(0);
     refetch();
   }, [refetch]);
 
-  const grouped = useMemo(
-    () => groupByDate(data?.memories ?? []),
-    [data?.memories],
+  useEffect(() => {
+    if (!data) return;
+
+    setTotalCount(data.total ?? 0);
+
+    if (offset === 0) {
+      setMemoryPages(data.memories);
+      return;
+    }
+
+    setMemoryPages((prev) => {
+      const existingIds = new Set(prev.map((m) => m.id));
+      const next = data.memories.filter((m) => !existingIds.has(m.id));
+      return next.length > 0 ? [...prev, ...next] : prev;
+    });
+  }, [data, offset]);
+
+  const sortedMemories = useMemo(
+    () =>
+      [...memoryPages].sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      ),
+    [memoryPages],
   );
 
-  const hasMore = (data?.total ?? 0) > offset + PAGE_SIZE;
+  const hasMore = memoryPages.length < totalCount;
 
   const loadMore = useCallback(() => {
-    if (hasMore && !isLoading) {
+    if (hasMore && !isLoading && !isRefetching) {
       setOffset((prev) => prev + PAGE_SIZE);
     }
-  }, [hasMore, isLoading]);
+  }, [hasMore, isLoading, isRefetching]);
 
   const clearSearch = useCallback(() => {
+    setMemoryPages([]);
+    setTotalCount(0);
     setSearchQuery("");
     setOffset(0);
   }, []);
 
   const handleFilterChange = useCallback((key: string) => {
+    setMemoryPages([]);
+    setTotalCount(0);
     setActiveFilter(key);
     setOffset(0);
   }, []);
 
-  const s = styles(colors);
+  const closeMemoryDetail = useCallback(() => {
+    setSelectedMemory(null);
+  }, []);
 
   return (
-    <SafeAreaView style={s.container}>
-      {/* Search bar */}
-      <View style={s.searchContainer}>
-        <View style={s.searchBar}>
-          <Search
-            size={16}
-            color={colors.mutedForeground}
-            strokeWidth={1.5}
-          />
-          <TextInput
-            style={s.searchInput}
-            placeholder="Search memories..."
-            placeholderTextColor={colors.mutedForeground}
-            value={searchQuery}
-            onChangeText={(text) => {
-              setSearchQuery(text);
-              setOffset(0);
-            }}
-            returnKeyType="search"
-          />
-          {searchQuery.length > 0 && (
-            <Pressable onPress={clearSearch} hitSlop={8}>
-              <X
-                size={16}
-                color={colors.mutedForeground}
-                strokeWidth={1.5}
-              />
-            </Pressable>
-          )}
-        </View>
-      </View>
-
-      {/* Type filter chips */}
-      <View style={s.filterRow}>
-        {TYPE_FILTERS.map((filter) => {
-          const active = activeFilter === filter.key;
-          return (
-            <Pressable
-              key={filter.key}
-              onPress={() => handleFilterChange(filter.key)}
-              style={[s.filterChip, active && s.filterChipActive]}
-            >
-              <Text style={[s.filterChipText, active && s.filterChipTextActive]}>
-                {filter.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      {/* Content */}
-      {isLoading && offset === 0 ? (
-        <View style={s.center}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      ) : !data?.memories?.length ? (
-        <ScrollView
-          contentContainerStyle={s.center}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefetching}
-              onRefresh={onRefresh}
-              tintColor={colors.primary}
-            />
-          }
-        >
-          <FileText
-            size={32}
-            color={colors.mutedForeground}
-            strokeWidth={1}
-          />
-          <Text style={s.emptyTitle}>No entries yet</Text>
-          <Text style={s.emptySubtitle}>
-            {searchQuery
-              ? "No memories match your search. Try different keywords."
-              : "Your journal entries will appear here as you chat with Groot."}
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <GradientBackground>
+        {/* Header */}
+        <View style={styles.headerContainer}>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>
+            Journal
           </Text>
-        </ScrollView>
-      ) : (
-        <ScrollView
-          contentContainerStyle={s.listContent}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefetching}
-              onRefresh={onRefresh}
-              tintColor={colors.primary}
+        </View>
+
+        {/* Search bar */}
+        <View style={styles.searchContainer}>
+          <View
+            style={[
+              styles.searchBar,
+              {
+                backgroundColor: colors.glassSurface,
+                borderColor: colors.glassBorder,
+              },
+            ]}
+          >
+            <Search
+              size={16}
+              color={colors.mutedForeground}
+              strokeWidth={1.5}
             />
-          }
-          showsVerticalScrollIndicator={false}
-          onScroll={({ nativeEvent }) => {
-            const { layoutMeasurement, contentOffset, contentSize } =
-              nativeEvent;
-            const isCloseToBottom =
-              layoutMeasurement.height + contentOffset.y >=
-              contentSize.height - 100;
-            if (isCloseToBottom) {
-              loadMore();
+            <TextInput
+              style={[styles.searchInput, { color: colors.foreground }]}
+              placeholder="Search memories..."
+              placeholderTextColor={colors.mutedForeground}
+              value={searchQuery}
+              onChangeText={(text) => {
+                setMemoryPages([]);
+                setTotalCount(0);
+                setSearchQuery(text);
+                setOffset(0);
+              }}
+              returnKeyType="search"
+            />
+            {searchQuery.length > 0 && (
+              <Pressable onPress={clearSearch} hitSlop={8}>
+                <X
+                  size={16}
+                  color={colors.mutedForeground}
+                  strokeWidth={1.5}
+                />
+              </Pressable>
+            )}
+          </View>
+        </View>
+
+        {/* Type filter chips */}
+        <View style={styles.filterRow}>
+          {TYPE_FILTERS.map((filter) => {
+            const active = activeFilter === filter.key;
+            return (
+              <PressScale
+                key={filter.key}
+                onPress={() => handleFilterChange(filter.key)}
+                scale={0.95}
+              >
+                <PillBadge
+                  label={filter.label}
+                  color={active ? colors.primary : colors.glassSurface}
+                  textColor={
+                    active ? colors.primaryForeground : colors.mutedForeground
+                  }
+                />
+              </PressScale>
+            );
+          })}
+        </View>
+
+        {/* Content */}
+        {isLoading && offset === 0 ? (
+          <View style={styles.center}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : memoryPages.length === 0 ? (
+          <ScrollView
+            contentContainerStyle={styles.emptyScrollContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefetching}
+                onRefresh={onRefresh}
+                tintColor={colors.primary}
+              />
             }
-          }}
-          scrollEventThrottle={400}
-        >
-          {grouped.map((group) => (
-            <View key={group.date} style={s.dateGroup}>
-              <Text style={s.dateHeader}>{group.date}</Text>
-              {group.items.map((memory) => {
-                const mood = getMoodFromMetadata(memory);
+          >
+            <GlassCard delay={100} padding={32}>
+              <View style={styles.emptyInner}>
+                <View
+                  style={[
+                    styles.emptyIconCircle,
+                    { backgroundColor: colors.glassSurface },
+                  ]}
+                >
+                  <BookOpen
+                    size={32}
+                    color={colors.mutedForeground}
+                    strokeWidth={1.2}
+                  />
+                </View>
+                <Text
+                  style={[styles.emptyTitle, { color: colors.foreground }]}
+                >
+                  No entries yet
+                </Text>
+                <Text
+                  style={[
+                    styles.emptySubtitle,
+                    { color: colors.mutedForeground },
+                  ]}
+                >
+                  {searchQuery
+                    ? "No memories match your search. Try different keywords."
+                    : "Your journal entries will appear here as you chat with Groot."}
+                </Text>
+              </View>
+            </GlassCard>
+          </ScrollView>
+        ) : (
+          <Animated.View entering={FadeIn.duration(400)} style={styles.flex}>
+            <FlatList
+              data={sortedMemories}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+              onEndReached={loadMore}
+              onEndReachedThreshold={0.2}
+              renderItem={({ item, index }) => {
+                const mood = getMoodFromMetadata(item);
                 const moodColor = mood
                   ? getMoodColorFromName(mood, colors)
-                  : colors.border;
-                const badge = getTypeBadge(memory.message_type);
+                  : undefined;
+                const badge = getTypeBadge(item.message_type);
+                const dateLabel = formatDateHeading(item.created_at);
+                const previous = index > 0 ? sortedMemories[index - 1] : null;
+                const previousDateLabel = previous
+                  ? formatDateHeading(previous.created_at)
+                  : null;
+                const showDateHeading = previousDateLabel !== dateLabel;
+                const next = index < sortedMemories.length - 1
+                  ? sortedMemories[index + 1]
+                  : null;
+                const nextDateLabel = next
+                  ? formatDateHeading(next.created_at)
+                  : null;
+                const isLastInDateGroup = nextDateLabel !== dateLabel;
 
                 return (
                   <View
-                    key={memory.id}
-                    style={[s.entryCard, { borderLeftColor: moodColor }]}
+                    style={
+                      isLastInDateGroup
+                        ? styles.entryRowLastInGroup
+                        : styles.entryRow
+                    }
                   >
-                    <View style={s.entryHeader}>
-                      <View style={s.entryHeaderLeft}>
-                        {mood && (
-                          <View
-                            style={[
-                              s.moodDot,
-                              { backgroundColor: moodColor },
-                            ]}
-                          />
-                        )}
-                        <Text style={s.entryTime}>
-                          {formatTime(memory.created_at)}
-                        </Text>
-                      </View>
-                      <View style={s.typeBadge}>
-                        <Text style={s.typeBadgeText}>{badge.label}</Text>
-                      </View>
-                    </View>
-                    <Text style={s.entryContent} numberOfLines={3}>
-                      {memory.content}
-                    </Text>
-                    {memory.media_description && (
-                      <Text style={s.mediaDesc} numberOfLines={1}>
-                        {memory.media_description}
+                    {showDateHeading && (
+                      <Text
+                        style={[styles.dateHeading, { color: colors.mutedForeground }]}
+                      >
+                        {dateLabel}
                       </Text>
                     )}
+
+                    <PressScale
+                      scale={0.985}
+                      onPress={() => setSelectedMemory(item)}
+                    >
+                      <GlassCard
+                        accentColor={moodColor}
+                        delay={Math.min(index * 40, 300)}
+                        padding={16}
+                      >
+                        {/* Card header row */}
+                        <View style={styles.entryHeader}>
+                          <View style={styles.entryHeaderLeft}>
+                            {mood && (
+                              <View
+                                style={[
+                                  styles.moodDot,
+                                  {
+                                    backgroundColor: moodColor,
+                                    shadowColor: moodColor,
+                                  },
+                                ]}
+                              />
+                            )}
+                            <Text
+                              style={[
+                                styles.entryTime,
+                                { color: colors.mutedForeground },
+                              ]}
+                            >
+                              {formatTime(item.created_at)}
+                            </Text>
+                          </View>
+                          <PillBadge label={badge.label} small />
+                        </View>
+
+                        {/* Content */}
+                        <Text
+                          style={[
+                            styles.entryContent,
+                            { color: colors.foreground },
+                          ]}
+                          numberOfLines={3}
+                        >
+                          {item.content}
+                        </Text>
+
+                        {/* Media description */}
+                        {item.media_description && (
+                          <Text
+                            style={[
+                              styles.mediaDesc,
+                              { color: colors.mutedForeground },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {item.media_description}
+                          </Text>
+                        )}
+                      </GlassCard>
+                    </PressScale>
                   </View>
                 );
-              })}
-            </View>
-          ))}
-
-          {isLoading && offset > 0 && (
-            <ActivityIndicator
-              size="small"
-              color={colors.primary}
-              style={{ paddingVertical: 20 }}
+              }}
+              ListFooterComponent={
+                isLoading && offset > 0 ? (
+                  <ActivityIndicator
+                    size="small"
+                    color={colors.primary}
+                    style={styles.loadingMore}
+                  />
+                ) : !hasMore && memoryPages.length > 0 ? (
+                  <Text style={[styles.endText, { color: colors.mutedForeground }]}>
+                    {totalCount} {totalCount === 1 ? "memory" : "memories"} total
+                  </Text>
+                ) : null
+              }
             />
-          )}
+          </Animated.View>
+        )}
 
-          {!hasMore && data.memories.length > 0 && (
-            <Text style={s.endText}>
-              {data.total} {data.total === 1 ? "memory" : "memories"} total
-            </Text>
-          )}
-        </ScrollView>
-      )}
+        <Modal
+          visible={!!selectedMemory}
+          transparent
+          animationType="fade"
+          onRequestClose={closeMemoryDetail}
+        >
+          <View style={styles.modalOverlay}>
+            <Pressable
+              style={styles.modalBackdrop}
+              onPress={closeMemoryDetail}
+            />
+            <View style={styles.modalCardWrap}>
+              <GlassCard padding={18} style={styles.modalCard}>
+                <View style={styles.modalHeader}>
+                  <Text style={[styles.modalTitle, { color: colors.foreground }]}>
+                    Journal Entry
+                  </Text>
+                  <PressScale
+                    onPress={closeMemoryDetail}
+                    scale={0.94}
+                    haptic={false}
+                    style={styles.modalCloseButton}
+                  >
+                    <X size={18} color={colors.mutedForeground} strokeWidth={2} />
+                  </PressScale>
+                </View>
+
+                {selectedMemory ? (
+                  <ScrollView
+                    style={styles.modalBody}
+                    showsVerticalScrollIndicator={false}
+                  >
+                    <View style={styles.modalMetaRow}>
+                      <PillBadge
+                        label={getTypeBadge(selectedMemory.message_type).label}
+                        small
+                      />
+                      <Text
+                        style={[
+                          styles.modalMetaText,
+                          { color: colors.mutedForeground },
+                        ]}
+                      >
+                        {new Date(selectedMemory.created_at).toLocaleString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}
+                      </Text>
+                    </View>
+
+                    <Text style={[styles.modalContent, { color: colors.foreground }]}>
+                      {selectedMemory.content}
+                    </Text>
+
+                    {selectedMemory.media_description ? (
+                      <View
+                        style={[
+                          styles.modalMediaBlock,
+                          {
+                            backgroundColor: colors.glassSurface,
+                            borderColor: colors.glassBorder,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.modalMediaLabel,
+                            { color: colors.mutedForeground },
+                          ]}
+                        >
+                          Media Description
+                        </Text>
+                        <Text
+                          style={[
+                            styles.modalMediaText,
+                            { color: colors.foreground },
+                          ]}
+                        >
+                          {selectedMemory.media_description}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </ScrollView>
+                ) : null}
+              </GlassCard>
+            </View>
+          </View>
+        </Modal>
+      </GradientBackground>
     </SafeAreaView>
   );
 }
 
 // ── Styles ───────────────────────────────────
 
-const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: c.background,
-    },
-    center: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      paddingHorizontal: 40,
-    },
-    searchContainer: {
-      paddingHorizontal: 20,
-      paddingTop: 12,
-      paddingBottom: 8,
-    },
-    searchBar: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: c.secondary,
-      borderRadius: 10,
-      paddingHorizontal: 12,
-      height: 40,
-      gap: 8,
-    },
-    searchInput: {
-      flex: 1,
-      fontFamily: "Inter_400Regular",
-      ...typography.sm,
-      color: c.foreground,
-      padding: 0,
-    },
-    filterRow: {
-      flexDirection: "row",
-      paddingHorizontal: 20,
-      paddingBottom: 12,
-      gap: 8,
-    },
-    filterChip: {
-      paddingHorizontal: 14,
-      paddingVertical: 6,
-      borderRadius: 20,
-      backgroundColor: c.secondary,
-    },
-    filterChipActive: {
-      backgroundColor: c.primary,
-    },
-    filterChipText: {
-      fontFamily: "Inter_500Medium",
-      ...typography.xs,
-      color: c.mutedForeground,
-    },
-    filterChipTextActive: {
-      color: c.primaryForeground,
-    },
-    listContent: {
-      padding: 20,
-      paddingTop: 0,
-      paddingBottom: 40,
-    },
-    dateGroup: {
-      marginBottom: 20,
-    },
-    dateHeader: {
-      fontFamily: "Inter_600SemiBold",
-      ...typography.sm,
-      color: c.mutedForeground,
-      marginBottom: 10,
-    },
-    entryCard: {
-      backgroundColor: c.card,
-      borderRadius: 10,
-      padding: 14,
-      marginBottom: 8,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border,
-      borderLeftWidth: 3,
-    },
-    entryHeader: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: 8,
-    },
-    entryHeaderLeft: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 6,
-    },
-    moodDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-    },
-    entryTime: {
-      fontFamily: "Inter_400Regular",
-      ...typography.xs,
-      color: c.mutedForeground,
-    },
-    typeBadge: {
-      backgroundColor: c.secondary,
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 4,
-    },
-    typeBadgeText: {
-      fontFamily: "Inter_500Medium",
-      ...typography.xs,
-      color: c.mutedForeground,
-    },
-    entryContent: {
-      fontFamily: "Inter_400Regular",
-      ...typography.sm,
-      color: c.foreground,
-      lineHeight: 22,
-    },
-    mediaDesc: {
-      fontFamily: "Inter_400Regular",
-      ...typography.xs,
-      color: c.mutedForeground,
-      fontStyle: "italic",
-      marginTop: 6,
-    },
-    endText: {
-      fontFamily: "Inter_400Regular",
-      ...typography.xs,
-      color: c.mutedForeground,
-      textAlign: "center",
-      paddingVertical: 16,
-    },
-    emptyTitle: {
-      fontFamily: "Inter_600SemiBold",
-      ...typography.lg,
-      color: c.foreground,
-      marginTop: 16,
-      marginBottom: 8,
-    },
-    emptySubtitle: {
-      fontFamily: "Inter_400Regular",
-      ...typography.sm,
-      color: c.mutedForeground,
-      textAlign: "center",
-      lineHeight: 22,
-    },
-  });
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
+  flex: {
+    flex: 1,
+  },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headerContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  headerTitle: {
+    fontFamily: "Inter_700Bold",
+    ...typography.title,
+  },
+  searchContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    height: 44,
+    gap: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: "Inter_400Regular",
+    ...typography.sm,
+    padding: 0,
+  },
+  filterRow: {
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    gap: 8,
+  },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingTop: 0,
+    paddingBottom: 40,
+  },
+  dateHeading: {
+    fontFamily: "Inter_600SemiBold",
+    ...typography.xs,
+    letterSpacing: 0.4,
+    marginBottom: 10,
+    paddingHorizontal: 2,
+  },
+  entryRow: {
+    marginBottom: 16,
+  },
+  entryRowLastInGroup: {
+    marginBottom: 22,
+  },
+  entryHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  entryHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  moodDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    // Glow effect on Android via elevation is limited,
+    // but the shadowColor on iOS adds a soft halo
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  entryTime: {
+    fontFamily: "Inter_400Regular",
+    ...typography.xs,
+  },
+  entryContent: {
+    fontFamily: "Inter_400Regular",
+    ...typography.sm,
+    lineHeight: 22,
+  },
+  mediaDesc: {
+    fontFamily: "Inter_400Regular",
+    ...typography.xs,
+    fontStyle: "italic",
+    marginTop: 8,
+  },
+  loadingMore: {
+    paddingVertical: 20,
+  },
+  endText: {
+    fontFamily: "Inter_400Regular",
+    ...typography.xs,
+    textAlign: "center",
+    paddingVertical: 16,
+  },
+  emptyScrollContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 32,
+  },
+  emptyInner: {
+    alignItems: "center",
+  },
+  emptyIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    fontFamily: "Inter_600SemiBold",
+    ...typography.lg,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontFamily: "Inter_400Regular",
+    ...typography.sm,
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(8, 10, 16, 0.66)",
+  },
+  modalCardWrap: {
+    maxHeight: "76%",
+  },
+  modalCard: {
+    borderRadius: 18,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontFamily: "Inter_700Bold",
+    ...typography.lg,
+  },
+  modalCloseButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalBody: {
+    maxHeight: "100%",
+  },
+  modalMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 14,
+  },
+  modalMetaText: {
+    fontFamily: "Inter_400Regular",
+    ...typography.xs,
+  },
+  modalContent: {
+    fontFamily: "Inter_400Regular",
+    ...typography.base,
+    lineHeight: 24,
+  },
+  modalMediaBlock: {
+    marginTop: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 12,
+  },
+  modalMediaLabel: {
+    fontFamily: "Inter_500Medium",
+    ...typography.xs,
+    marginBottom: 6,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+  modalMediaText: {
+    fontFamily: "Inter_400Regular",
+    ...typography.sm,
+    lineHeight: 20,
+  },
+});

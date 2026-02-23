@@ -6,11 +6,11 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
-  Pressable,
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import Animated, { FadeIn } from "react-native-reanimated";
 import {
   ArrowLeft,
   User,
@@ -25,6 +25,10 @@ import { useTheme } from "../lib/theme/provider";
 import { useProfile } from "../lib/api/queries";
 import { useDeleteProfileFact } from "../lib/api/mutations";
 import { typography } from "../constants/typography";
+import { GlassCard } from "../components/ui/glass-card";
+import { GradientBackground } from "../components/ui/gradient-background";
+import { PressScale } from "../components/ui/press-scale";
+import { SectionHeader } from "../components/ui/section-header";
 import type { ProfileFact, ProfileData } from "../../shared/types/api";
 
 // ── Category config ──────────────────────────
@@ -98,8 +102,6 @@ export default function ProfileScreen() {
     [deleteFact],
   );
 
-  const s = styles(colors);
-
   const totalFacts = data
     ? data.facts.static.length +
       data.facts.dynamic.length +
@@ -107,43 +109,85 @@ export default function ProfileScreen() {
       data.facts.goal.length
     : 0;
 
-  return (
-    <SafeAreaView style={s.container}>
-      {/* Header */}
-      <View style={s.header}>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <ArrowLeft size={24} color={colors.foreground} strokeWidth={1.5} />
-        </Pressable>
-        <Text style={s.headerTitle}>Profile</Text>
-        <View style={{ width: 24 }} />
-      </View>
+  // ── Loading ──────────────────────────────
 
-      {isLoading ? (
-        <View style={s.center}>
-          <ActivityIndicator size="large" color={colors.primary} />
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.flex}>
+        <GradientBackground>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        </GradientBackground>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Empty ────────────────────────────────
+
+  if (totalFacts === 0) {
+    return (
+      <SafeAreaView style={styles.flex}>
+        <GradientBackground>
+          {/* Header */}
+          <View style={styles.header}>
+            <PressScale onPress={() => router.back()}>
+              <ArrowLeft size={24} color={colors.foreground} strokeWidth={1.5} />
+            </PressScale>
+            <View style={{ width: 24 }} />
+          </View>
+
+          <ScrollView
+            contentContainerStyle={styles.emptyContainer}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefetching}
+                onRefresh={onRefresh}
+                tintColor={colors.primary}
+              />
+            }
+          >
+            <Animated.View
+              entering={FadeIn.delay(100).duration(600)}
+              style={[styles.emptyIconWrap, { backgroundColor: colors.glassSurface }]}
+            >
+              <User size={40} color={colors.mutedForeground} strokeWidth={1.2} />
+            </Animated.View>
+            <Animated.Text
+              entering={FadeIn.delay(250).duration(600)}
+              style={[styles.emptyTitle, { color: colors.foreground }]}
+            >
+              Profile is empty
+            </Animated.Text>
+            <Animated.Text
+              entering={FadeIn.delay(400).duration(600)}
+              style={[styles.emptySubtitle, { color: colors.mutedForeground }]}
+            >
+              Groot builds your profile from conversations. Share about yourself
+              -- your interests, goals, and preferences -- and they will appear
+              here.
+            </Animated.Text>
+          </ScrollView>
+        </GradientBackground>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Main render ──────────────────────────
+
+  return (
+    <SafeAreaView style={styles.flex}>
+      <GradientBackground>
+        {/* Header */}
+        <View style={styles.header}>
+          <PressScale onPress={() => router.back()}>
+            <ArrowLeft size={24} color={colors.foreground} strokeWidth={1.5} />
+          </PressScale>
+          <View style={{ width: 24 }} />
         </View>
-      ) : totalFacts === 0 ? (
+
         <ScrollView
-          contentContainerStyle={s.center}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefetching}
-              onRefresh={onRefresh}
-              tintColor={colors.primary}
-            />
-          }
-        >
-          <User size={32} color={colors.mutedForeground} strokeWidth={1} />
-          <Text style={s.emptyTitle}>Profile is empty</Text>
-          <Text style={s.emptySubtitle}>
-            Groot builds your profile from conversations. Share about yourself
-            -- your interests, goals, and preferences -- and they will appear
-            here.
-          </Text>
-        </ScrollView>
-      ) : (
-        <ScrollView
-          contentContainerStyle={s.scroll}
+          contentContainerStyle={styles.scroll}
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
@@ -153,157 +197,219 @@ export default function ProfileScreen() {
           }
           showsVerticalScrollIndicator={false}
         >
-          {categories.map((cat) => {
+          {/* Title */}
+          <Animated.View
+            entering={FadeIn.duration(700)}
+            style={styles.titleSection}
+          >
+            <Text style={[styles.pageTitle, { color: colors.foreground }]}>
+              Profile
+            </Text>
+            <Text style={[styles.pageSubtitle, { color: colors.mutedForeground }]}>
+              What Groot knows about you
+            </Text>
+          </Animated.View>
+
+          {/* Categories */}
+          {categories.map((cat, catIndex) => {
             const facts = data?.facts[cat.key] ?? [];
             if (facts.length === 0) return null;
 
             return (
-              <View key={cat.key} style={s.categorySection}>
-                <View style={s.categoryHeader}>
-                  {cat.icon}
+              <View key={cat.key} style={styles.categorySection}>
+                {/* Category icon + label row */}
+                <View style={styles.categoryIconRow}>
+                  <View
+                    style={[
+                      styles.categoryIconWrap,
+                      { backgroundColor: colors.glassSurface },
+                    ]}
+                  >
+                    {cat.icon}
+                  </View>
                   <View>
-                    <Text style={s.categoryLabel}>{cat.label}</Text>
-                    <Text style={s.categoryDesc}>{cat.description}</Text>
+                    <Text style={[styles.categoryLabel, { color: colors.foreground }]}>
+                      {cat.label}
+                    </Text>
+                    <Text style={[styles.categoryDesc, { color: colors.mutedForeground }]}>
+                      {cat.description}
+                    </Text>
                   </View>
                 </View>
 
-                {facts.map((fact: ProfileFact) => (
-                  <View key={fact.id} style={s.factRow}>
-                    <View style={s.factContent}>
-                      <Text style={s.factKey}>{fact.key}</Text>
-                      <Text style={s.factValue}>{fact.value}</Text>
-                      {fact.lastMentioned && (
-                        <Text style={s.factMeta}>
-                          Last mentioned{" "}
-                          {new Date(fact.lastMentioned).toLocaleDateString(
-                            "en-US",
-                            { month: "short", day: "numeric" },
-                          )}
+                <SectionHeader title={cat.label} />
+
+                {/* Fact cards */}
+                {facts.map((fact: ProfileFact, factIndex: number) => (
+                  <GlassCard
+                    key={fact.id}
+                    delay={catIndex * 100 + factIndex * 60}
+                    padding={14}
+                    style={styles.factCardSpacing}
+                  >
+                    <View style={styles.factRow}>
+                      <View style={styles.factContent}>
+                        <Text
+                          style={[
+                            styles.factKey,
+                            { color: colors.mutedForeground },
+                          ]}
+                        >
+                          {fact.key}
                         </Text>
-                      )}
+                        <Text style={[styles.factValue, { color: colors.foreground }]}>
+                          {fact.value}
+                        </Text>
+                        {fact.lastMentioned && (
+                          <Text style={[styles.factMeta, { color: colors.mutedForeground }]}>
+                            Last mentioned{" "}
+                            {new Date(fact.lastMentioned).toLocaleDateString(
+                              "en-US",
+                              { month: "short", day: "numeric" },
+                            )}
+                          </Text>
+                        )}
+                      </View>
+                      <PressScale
+                        onPress={() => handleDelete(fact)}
+                        style={styles.deleteBtn}
+                      >
+                        <Trash2
+                          size={16}
+                          color={colors.destructive}
+                          strokeWidth={1.5}
+                        />
+                      </PressScale>
                     </View>
-                    <Pressable
-                      onPress={() => handleDelete(fact)}
-                      hitSlop={12}
-                      style={s.deleteBtn}
-                    >
-                      <Trash2
-                        size={16}
-                        color={colors.destructive}
-                        strokeWidth={1.5}
-                      />
-                    </Pressable>
-                  </View>
+                  </GlassCard>
                 ))}
               </View>
             );
           })}
+
+          <View style={styles.bottomSpacer} />
         </ScrollView>
-      )}
+      </GradientBackground>
     </SafeAreaView>
   );
 }
 
 // ── Styles ───────────────────────────────────
 
-const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: c.background,
-    },
-    center: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      paddingHorizontal: 40,
-    },
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: 20,
-      paddingVertical: 14,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: c.border,
-    },
-    headerTitle: {
-      fontFamily: "Inter_600SemiBold",
-      ...typography.lg,
-      color: c.foreground,
-    },
-    scroll: {
-      padding: 20,
-      paddingBottom: 40,
-    },
-    categorySection: {
-      marginBottom: 28,
-    },
-    categoryHeader: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 10,
-      marginBottom: 12,
-    },
-    categoryLabel: {
-      fontFamily: "Inter_600SemiBold",
-      ...typography.base,
-      color: c.foreground,
-    },
-    categoryDesc: {
-      fontFamily: "Inter_400Regular",
-      ...typography.xs,
-      color: c.mutedForeground,
-    },
-    factRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: c.card,
-      borderRadius: 10,
-      padding: 14,
-      marginBottom: 6,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border,
-    },
-    factContent: {
-      flex: 1,
-    },
-    factKey: {
-      fontFamily: "Inter_500Medium",
-      ...typography.xs,
-      color: c.mutedForeground,
-      textTransform: "uppercase",
-      letterSpacing: 0.5,
-      marginBottom: 2,
-    },
-    factValue: {
-      fontFamily: "Inter_400Regular",
-      ...typography.sm,
-      color: c.foreground,
-      lineHeight: 22,
-    },
-    factMeta: {
-      fontFamily: "Inter_400Regular",
-      ...typography.xs,
-      color: c.mutedForeground,
-      marginTop: 4,
-    },
-    deleteBtn: {
-      padding: 8,
-      marginLeft: 8,
-    },
-    emptyTitle: {
-      fontFamily: "Inter_600SemiBold",
-      ...typography.lg,
-      color: c.foreground,
-      marginTop: 16,
-      marginBottom: 8,
-    },
-    emptySubtitle: {
-      fontFamily: "Inter_400Regular",
-      ...typography.sm,
-      color: c.mutedForeground,
-      textAlign: "center",
-      lineHeight: 22,
-    },
-  });
+const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+  },
+  scroll: {
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
+  titleSection: {
+    marginBottom: 24,
+  },
+  pageTitle: {
+    fontFamily: "Inter_700Bold",
+    ...typography.hero,
+    marginBottom: 4,
+  },
+  pageSubtitle: {
+    fontFamily: "Inter_400Regular",
+    ...typography.sm,
+  },
+  categorySection: {
+    marginBottom: 28,
+  },
+  categoryIconRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 14,
+  },
+  categoryIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  categoryLabel: {
+    fontFamily: "Inter_600SemiBold",
+    ...typography.base,
+  },
+  categoryDesc: {
+    fontFamily: "Inter_400Regular",
+    ...typography.xs,
+  },
+  factCardSpacing: {
+    marginBottom: 8,
+  },
+  factRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  factContent: {
+    flex: 1,
+  },
+  factKey: {
+    fontFamily: "Inter_500Medium",
+    ...typography.xs,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  factValue: {
+    fontFamily: "Inter_400Regular",
+    ...typography.sm,
+    lineHeight: 22,
+  },
+  factMeta: {
+    fontFamily: "Inter_400Regular",
+    ...typography.xs,
+    marginTop: 4,
+  },
+  deleteBtn: {
+    padding: 8,
+    marginLeft: 8,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 40,
+  },
+  emptyIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    fontFamily: "Inter_700Bold",
+    ...typography.title,
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  emptySubtitle: {
+    fontFamily: "Inter_400Regular",
+    ...typography.base,
+    textAlign: "center",
+    lineHeight: 24,
+  },
+  bottomSpacer: {
+    height: 20,
+  },
+});

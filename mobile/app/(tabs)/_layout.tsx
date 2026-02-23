@@ -13,8 +13,16 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.mutedForeground,
         tabBarStyle: {
-          backgroundColor: colors.card,
-          borderTopColor: colors.border,
+          backgroundColor: colors.glassSurface,
+          borderTopColor: colors.glassBorder,
+          borderTopWidth: 1,
+          elevation: 0,
+          height: 65,
+          paddingBottom: 8,
+        },
+        tabBarLabelStyle: {
+          fontFamily: "Inter_500Medium",
+          fontSize: 11,
         },
       }}
     >

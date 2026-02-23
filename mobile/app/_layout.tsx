@@ -9,14 +9,14 @@ import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Stack, useRouter, useSegments } from "expo-router";
+import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { AuthProvider } from "../lib/auth/provider";
 import { ThemeProvider } from "../lib/theme/provider";
-import { AuthProvider, useAuth } from "../lib/auth/provider";
 
 export { ErrorBoundary } from "expo-router";
 
@@ -60,32 +60,6 @@ try {
 }
 
 // ---------------------------------------------------------------------------
-// Auth gate — redirects unauthenticated users to the login screen
-// ---------------------------------------------------------------------------
-
-function AuthGate({ children }: { children: React.ReactNode }) {
-  const { session, loading } = useAuth();
-  const segments = useSegments();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (loading) return;
-
-    const inAuthGroup = segments[0] === "(auth)";
-
-    if (!session && !inAuthGroup) {
-      // Not signed in and not already on the auth screens — redirect.
-      router.replace("/(auth)/login");
-    } else if (session && inAuthGroup) {
-      // Signed in but still on an auth screen — go to the main app.
-      router.replace("/(tabs)");
-    }
-  }, [session, loading, segments, router]);
-
-  return <>{children}</>;
-}
-
-// ---------------------------------------------------------------------------
 // Root layout
 // ---------------------------------------------------------------------------
 
@@ -125,26 +99,23 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <PersistQueryClientProvider
-          client={queryClient}
-          persistOptions={{ persister: asyncStoragePersister }}
-        >
-          <AuthProvider>
-            <AuthGate>
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="(auth)" />
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="habits" />
-                <Stack.Screen name="tasks" />
-                <Stack.Screen name="insights" />
-                <Stack.Screen name="topics" />
-                <Stack.Screen name="people" />
-                <Stack.Screen name="profile" />
-                <Stack.Screen name="settings" />
-              </Stack>
-            </AuthGate>
-          </AuthProvider>
-        </PersistQueryClientProvider>
+        <AuthProvider>
+          <PersistQueryClientProvider
+            client={queryClient}
+            persistOptions={{ persister: asyncStoragePersister }}
+          >
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="habits" />
+              <Stack.Screen name="tasks" />
+              <Stack.Screen name="insights" />
+              <Stack.Screen name="topics" />
+              <Stack.Screen name="people" />
+              <Stack.Screen name="profile" />
+              <Stack.Screen name="settings" />
+            </Stack>
+          </PersistQueryClientProvider>
+        </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

@@ -203,6 +203,7 @@ export async function processMessage(
       enrichInboundMessageMetadata(user.id, parsed.messageId, {
         memoryTags: grootResponse.memoryTags.length > 0 ? grootResponse.memoryTags : ["daily-life"],
         detectedMood: grootResponse.detectedMood ?? null,
+        shouldStoreMemory: grootResponse.shouldStoreMemory,
       }),
     ];
 
@@ -399,6 +400,7 @@ async function handleMedia(
           enrichInboundMessageMetadata(userId, parsed.messageId, {
             memoryTags: grootResponse.memoryTags.length > 0 ? grootResponse.memoryTags : ["daily-life"],
             detectedMood: grootResponse.detectedMood ?? null,
+            shouldStoreMemory: grootResponse.shouldStoreMemory,
           }),
         ];
 
@@ -434,6 +436,7 @@ async function handleMedia(
           enrichInboundMessageMetadata(userId, parsed.messageId, {
             memoryTags: grootResponse.memoryTags.length > 0 ? grootResponse.memoryTags : ["daily-life"],
             detectedMood: grootResponse.detectedMood ?? null,
+            shouldStoreMemory: grootResponse.shouldStoreMemory,
           }),
         ];
 
@@ -481,14 +484,41 @@ async function storeInboundMessage(userId: string, parsed: ParsedMessage): Promi
 async function enrichInboundMessageMetadata(
   userId: string,
   platformMessageId: string,
-  aiMetadata: { memoryTags: string[]; detectedMood: string | null },
+  aiMetadata: {
+    memoryTags: string[];
+    detectedMood: string | null;
+    shouldStoreMemory: boolean;
+  },
 ): Promise<void> {
   const supabase = getSupabaseAdmin();
+  const { data: existing } = await supabase
+    .from("messages")
+    .select("metadata")
+    .eq("user_id", userId)
+    .eq("platform_message_id", platformMessageId)
+    .single<{ metadata: Record<string, unknown> | null }>();
+
+  const normalizedTags = normalizeMemoryTags(aiMetadata.memoryTags);
+  const mergedMetadata: Record<string, unknown> = {
+    ...(existing?.metadata ?? {}),
+    memoryTags: normalizedTags.length > 0 ? normalizedTags : ["daily-life"],
+    detectedMood: aiMetadata.detectedMood,
+    shouldStoreMemory: aiMetadata.shouldStoreMemory,
+  };
+
   await supabase
     .from("messages")
-    .update({ metadata: aiMetadata })
+    .update({ metadata: mergedMetadata })
     .eq("user_id", userId)
     .eq("platform_message_id", platformMessageId);
+}
+
+function normalizeMemoryTags(tags: string[]): string[] {
+  const normalized = tags
+    .map((tag) => tag.trim().toLowerCase())
+    .map((tag) => (tag === "general" ? "daily-life" : tag))
+    .filter(Boolean);
+  return [...new Set(normalized)];
 }
 
 async function storeLongTermMemoryAndMark(

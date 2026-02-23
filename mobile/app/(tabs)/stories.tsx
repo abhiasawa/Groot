@@ -21,6 +21,10 @@ import { useTheme } from "../../lib/theme/provider";
 import { useStories, useStoryStats } from "../../lib/api/queries";
 import { getMoodColorFromName } from "../../constants/mood";
 import { typography } from "../../constants/typography";
+import { GlassCard } from "../../components/ui/glass-card";
+import { GradientBackground } from "../../components/ui/gradient-background";
+import { PillBadge } from "../../components/ui/pill-badge";
+import { SectionHeader } from "../../components/ui/section-header";
 import type { Story } from "../../../shared/types/api";
 
 // ── Helpers ──────────────────────────────────
@@ -61,7 +65,9 @@ function groupByWeek(stories: Story[]): { week: string; items: Story[] }[] {
 
 function getMoodFromMetadata(story: Story): string | null {
   if (story.metadata && typeof story.metadata === "object") {
-    const mood = (story.metadata as Record<string, unknown>).mood;
+    const mood =
+      (story.metadata as Record<string, unknown>).detectedMood ??
+      (story.metadata as Record<string, unknown>).mood;
     if (typeof mood === "string") return mood;
   }
   return null;
@@ -69,7 +75,9 @@ function getMoodFromMetadata(story: Story): string | null {
 
 function getTagsFromMetadata(story: Story): string[] {
   if (story.metadata && typeof story.metadata === "object") {
-    const tags = (story.metadata as Record<string, unknown>).tags;
+    const tags =
+      (story.metadata as Record<string, unknown>).memoryTags ??
+      (story.metadata as Record<string, unknown>).tags;
     if (Array.isArray(tags)) return tags as string[];
   }
   return [];
@@ -123,156 +131,207 @@ export default function StoriesScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[s.container, s.center]}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <SafeAreaView style={s.safeArea}>
+        <GradientBackground>
+          <View style={s.center}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        </GradientBackground>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={s.container}>
-      <ScrollView
-        contentContainerStyle={s.scroll}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefetching}
-            onRefresh={onRefresh}
-            tintColor={colors.primary}
-          />
-        }
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <Text style={s.pageTitle}>Stories</Text>
+    <SafeAreaView style={s.safeArea}>
+      <GradientBackground>
+        <ScrollView
+          contentContainerStyle={s.scroll}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+            />
+          }
+          showsVerticalScrollIndicator={false}
+        >
+          {/* ── Header ── */}
+          <View style={s.header}>
+            <Text style={s.pageTitle}>Stories</Text>
+            <Text style={s.pageSubtitle}>Your storyworthy moments</Text>
+          </View>
 
-        {/* Stats strip */}
-        {statsData && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={s.statsStrip}
-          >
-            <View style={s.statPill}>
-              <Flame size={14} color={colors.accent} strokeWidth={1.5} />
-              <Text style={s.statValue}>{statsData.streak}</Text>
-              <Text style={s.statLabel}>day streak</Text>
+          {/* ── Stats Grid ── */}
+          {statsData && (
+            <View style={s.statsGrid}>
+              <View style={s.statTile}>
+                <View
+                  style={[
+                    s.statIconPill,
+                    { backgroundColor: colors.accent + "1A" },
+                  ]}
+                >
+                  <Flame size={14} color={colors.accent} strokeWidth={1.7} />
+                </View>
+                <Text style={s.statValue}>{statsData.streak}</Text>
+                <Text style={s.statLabel}>Streak</Text>
+                <Text style={s.statHint}>Consecutive days</Text>
+              </View>
+
+              <View style={s.statTile}>
+                <View
+                  style={[
+                    s.statIconPill,
+                    { backgroundColor: colors.chart1 + "1A" },
+                  ]}
+                >
+                  <BookOpen size={14} color={colors.chart1} strokeWidth={1.7} />
+                </View>
+                <Text style={s.statValue}>{statsData.total}</Text>
+                <Text style={s.statLabel}>Stories Total</Text>
+                <Text style={s.statHint}>All-time count</Text>
+              </View>
+
+              <View style={s.statTile}>
+                <View
+                  style={[
+                    s.statIconPill,
+                    { backgroundColor: colors.chart2 + "1A" },
+                  ]}
+                >
+                  <TrendingUp size={14} color={colors.chart2} strokeWidth={1.7} />
+                </View>
+                <Text style={s.statValue}>
+                  {statsData.thisMonth}
+                  {trendPct !== null && trendPct !== 0 && (
+                    <Text
+                      style={{
+                        ...typography.caption,
+                        color: trendPct > 0 ? colors.moodGood : colors.moodLow,
+                        fontFamily: "Inter_500Medium",
+                      }}
+                    >
+                      {" "}
+                      {trendPct > 0 ? "+" : ""}
+                      {trendPct}%
+                    </Text>
+                  )}
+                </Text>
+                <Text style={s.statLabel}>This Month</Text>
+                <Text style={s.statHint}>Compared to last month</Text>
+              </View>
+
+              <View style={s.statTile}>
+                <View
+                  style={[
+                    s.statIconPill,
+                    { backgroundColor: colors.chart4 + "1A" },
+                  ]}
+                >
+                  <Tag size={14} color={colors.chart4} strokeWidth={1.7} />
+                </View>
+                <Text style={s.statValue} numberOfLines={1}>
+                  {statsData.topTags?.[0]?.tag ?? "No theme yet"}
+                </Text>
+                <Text style={s.statLabel}>Top Theme</Text>
+                <Text style={s.statHint}>Most frequent tag</Text>
+              </View>
             </View>
-            <View style={s.statPill}>
-              <BookOpen size={14} color={colors.chart1} strokeWidth={1.5} />
-              <Text style={s.statValue}>{statsData.total}</Text>
-              <Text style={s.statLabel}>total</Text>
-            </View>
-            <View style={s.statPill}>
-              <TrendingUp size={14} color={colors.chart2} strokeWidth={1.5} />
-              <Text style={s.statValue}>{statsData.thisMonth}</Text>
-              <Text style={s.statLabel}>
-                this month
-                {trendPct !== null && trendPct !== 0 && (
-                  <Text
-                    style={{
-                      color: trendPct > 0 ? colors.moodGood : colors.moodLow,
-                    }}
-                  >
-                    {" "}
-                    {trendPct > 0 ? "+" : ""}
-                    {trendPct}%
+          )}
+
+          {/* ── Today's Story Hero ── */}
+          <View style={s.section}>
+            {todaysStory ? (
+              <GlassCard
+                delay={100}
+                padding={20}
+                accentColor={colors.accent}
+              >
+                <View style={s.heroHeader}>
+                  <Sparkles
+                    size={16}
+                    color={colors.accent}
+                    strokeWidth={1.5}
+                  />
+                  <Text style={s.heroLabel}>TODAY'S STORY</Text>
+                </View>
+                <Text style={s.heroContent} numberOfLines={6}>
+                  {todaysStory.content}
+                </Text>
+              </GlassCard>
+            ) : (
+              <GlassCard delay={100} padding={28}>
+                <View style={s.promptInner}>
+                  <PenLine
+                    size={28}
+                    color={colors.mutedForeground}
+                    strokeWidth={1.5}
+                  />
+                  <Text style={s.promptTitle}>No story today yet</Text>
+                  <Text style={s.promptSubtitle}>
+                    Share your day with Groot and a story will be crafted for
+                    you.
                   </Text>
-                )}
-              </Text>
-            </View>
-            {statsData.topTags?.[0] && (
-              <View style={s.statPill}>
-                <Tag size={14} color={colors.chart4} strokeWidth={1.5} />
-                <Text style={s.statValue}>{statsData.topTags[0].tag}</Text>
-                <Text style={s.statLabel}>top theme</Text>
-              </View>
+                </View>
+              </GlassCard>
             )}
-          </ScrollView>
-        )}
+          </View>
 
-        {/* Today's story hero */}
-        <View style={s.section}>
-          {todaysStory ? (
-            <View style={s.heroCard}>
-              <View style={s.heroHeader}>
-                <Sparkles
-                  size={16}
-                  color={colors.accent}
-                  strokeWidth={1.5}
-                />
-                <Text style={s.heroLabel}>Today's Story</Text>
-              </View>
-              <Text style={s.heroContent} numberOfLines={6}>
-                {todaysStory.content}
+          {/* ── Weekly Timeline ── */}
+          {grouped.length === 0 ? (
+            <View style={s.emptyState}>
+              <BookOpen
+                size={36}
+                color={colors.mutedForeground}
+                strokeWidth={1}
+              />
+              <Text style={s.emptyTitle}>Your story collection is empty</Text>
+              <Text style={s.emptySubtitle}>
+                As you share your experiences, Groot will weave them into
+                meaningful stories.
               </Text>
             </View>
           ) : (
-            <View style={s.promptCard}>
-              <PenLine
-                size={24}
-                color={colors.mutedForeground}
-                strokeWidth={1.5}
-              />
-              <Text style={s.promptTitle}>No story today yet</Text>
-              <Text style={s.promptSubtitle}>
-                Share your day with Groot and a story will be crafted for you.
-              </Text>
-            </View>
+            grouped.map((group) => (
+              <View key={group.week} style={s.weekGroup}>
+                <SectionHeader title={group.week} />
+                {group.items.map((story, storyIndex) => {
+                  const mood = getMoodFromMetadata(story);
+                  const moodColor = mood
+                    ? getMoodColorFromName(mood, colors)
+                    : undefined;
+                  const tags = getTagsFromMetadata(story);
+                  const staggerDelay = 150 + storyIndex * 50;
+
+                  return (
+                    <GlassCard
+                      key={story.id}
+                      delay={staggerDelay}
+                      padding={16}
+                      accentColor={moodColor}
+                      style={s.storyCardOuter}
+                    >
+                      <Text style={s.storyDate}>
+                        {formatDate(story.created_at)}
+                      </Text>
+                      <Text style={s.storyContent} numberOfLines={4}>
+                        {story.content}
+                      </Text>
+                      {tags.length > 0 && (
+                        <View style={s.tagsRow}>
+                          {tags.slice(0, 3).map((tag) => (
+                            <PillBadge key={tag} label={tag} small />
+                          ))}
+                        </View>
+                      )}
+                    </GlassCard>
+                  );
+                })}
+              </View>
+            ))
           )}
-        </View>
-
-        {/* Weekly grouped timeline */}
-        {grouped.length === 0 ? (
-          <View style={s.emptyState}>
-            <BookOpen
-              size={32}
-              color={colors.mutedForeground}
-              strokeWidth={1}
-            />
-            <Text style={s.emptyTitle}>Your story collection is empty</Text>
-            <Text style={s.emptySubtitle}>
-              As you share your experiences, Groot will weave them into
-              meaningful stories.
-            </Text>
-          </View>
-        ) : (
-          grouped.map((group) => (
-            <View key={group.week} style={s.weekGroup}>
-              <Text style={s.weekLabel}>{group.week}</Text>
-              {group.items.map((story) => {
-                const mood = getMoodFromMetadata(story);
-                const moodColor = mood
-                  ? getMoodColorFromName(mood, colors)
-                  : colors.border;
-                const tags = getTagsFromMetadata(story);
-
-                return (
-                  <View
-                    key={story.id}
-                    style={[s.storyCard, { borderLeftColor: moodColor }]}
-                  >
-                    <Text style={s.storyDate}>
-                      {formatDate(story.created_at)}
-                    </Text>
-                    <Text style={s.storyContent} numberOfLines={4}>
-                      {story.content}
-                    </Text>
-                    {tags.length > 0 && (
-                      <View style={s.tagsRow}>
-                        {tags.slice(0, 3).map((tag) => (
-                          <View key={tag} style={s.tagBadge}>
-                            <Text style={s.tagText}>{tag}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    )}
-                  </View>
-                );
-              })}
-            </View>
-          ))
-        )}
-      </ScrollView>
+        </ScrollView>
+      </GradientBackground>
     </SafeAreaView>
   );
 }
@@ -281,9 +340,9 @@ export default function StoriesScreen() {
 
 const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
   StyleSheet.create({
-    container: {
+    safeArea: {
       flex: 1,
-      backgroundColor: c.background,
+      backgroundColor: c.gradientStart,
     },
     center: {
       flex: 1,
@@ -294,61 +353,89 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       padding: 20,
       paddingBottom: 40,
     },
+
+    // ── Header ──
+    header: {
+      marginBottom: 20,
+    },
     pageTitle: {
       fontFamily: "Inter_700Bold",
-      ...typography["2xl"],
+      ...typography.title,
       color: c.foreground,
-      marginBottom: 16,
     },
-    statsStrip: {
+    pageSubtitle: {
+      fontFamily: "Inter_400Regular",
+      ...typography.sm,
+      color: c.mutedForeground,
+      marginTop: 4,
+    },
+
+    // ── Stats Grid ──
+    statsGrid: {
       flexDirection: "row",
-      gap: 10,
+      flexWrap: "wrap",
+      justifyContent: "space-between",
+      rowGap: 10,
       marginBottom: 24,
-      paddingRight: 20,
     },
-    statPill: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 6,
-      backgroundColor: c.card,
+    statTile: {
+      width: "48.5%",
+      minHeight: 118,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: c.glassBorder,
+      backgroundColor: c.glassSurface,
       paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 20,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border,
+      paddingVertical: 12,
+      shadowColor: c.elevatedShadowColor,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.7,
+      shadowRadius: 10,
+      elevation: 2,
+    },
+    statIconPill: {
+      alignSelf: "flex-start",
+      borderRadius: 999,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      marginBottom: 8,
     },
     statValue: {
-      fontFamily: "Inter_600SemiBold",
-      ...typography.sm,
+      fontFamily: "Inter_700Bold",
+      ...typography.lg,
       color: c.foreground,
+      marginBottom: 2,
     },
     statLabel: {
+      fontFamily: "Inter_600SemiBold",
+      ...typography.caption,
+      color: c.mutedForeground,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    statHint: {
       fontFamily: "Inter_400Regular",
       ...typography.xs,
       color: c.mutedForeground,
+      marginTop: 2,
+      opacity: 0.9,
     },
+
+    // ── Today's Hero ──
     section: {
-      marginBottom: 24,
-    },
-    heroCard: {
-      backgroundColor: c.card,
-      borderRadius: 12,
-      padding: 18,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border,
-      borderLeftWidth: 3,
-      borderLeftColor: c.accent,
+      marginBottom: 28,
     },
     heroHeader: {
       flexDirection: "row",
       alignItems: "center",
       gap: 6,
-      marginBottom: 10,
+      marginBottom: 12,
     },
     heroLabel: {
-      fontFamily: "Inter_600SemiBold",
-      ...typography.sm,
+      fontFamily: "Inter_700Bold",
+      ...typography.caption,
       color: c.accent,
+      letterSpacing: 1.5,
     },
     heroContent: {
       fontFamily: "Inter_400Regular",
@@ -356,19 +443,16 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       color: c.foreground,
       lineHeight: 22,
     },
-    promptCard: {
-      backgroundColor: c.secondary,
-      borderRadius: 12,
-      padding: 24,
+
+    // ── Prompt (no story today) ──
+    promptInner: {
       alignItems: "center",
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border,
     },
     promptTitle: {
       fontFamily: "Inter_600SemiBold",
       ...typography.base,
       color: c.foreground,
-      marginTop: 12,
+      marginTop: 14,
       marginBottom: 6,
     },
     promptSubtitle: {
@@ -378,31 +462,21 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       textAlign: "center",
       lineHeight: 22,
     },
+
+    // ── Weekly Timeline ──
     weekGroup: {
       marginBottom: 24,
     },
-    weekLabel: {
-      fontFamily: "Inter_600SemiBold",
-      ...typography.sm,
-      color: c.mutedForeground,
+    storyCardOuter: {
       marginBottom: 10,
-      textTransform: "uppercase",
-      letterSpacing: 0.5,
-    },
-    storyCard: {
-      backgroundColor: c.card,
-      borderRadius: 10,
-      padding: 14,
-      marginBottom: 8,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border,
-      borderLeftWidth: 3,
     },
     storyDate: {
       fontFamily: "Inter_500Medium",
-      ...typography.xs,
+      ...typography.caption,
       color: c.mutedForeground,
       marginBottom: 6,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
     },
     storyContent: {
       fontFamily: "Inter_400Regular",
@@ -414,30 +488,22 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       flexDirection: "row",
       flexWrap: "wrap",
       gap: 6,
-      marginTop: 10,
+      marginTop: 12,
     },
-    tagBadge: {
-      backgroundColor: c.secondary,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 4,
-    },
-    tagText: {
-      fontFamily: "Inter_500Medium",
-      ...typography.xs,
-      color: c.mutedForeground,
-    },
+
+    // ── Empty State ──
     emptyState: {
       alignItems: "center",
-      paddingVertical: 40,
-      paddingHorizontal: 20,
+      paddingVertical: 48,
+      paddingHorizontal: 24,
     },
     emptyTitle: {
       fontFamily: "Inter_600SemiBold",
       ...typography.lg,
       color: c.foreground,
-      marginTop: 16,
+      marginTop: 18,
       marginBottom: 8,
+      textAlign: "center",
     },
     emptySubtitle: {
       fontFamily: "Inter_400Regular",

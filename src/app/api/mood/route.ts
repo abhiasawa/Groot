@@ -11,6 +11,31 @@ const MOOD_SCORE: Record<string, number> = {
   bad: 1, sad: 1, angry: 1, frustrated: 1, upset: 1,
 };
 
+const POSITIVE_WORDS = [
+  "happy", "great", "excited", "awesome", "nice", "good", "grateful",
+  "motivated", "progress", "win", "worked", "better",
+];
+
+const NEGATIVE_WORDS = [
+  "sad", "stressed", "anxious", "overwhelmed", "angry", "upset",
+  "frustrated", "tired", "bad", "worried", "burnout", "exhausted",
+];
+
+function normalizeMood(raw: string): string | null {
+  const normalized = raw.trim().toLowerCase();
+  return normalized in MOOD_SCORE ? normalized : null;
+}
+
+function inferMoodFromText(text: string): string | null {
+  const normalized = text.toLowerCase();
+  const positiveHits = POSITIVE_WORDS.filter((word) => normalized.includes(word)).length;
+  const negativeHits = NEGATIVE_WORDS.filter((word) => normalized.includes(word)).length;
+  if (positiveHits === 0 && negativeHits === 0) return null;
+  if (positiveHits > negativeHits) return "good";
+  if (negativeHits > positiveHits) return "low";
+  return "okay";
+}
+
 /**
  * GET /api/mood?year=2026 — Daily moods + weekly trend.
  */
@@ -32,26 +57,48 @@ export async function GET(request: NextRequest) {
   const startDate = `${year}-01-01T00:00:00`;
   const endDate = `${year}-12-31T23:59:59`;
 
-  // Fetch outbound messages with mood in metadata
+  // Fetch both inbound and outbound; prefer explicit metadata mood,
+  // but infer from text as a fallback so mood doesn't stay blank.
   const { data: messages } = await supabase
     .from("messages")
-    .select("created_at, metadata")
+    .select("created_at, direction, content, media_description, metadata")
     .eq("user_id", userId)
-    .eq("direction", "outbound")
-    .not("metadata", "is", null)
     .gte("created_at", startDate)
     .lte("created_at", endDate)
     .order("created_at", { ascending: true });
 
   // Extract daily moods
   const dailyMoodMap = new Map<string, string[]>();
+  const activeDays = new Set<string>();
   for (const msg of messages ?? []) {
-    const meta = msg.metadata as Record<string, unknown> | null;
-    const mood = (meta?.detectedMood as string) ?? (meta?.mood as string);
-    if (!mood) continue;
     const dateKey = (msg.created_at as string).split("T")[0]!;
-    if (!dailyMoodMap.has(dateKey)) dailyMoodMap.set(dateKey, []);
-    dailyMoodMap.get(dateKey)!.push(mood.toLowerCase());
+    activeDays.add(dateKey);
+
+    const meta = msg.metadata as Record<string, unknown> | null;
+    const explicitMood = normalizeMood(
+      ((meta?.detectedMood as string | undefined) ?? (meta?.mood as string | undefined) ?? ""),
+    );
+
+    let mood = explicitMood;
+    if (!mood && msg.direction === "inbound") {
+      const text = `${msg.content ?? ""}\n${msg.media_description ?? ""}`.trim();
+      if (text.length > 0) {
+        mood = inferMoodFromText(text);
+      }
+    }
+
+    if (mood) {
+      if (!dailyMoodMap.has(dateKey)) dailyMoodMap.set(dateKey, []);
+      dailyMoodMap.get(dateKey)!.push(mood);
+    }
+  }
+
+  // Fallback: if we have activity on a day but no detected/inferred mood,
+  // classify it as neutral so the mood timeline doesn't look broken.
+  for (const dateKey of activeDays) {
+    if (!dailyMoodMap.has(dateKey)) {
+      dailyMoodMap.set(dateKey, ["okay"]);
+    }
   }
 
   // Pick dominant mood per day
@@ -74,7 +121,8 @@ export async function GET(request: NextRequest) {
   for (const dm of dailyMoods) {
     const d = new Date(dm.date);
     const weekStart = new Date(d);
-    weekStart.setDate(d.getDate() - d.getDay() + 1); // Monday
+    const mondayOffset = (d.getDay() + 6) % 7; // Monday-based week
+    weekStart.setDate(d.getDate() - mondayOffset);
     const key = weekStart.toISOString().split("T")[0]!;
     if (!weeklyMap.has(key)) weeklyMap.set(key, []);
     weeklyMap.get(key)!.push(dm.score);

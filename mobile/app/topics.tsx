@@ -6,10 +6,10 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
-  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import {
   ArrowLeft,
   Hash,
@@ -21,6 +21,11 @@ import { useTheme } from "../lib/theme/provider";
 import { useTopics } from "../lib/api/queries";
 import { getMoodColorFromName } from "../constants/mood";
 import { typography } from "../constants/typography";
+import { GradientBackground } from "../components/ui/gradient-background";
+import { GlassCard } from "../components/ui/glass-card";
+import { PressScale } from "../components/ui/press-scale";
+import { SectionHeader } from "../components/ui/section-header";
+import { PillBadge } from "../components/ui/pill-badge";
 import type { Topic, TopicMemory } from "../../shared/types/api";
 
 // ── Helpers ──────────────────────────────────
@@ -51,277 +56,313 @@ export default function TopicsScreen() {
     [],
   );
 
-  const s = styles(colors);
-
   return (
-    <SafeAreaView style={s.container}>
-      {/* Header */}
-      <View style={s.header}>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <ArrowLeft size={24} color={colors.foreground} strokeWidth={1.5} />
-        </Pressable>
-        <Text style={s.headerTitle}>Topics</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      {isLoading ? (
-        <View style={s.center}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      ) : !data?.topics?.length ? (
-        <ScrollView
-          contentContainerStyle={s.center}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefetching}
-              onRefresh={onRefresh}
-              tintColor={colors.primary}
-            />
-          }
-        >
-          <Hash size={32} color={colors.mutedForeground} strokeWidth={1} />
-          <Text style={s.emptyTitle}>No topics discovered yet</Text>
-          <Text style={s.emptySubtitle}>
-            As you share more with Groot, topics and themes will be
-            automatically identified from your conversations.
-          </Text>
-        </ScrollView>
-      ) : (
-        <ScrollView
-          contentContainerStyle={s.scroll}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefetching}
-              onRefresh={onRefresh}
-              tintColor={colors.primary}
-            />
-          }
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Summary */}
-          <Text style={s.summaryText}>
-            {data.totalTopics} topics across {data.totalTaggedMemories}{" "}
-            memories
-          </Text>
-
-          {/* Topic grid */}
-          <View style={s.topicGrid}>
-            {data.topics.map((topic: Topic) => {
-              const isExpanded = expandedTopic === topic.name;
-              const moodColor = topic.dominantMood
-                ? getMoodColorFromName(topic.dominantMood, colors)
-                : null;
-
-              return (
-                <View key={topic.name}>
-                  <Pressable
-                    style={({ pressed }) => [
-                      s.topicCard,
-                      isExpanded && s.topicCardExpanded,
-                      pressed && s.topicCardPressed,
-                    ]}
-                    onPress={() => toggleExpand(topic.name)}
-                  >
-                    <View style={s.topicHeader}>
-                      <View style={s.topicNameRow}>
-                        <Text style={s.topicName}>{topic.name}</Text>
-                        {moodColor && (
-                          <View
-                            style={[
-                              s.topicMoodDot,
-                              { backgroundColor: moodColor },
-                            ]}
-                          />
-                        )}
-                      </View>
-                      <View style={s.topicRight}>
-                        <View style={s.countBadge}>
-                          <Text style={s.countText}>
-                            {topic.memoryCount}
-                          </Text>
-                        </View>
-                        {isExpanded ? (
-                          <ChevronUp
-                            size={16}
-                            color={colors.mutedForeground}
-                            strokeWidth={1.5}
-                          />
-                        ) : (
-                          <ChevronDown
-                            size={16}
-                            color={colors.mutedForeground}
-                            strokeWidth={1.5}
-                          />
-                        )}
-                      </View>
-                    </View>
-
-                    <Text style={s.lastMentioned}>
-                      Last mentioned {formatDate(topic.lastMentioned)}
-                    </Text>
-                  </Pressable>
-
-                  {/* Expanded sample memories */}
-                  {isExpanded && topic.sampleMemories.length > 0 && (
-                    <View style={s.samplesContainer}>
-                      {topic.sampleMemories.map((mem: TopicMemory) => (
-                        <View key={mem.id} style={s.sampleCard}>
-                          <Text style={s.sampleContent} numberOfLines={2}>
-                            {mem.content}
-                          </Text>
-                          <Text style={s.sampleDate}>
-                            {formatDate(mem.created_at)}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              );
-            })}
+    <GradientBackground>
+      <SafeAreaView style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <PressScale onPress={() => router.back()}>
+            <ArrowLeft size={24} color={colors.foreground} strokeWidth={1.5} />
+          </PressScale>
+          <View>
+            <Text style={[styles.headerTitle, { color: colors.foreground }]}>
+              Topics
+            </Text>
+            <Text
+              style={[styles.headerSubtitle, { color: colors.mutedForeground }]}
+            >
+              Themes from your conversations
+            </Text>
           </View>
-        </ScrollView>
-      )}
-    </SafeAreaView>
+          <View style={styles.headerSpacer} />
+        </View>
+
+        {isLoading ? (
+          <View style={styles.center}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : !data?.topics?.length ? (
+          <ScrollView
+            contentContainerStyle={styles.center}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefetching}
+                onRefresh={onRefresh}
+                tintColor={colors.primary}
+              />
+            }
+          >
+            <Animated.View
+              entering={FadeInDown.duration(420)}
+              style={[
+                styles.emptyIconContainer,
+                { backgroundColor: colors.glassSurface },
+              ]}
+            >
+              <Hash size={32} color={colors.mutedForeground} strokeWidth={1} />
+            </Animated.View>
+            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+              No topics discovered yet
+            </Text>
+            <Text
+              style={[styles.emptySubtitle, { color: colors.mutedForeground }]}
+            >
+              As you share more with Groot, topics and themes will be
+              automatically identified from your conversations.
+            </Text>
+          </ScrollView>
+        ) : (
+          <ScrollView
+            contentContainerStyle={styles.scroll}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefetching}
+                onRefresh={onRefresh}
+                tintColor={colors.primary}
+              />
+            }
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Summary */}
+            <Text
+              style={[styles.summaryText, { color: colors.mutedForeground }]}
+            >
+              {data.totalTopics} topics across {data.totalTaggedMemories}{" "}
+              memories
+            </Text>
+
+            <SectionHeader title="All Topics" />
+
+            {/* Topic list */}
+            <View style={styles.topicGrid}>
+              {data.topics.map((topic: Topic, index: number) => {
+                const isExpanded = expandedTopic === topic.name;
+                const moodColor = topic.dominantMood
+                  ? getMoodColorFromName(topic.dominantMood, colors)
+                  : null;
+
+                return (
+                  <View key={topic.name} style={styles.topicWrapper}>
+                    <PressScale
+                      onPress={() => toggleExpand(topic.name)}
+                      style={isExpanded ? styles.expandedPressScale : undefined}
+                    >
+                      <GlassCard
+                        delay={index * 80}
+                        padding={14}
+                        style={
+                          isExpanded ? styles.topicCardExpanded : undefined
+                        }
+                      >
+                        <View style={styles.topicHeader}>
+                          <View style={styles.topicNameRow}>
+                            <Text
+                              style={[
+                                styles.topicName,
+                                { color: colors.foreground },
+                              ]}
+                            >
+                              {topic.name}
+                            </Text>
+                            {moodColor && (
+                              <View
+                                style={[
+                                  styles.topicMoodDot,
+                                  { backgroundColor: moodColor },
+                                ]}
+                              />
+                            )}
+                          </View>
+                          <View style={styles.topicRight}>
+                            <PillBadge
+                              label={String(topic.memoryCount)}
+                              small
+                            />
+                            {isExpanded ? (
+                              <ChevronUp
+                                size={16}
+                                color={colors.mutedForeground}
+                                strokeWidth={1.5}
+                              />
+                            ) : (
+                              <ChevronDown
+                                size={16}
+                                color={colors.mutedForeground}
+                                strokeWidth={1.5}
+                              />
+                            )}
+                          </View>
+                        </View>
+
+                        <Text
+                          style={[
+                            styles.lastMentioned,
+                            { color: colors.mutedForeground },
+                          ]}
+                        >
+                          Last mentioned {formatDate(topic.lastMentioned)}
+                        </Text>
+                      </GlassCard>
+                    </PressScale>
+
+                    {/* Expanded sample memories */}
+                    {isExpanded && topic.sampleMemories.length > 0 && (
+                      <Animated.View
+                        entering={FadeInDown.duration(260)}
+                        style={[
+                          styles.samplesContainer,
+                          { backgroundColor: colors.glassSurface },
+                        ]}
+                      >
+                        {topic.sampleMemories.map((mem: TopicMemory) => (
+                          <GlassCard key={mem.id} padding={12}>
+                            <Text
+                              style={[
+                                styles.sampleContent,
+                                { color: colors.foreground },
+                              ]}
+                              numberOfLines={2}
+                            >
+                              {mem.content}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.sampleDate,
+                                { color: colors.mutedForeground },
+                              ]}
+                            >
+                              {formatDate(mem.created_at)}
+                            </Text>
+                          </GlassCard>
+                        ))}
+                      </Animated.View>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          </ScrollView>
+        )}
+      </SafeAreaView>
+    </GradientBackground>
   );
 }
 
 // ── Styles ───────────────────────────────────
 
-const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: c.background,
-    },
-    center: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      paddingHorizontal: 40,
-    },
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: 20,
-      paddingVertical: 14,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: c.border,
-    },
-    headerTitle: {
-      fontFamily: "Inter_600SemiBold",
-      ...typography.lg,
-      color: c.foreground,
-    },
-    scroll: {
-      padding: 20,
-      paddingBottom: 40,
-    },
-    summaryText: {
-      fontFamily: "Inter_400Regular",
-      ...typography.sm,
-      color: c.mutedForeground,
-      marginBottom: 16,
-    },
-    topicGrid: {
-      gap: 0,
-    },
-    topicCard: {
-      backgroundColor: c.card,
-      borderRadius: 10,
-      padding: 14,
-      marginBottom: 8,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border,
-    },
-    topicCardExpanded: {
-      borderBottomLeftRadius: 0,
-      borderBottomRightRadius: 0,
-      marginBottom: 0,
-    },
-    topicCardPressed: {
-      backgroundColor: c.secondary,
-    },
-    topicHeader: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: 4,
-    },
-    topicNameRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 6,
-    },
-    topicName: {
-      fontFamily: "Inter_600SemiBold",
-      ...typography.base,
-      color: c.foreground,
-    },
-    topicMoodDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-    },
-    topicRight: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-    },
-    countBadge: {
-      backgroundColor: c.secondary,
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 10,
-    },
-    countText: {
-      fontFamily: "Inter_600SemiBold",
-      ...typography.xs,
-      color: c.mutedForeground,
-    },
-    lastMentioned: {
-      fontFamily: "Inter_400Regular",
-      ...typography.xs,
-      color: c.mutedForeground,
-    },
-    samplesContainer: {
-      backgroundColor: c.secondary,
-      borderBottomLeftRadius: 10,
-      borderBottomRightRadius: 10,
-      padding: 12,
-      marginBottom: 8,
-      gap: 8,
-    },
-    sampleCard: {
-      backgroundColor: c.card,
-      borderRadius: 8,
-      padding: 12,
-    },
-    sampleContent: {
-      fontFamily: "Inter_400Regular",
-      ...typography.sm,
-      color: c.foreground,
-      lineHeight: 20,
-    },
-    sampleDate: {
-      fontFamily: "Inter_400Regular",
-      ...typography.xs,
-      color: c.mutedForeground,
-      marginTop: 6,
-    },
-    emptyTitle: {
-      fontFamily: "Inter_600SemiBold",
-      ...typography.lg,
-      color: c.foreground,
-      marginTop: 16,
-      marginBottom: 8,
-    },
-    emptySubtitle: {
-      fontFamily: "Inter_400Regular",
-      ...typography.sm,
-      color: c.mutedForeground,
-      textAlign: "center",
-      lineHeight: 22,
-    },
-  });
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 40,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+  },
+  headerTitle: {
+    fontFamily: "Inter_600SemiBold",
+    ...typography.lg,
+  },
+  headerSubtitle: {
+    fontFamily: "Inter_400Regular",
+    ...typography.xs,
+    marginTop: 2,
+  },
+  headerSpacer: {
+    width: 24,
+  },
+  scroll: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  summaryText: {
+    fontFamily: "Inter_400Regular",
+    ...typography.sm,
+    marginBottom: 16,
+  },
+  topicGrid: {
+    gap: 0,
+  },
+  topicWrapper: {
+    marginBottom: 10,
+  },
+  expandedPressScale: {
+    marginBottom: 0,
+  },
+  topicCardExpanded: {
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+  },
+  topicHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  topicNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  topicName: {
+    fontFamily: "Inter_600SemiBold",
+    ...typography.base,
+  },
+  topicMoodDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  topicRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  lastMentioned: {
+    fontFamily: "Inter_400Regular",
+    ...typography.xs,
+  },
+  samplesContainer: {
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    padding: 12,
+    gap: 8,
+  },
+  sampleContent: {
+    fontFamily: "Inter_400Regular",
+    ...typography.sm,
+    lineHeight: 20,
+  },
+  sampleDate: {
+    fontFamily: "Inter_400Regular",
+    ...typography.xs,
+    marginTop: 6,
+  },
+  emptyIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  emptyTitle: {
+    fontFamily: "Inter_600SemiBold",
+    ...typography.lg,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontFamily: "Inter_400Regular",
+    ...typography.sm,
+    textAlign: "center",
+    lineHeight: 22,
+  },
+});

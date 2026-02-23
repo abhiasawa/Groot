@@ -1,7 +1,4 @@
-import * as SecureStore from "expo-secure-store";
-
 const API_BASE = "https://groot-three.vercel.app";
-const JWT_KEY = "supabase-jwt";
 
 // ── Error class ──────────────────────────────
 
@@ -18,25 +15,17 @@ export class ApiError extends Error {
 // ── Fetch wrapper ────────────────────────────
 
 /**
- * Authenticated fetch against the Groot API.
+ * Fetch against the Groot API.
  *
- * - Reads the Supabase JWT from expo-secure-store.
- * - Attaches `Authorization: Bearer <jwt>`.
- * - Returns parsed JSON on 2xx; throws `ApiError` otherwise.
+ * Uses the single-user fallback on the server (no auth required).
+ * Returns parsed JSON on 2xx; throws `ApiError` otherwise.
  */
 export async function apiFetch<T>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
-  const jwt = await SecureStore.getItemAsync(JWT_KEY);
-
-  if (!jwt) {
-    throw new ApiError("Not authenticated", 401);
-  }
-
   const headers: HeadersInit = {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${jwt}`,
     ...(init?.headers as Record<string, string> | undefined),
   };
 

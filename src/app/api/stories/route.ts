@@ -40,30 +40,70 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // Fetch stories: inbound messages that are stored as long-term memories
-  // Strategy: messages with shouldStoreMemory=true in metadata, OR messages with memoryTags
-  // No null-content filter — voice messages have content=null, transcription in media_description
-  const { data, count } = await supabase
+  const allStories = await loadStoryCandidates(supabase, userId);
+  const stories = allStories.slice(offset, offset + limit);
+
+  return NextResponse.json(
+    { stories, total: allStories.length },
+    { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" } },
+  );
+}
+
+interface StoryRow {
+  id: string;
+  content: string | null;
+  media_description: string | null;
+  message_type: string;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+  synced_to_supermemory: boolean | null;
+}
+
+const GENERIC_TAGS = new Set(["general", "daily-life", "daily_life"]);
+
+function normalizeTag(tag: string): string {
+  const normalized = tag.trim().toLowerCase();
+  return normalized === "general" ? "daily-life" : normalized;
+}
+
+function getMemoryTags(metadata: Record<string, unknown> | null): string[] {
+  const tags = metadata?.memoryTags;
+  if (!Array.isArray(tags)) return [];
+  return tags
+    .filter((tag): tag is string => typeof tag === "string")
+    .map(normalizeTag);
+}
+
+function hasSubstantiveContent(message: StoryRow): boolean {
+  const contentLength = message.content?.trim().length ?? 0;
+  const mediaLength = message.media_description?.trim().length ?? 0;
+  return contentLength + mediaLength >= 160;
+}
+
+function isStoryCandidate(message: StoryRow): boolean {
+  if (!message.content && !message.media_description) return false;
+
+  const meta = message.metadata;
+  if (meta?.shouldStoreMemory === true) return true;
+  if (message.synced_to_supermemory) return true;
+
+  const tags = getMemoryTags(meta);
+  if (tags.some((tag) => !GENERIC_TAGS.has(tag))) return true;
+
+  return hasSubstantiveContent(message);
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function loadStoryCandidates(supabase: any, userId: string): Promise<StoryRow[]> {
+  const { data } = await supabase
     .from("messages")
-    .select("id, content, media_description, message_type, metadata, created_at", { count: "exact" })
+    .select("id, content, media_description, message_type, metadata, created_at, synced_to_supermemory")
     .eq("user_id", userId)
     .eq("direction", "inbound")
     .order("created_at", { ascending: false })
-    .range(offset, offset + limit - 1);
+    .range(0, 1999);
 
-  // Filter in JS: must have content AND be explicitly marked as storyworthy
-  // Stories are curated highlights — only genuinely meaningful moments, not every message
-  const stories = (data ?? []).filter((m) => {
-    if (!m.content && !m.media_description) return false;
-    const meta = m.metadata as Record<string, unknown> | null;
-    if (!meta) return false;
-    return meta.shouldStoreMemory === true;
-  });
-
-  return NextResponse.json(
-    { stories, total: count ?? 0 },
-    { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" } },
-  );
+  return ((data ?? []) as StoryRow[]).filter(isStoryCandidate);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -74,66 +114,13 @@ async function getStoryStats(supabase: any, userId: string) {
   const lastMonthStart = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, "0")}-01T00:00:00`;
   const lastMonthEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01T00:00:00`;
 
-  // Only count messages explicitly marked as storyworthy (shouldStoreMemory=true in metadata JSONB)
-  // Using .filter() for JSONB arrow operator — avoids the .or() Supabase JS bug
-
-  // Total stories
-  const { count: total } = await supabase
-    .from("messages")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .eq("direction", "inbound")
-    .filter("metadata->>shouldStoreMemory", "eq", "true");
-
-  // This month count
-  const { count: thisMonth } = await supabase
-    .from("messages")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .eq("direction", "inbound")
-    .filter("metadata->>shouldStoreMemory", "eq", "true")
-    .gte("created_at", thisMonthStart);
-
-  // Last month count
-  const { count: lastMonthCount } = await supabase
-    .from("messages")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .eq("direction", "inbound")
-    .filter("metadata->>shouldStoreMemory", "eq", "true")
-    .gte("created_at", lastMonthStart)
-    .lt("created_at", lastMonthEnd);
-
-  // Streak calculation: count consecutive days with at least one storyworthy message
-  const { data: recentDays } = await supabase
-    .from("messages")
-    .select("created_at")
-    .eq("user_id", userId)
-    .eq("direction", "inbound")
-    .filter("metadata->>shouldStoreMemory", "eq", "true")
-    .order("created_at", { ascending: false })
-    .limit(200);
-
-  const streak = calculateStreak(recentDays ?? []);
-
-  // Top tags from storyworthy messages
-  const { data: taggedMessages } = await supabase
-    .from("messages")
-    .select("metadata")
-    .eq("user_id", userId)
-    .eq("direction", "inbound")
-    .filter("metadata->>shouldStoreMemory", "eq", "true")
-    .order("created_at", { ascending: false })
-    .limit(100);
+  const stories = await loadStoryCandidates(supabase, userId);
 
   const tagCounts = new Map<string, number>();
-  for (const msg of taggedMessages ?? []) {
-    const tags = (msg.metadata as Record<string, unknown>)?.memoryTags;
-    if (Array.isArray(tags)) {
-      for (const tag of tags) {
-        if (typeof tag === "string") {
-          tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
-        }
+  for (const msg of stories) {
+    for (const tag of getMemoryTags(msg.metadata)) {
+      if (!GENERIC_TAGS.has(tag)) {
+        tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
       }
     }
   }
@@ -142,10 +129,16 @@ async function getStoryStats(supabase: any, userId: string) {
     .slice(0, 5)
     .map(([tag, count]) => ({ tag, count }));
 
+  const thisMonthCount = stories.filter((story) => story.created_at >= thisMonthStart).length;
+  const lastMonthCount = stories.filter(
+    (story) => story.created_at >= lastMonthStart && story.created_at < lastMonthEnd,
+  ).length;
+  const streak = calculateStreak(stories.map((story) => ({ created_at: story.created_at })));
+
   return {
-    total: total ?? 0,
-    thisMonth: thisMonth ?? 0,
-    lastMonth: lastMonthCount ?? 0,
+    total: stories.length,
+    thisMonth: thisMonthCount,
+    lastMonth: lastMonthCount,
     streak,
     topTags,
   };

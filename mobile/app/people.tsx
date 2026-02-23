@@ -6,15 +6,19 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
-  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { ArrowLeft, Users, User, MessageSquare } from "lucide-react-native";
+import Animated, { FadeIn } from "react-native-reanimated";
+import { ArrowLeft, Users, MessageSquare } from "lucide-react-native";
 
 import { useTheme } from "../lib/theme/provider";
 import { usePeople } from "../lib/api/queries";
 import { typography } from "../constants/typography";
+import { GlassCard } from "../components/ui/glass-card";
+import { GradientBackground } from "../components/ui/gradient-background";
+import { PressScale } from "../components/ui/press-scale";
+import { PillBadge } from "../components/ui/pill-badge";
 import type { Person } from "../../shared/types/api";
 
 // ── Helpers ──────────────────────────────────
@@ -70,44 +74,84 @@ export default function PeopleScreen() {
     refetch();
   }, [refetch]);
 
-  const s = styles(colors);
+  // ── Loading ──────────────────────────────
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.flex}>
+        <GradientBackground>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        </GradientBackground>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Empty ────────────────────────────────
+
+  if (!data?.people?.length) {
+    return (
+      <SafeAreaView style={styles.flex}>
+        <GradientBackground>
+          {/* Header */}
+          <View style={styles.header}>
+            <PressScale onPress={() => router.back()}>
+              <ArrowLeft size={24} color={colors.foreground} strokeWidth={1.5} />
+            </PressScale>
+            <View style={{ width: 24 }} />
+          </View>
+
+          <ScrollView
+            contentContainerStyle={styles.emptyContainer}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefetching}
+                onRefresh={onRefresh}
+                tintColor={colors.primary}
+              />
+            }
+          >
+            <Animated.View
+              entering={FadeIn.delay(100).duration(600)}
+              style={[styles.emptyIconWrap, { backgroundColor: colors.glassSurface }]}
+            >
+              <Users size={40} color={colors.mutedForeground} strokeWidth={1.2} />
+            </Animated.View>
+            <Animated.Text
+              entering={FadeIn.delay(250).duration(600)}
+              style={[styles.emptyTitle, { color: colors.foreground }]}
+            >
+              No people mentioned yet
+            </Animated.Text>
+            <Animated.Text
+              entering={FadeIn.delay(400).duration(600)}
+              style={[styles.emptySubtitle, { color: colors.mutedForeground }]}
+            >
+              When you mention people in your conversations with Groot, they
+              will be tracked here with relationship info.
+            </Animated.Text>
+          </ScrollView>
+        </GradientBackground>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Main render ──────────────────────────
 
   return (
-    <SafeAreaView style={s.container}>
-      {/* Header */}
-      <View style={s.header}>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <ArrowLeft size={24} color={colors.foreground} strokeWidth={1.5} />
-        </Pressable>
-        <Text style={s.headerTitle}>People</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      {isLoading ? (
-        <View style={s.center}>
-          <ActivityIndicator size="large" color={colors.primary} />
+    <SafeAreaView style={styles.flex}>
+      <GradientBackground>
+        {/* Header */}
+        <View style={styles.header}>
+          <PressScale onPress={() => router.back()}>
+            <ArrowLeft size={24} color={colors.foreground} strokeWidth={1.5} />
+          </PressScale>
+          <View style={{ width: 24 }} />
         </View>
-      ) : !data?.people?.length ? (
+
         <ScrollView
-          contentContainerStyle={s.center}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefetching}
-              onRefresh={onRefresh}
-              tintColor={colors.primary}
-            />
-          }
-        >
-          <Users size={32} color={colors.mutedForeground} strokeWidth={1} />
-          <Text style={s.emptyTitle}>No people mentioned yet</Text>
-          <Text style={s.emptySubtitle}>
-            When you mention people in your conversations with Groot, they
-            will be tracked here with relationship info.
-          </Text>
-        </ScrollView>
-      ) : (
-        <ScrollView
-          contentContainerStyle={s.scroll}
+          contentContainerStyle={styles.scroll}
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
@@ -117,171 +161,195 @@ export default function PeopleScreen() {
           }
           showsVerticalScrollIndicator={false}
         >
-          {data.people.map((person: Person) => {
+          {/* Title */}
+          <Animated.View
+            entering={FadeIn.duration(700)}
+            style={styles.titleSection}
+          >
+            <Text style={[styles.pageTitle, { color: colors.foreground }]}>
+              People
+            </Text>
+            <Text style={[styles.pageSubtitle, { color: colors.mutedForeground }]}>
+              Your inner circle
+            </Text>
+          </Animated.View>
+
+          {/* Person list */}
+          {data.people.map((person: Person, index: number) => {
             const avatarBg = getAvatarColor(person.name, colors);
 
             return (
-              <View key={person.name} style={s.personCard}>
-                <View
-                  style={[s.avatar, { backgroundColor: avatarBg }]}
-                >
-                  <Text style={s.avatarText}>
-                    {getInitials(person.name)}
-                  </Text>
-                </View>
-
-                <View style={s.personInfo}>
-                  <Text style={s.personName}>{person.name}</Text>
-                  {person.relationship && (
-                    <Text style={s.personRelationship}>
-                      {person.relationship}
-                    </Text>
-                  )}
-                  <View style={s.personMeta}>
-                    <View style={s.metaItem}>
-                      <MessageSquare
-                        size={12}
-                        color={colors.mutedForeground}
-                        strokeWidth={1.5}
-                      />
-                      <Text style={s.metaText}>
-                        {person.mentionCount}{" "}
-                        {person.mentionCount === 1 ? "mention" : "mentions"}
-                      </Text>
-                    </View>
-                    <Text style={s.metaSep}>-</Text>
-                    <Text style={s.metaText}>
-                      {formatDate(person.lastMentioned)}
+              <GlassCard
+                key={person.name}
+                delay={index * 80}
+                padding={14}
+                style={styles.personCardSpacing}
+              >
+                <View style={styles.personRow}>
+                  <View style={[styles.avatar, { backgroundColor: avatarBg }]}>
+                    <Text style={styles.avatarText}>
+                      {getInitials(person.name)}
                     </Text>
                   </View>
-                </View>
 
-                <View style={s.sourceBadge}>
-                  <Text style={s.sourceText}>{person.source}</Text>
+                  <View style={styles.personInfo}>
+                    <Text style={[styles.personName, { color: colors.foreground }]}>
+                      {person.name}
+                    </Text>
+                    {person.relationship && (
+                      <Text style={[styles.personRelationship, { color: colors.mutedForeground }]}>
+                        {person.relationship}
+                      </Text>
+                    )}
+                    <View style={styles.personMeta}>
+                      <View style={styles.metaItem}>
+                        <MessageSquare
+                          size={12}
+                          color={colors.mutedForeground}
+                          strokeWidth={1.5}
+                        />
+                        <Text style={[styles.metaText, { color: colors.mutedForeground }]}>
+                          {person.mentionCount}{" "}
+                          {person.mentionCount === 1 ? "mention" : "mentions"}
+                        </Text>
+                      </View>
+                      <Text style={[styles.metaSep, { color: colors.mutedForeground }]}>
+                        -
+                      </Text>
+                      <Text style={[styles.metaText, { color: colors.mutedForeground }]}>
+                        {formatDate(person.lastMentioned)}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <PillBadge
+                    label={person.source}
+                    small
+                  />
                 </View>
-              </View>
+              </GlassCard>
             );
           })}
+
+          <View style={styles.bottomSpacer} />
         </ScrollView>
-      )}
+      </GradientBackground>
     </SafeAreaView>
   );
 }
 
 // ── Styles ───────────────────────────────────
 
-const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: c.background,
-    },
-    center: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      paddingHorizontal: 40,
-    },
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: 20,
-      paddingVertical: 14,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: c.border,
-    },
-    headerTitle: {
-      fontFamily: "Inter_600SemiBold",
-      ...typography.lg,
-      color: c.foreground,
-    },
-    scroll: {
-      padding: 20,
-      paddingBottom: 40,
-    },
-    personCard: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: c.card,
-      borderRadius: 12,
-      padding: 14,
-      marginBottom: 8,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border,
-    },
-    avatar: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      justifyContent: "center",
-      alignItems: "center",
-      marginRight: 14,
-    },
-    avatarText: {
-      fontFamily: "Inter_700Bold",
-      ...typography.sm,
-      color: "#FFFFFF",
-    },
-    personInfo: {
-      flex: 1,
-    },
-    personName: {
-      fontFamily: "Inter_600SemiBold",
-      ...typography.base,
-      color: c.foreground,
-    },
-    personRelationship: {
-      fontFamily: "Inter_400Regular",
-      ...typography.xs,
-      color: c.mutedForeground,
-      marginTop: 1,
-    },
-    personMeta: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 4,
-      marginTop: 4,
-    },
-    metaItem: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 3,
-    },
-    metaText: {
-      fontFamily: "Inter_400Regular",
-      ...typography.xs,
-      color: c.mutedForeground,
-    },
-    metaSep: {
-      fontFamily: "Inter_400Regular",
-      ...typography.xs,
-      color: c.mutedForeground,
-    },
-    sourceBadge: {
-      backgroundColor: c.secondary,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 4,
-    },
-    sourceText: {
-      fontFamily: "Inter_500Medium",
-      ...typography.xs,
-      color: c.mutedForeground,
-      textTransform: "capitalize",
-    },
-    emptyTitle: {
-      fontFamily: "Inter_600SemiBold",
-      ...typography.lg,
-      color: c.foreground,
-      marginTop: 16,
-      marginBottom: 8,
-    },
-    emptySubtitle: {
-      fontFamily: "Inter_400Regular",
-      ...typography.sm,
-      color: c.mutedForeground,
-      textAlign: "center",
-      lineHeight: 22,
-    },
-  });
+const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+  },
+  scroll: {
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
+  titleSection: {
+    marginBottom: 20,
+  },
+  pageTitle: {
+    fontFamily: "Inter_700Bold",
+    ...typography.hero,
+    marginBottom: 4,
+  },
+  pageSubtitle: {
+    fontFamily: "Inter_400Regular",
+    ...typography.sm,
+  },
+  personCardSpacing: {
+    marginBottom: 10,
+  },
+  personRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 14,
+  },
+  avatarText: {
+    fontFamily: "Inter_700Bold",
+    ...typography.sm,
+    color: "#FFFFFF",
+  },
+  personInfo: {
+    flex: 1,
+  },
+  personName: {
+    fontFamily: "Inter_600SemiBold",
+    ...typography.base,
+  },
+  personRelationship: {
+    fontFamily: "Inter_400Regular",
+    ...typography.xs,
+    marginTop: 1,
+  },
+  personMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 4,
+  },
+  metaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+  },
+  metaText: {
+    fontFamily: "Inter_400Regular",
+    ...typography.xs,
+  },
+  metaSep: {
+    fontFamily: "Inter_400Regular",
+    ...typography.xs,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 40,
+  },
+  emptyIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    fontFamily: "Inter_700Bold",
+    ...typography.title,
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  emptySubtitle: {
+    fontFamily: "Inter_400Regular",
+    ...typography.base,
+    textAlign: "center",
+    lineHeight: 24,
+  },
+  bottomSpacer: {
+    height: 20,
+  },
+});

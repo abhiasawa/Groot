@@ -6,25 +6,32 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
-  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import {
   Brain,
   CheckSquare,
   Bell,
   Flame,
-  Users,
-  Heart,
-  Clock,
   Sparkles,
+  BookOpen,
+  ChevronRight,
+  Leaf,
 } from "lucide-react-native";
 
 import { useTheme } from "../../lib/theme/provider";
 import { useHome } from "../../lib/api/queries";
 import { getMoodColorFromName } from "../../constants/mood";
 import { typography } from "../../constants/typography";
-import type { RecentMemory, HomeData } from "../../../shared/types/api";
+import { GlassCard } from "../../components/ui/glass-card";
+import { GradientBackground } from "../../components/ui/gradient-background";
+import { PressScale } from "../../components/ui/press-scale";
+import { SectionHeader } from "../../components/ui/section-header";
+import { PillBadge } from "../../components/ui/pill-badge";
+import { AnimatedStat } from "../../components/ui/animated-stat";
+import type { HomeData } from "../../../shared/types/api";
 
 // ── Helpers ──────────────────────────────────
 
@@ -35,35 +42,11 @@ function getGreeting(): string {
   return "Good evening";
 }
 
-function formatRelativeTime(dateStr: string): string {
-  const now = Date.now();
-  const then = new Date(dateStr).getTime();
-  const diff = now - then;
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return "Yesterday";
-  if (days < 7) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function getTypeBadge(type: string): string {
-  switch (type) {
-    case "text":
-      return "Text";
-    case "audio":
-      return "Voice";
-    case "image":
-      return "Photo";
-    default:
-      return type;
-  }
+function getSubGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Let's make today count.";
+  if (hour < 17) return "How's your day going?";
+  return "Time to wind down.";
 }
 
 // ── Component ────────────────────────────────
@@ -71,357 +54,465 @@ function getTypeBadge(type: string): string {
 export default function HomeScreen() {
   const { colors } = useTheme();
   const { data, isLoading, isRefetching, refetch } = useHome();
+  const router = useRouter();
 
   const onRefresh = useCallback(() => {
     refetch();
   }, [refetch]);
 
-  const s = styles(colors);
+  // ── Loading state ──────────────────────────
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[s.container, s.center]}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <SafeAreaView style={styles.flex}>
+        <GradientBackground>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        </GradientBackground>
       </SafeAreaView>
     );
   }
 
   const home = data as HomeData | undefined;
 
+  // ── Empty state (no data at all) ───────────
+
+  if (!home) {
+    return (
+      <SafeAreaView style={styles.flex}>
+        <GradientBackground>
+          <View style={styles.emptyContainer}>
+            <Animated.View
+              entering={FadeIn.delay(100).duration(600)}
+              style={styles.emptyIconWrap}
+            >
+              <Leaf size={48} color={colors.primary} strokeWidth={1.2} />
+            </Animated.View>
+            <Animated.Text
+              entering={FadeIn.delay(250).duration(600)}
+              style={[styles.emptyTitle, { color: colors.foreground }]}
+            >
+              Your garden awaits
+            </Animated.Text>
+            <Animated.Text
+              entering={FadeIn.delay(400).duration(600)}
+              style={[styles.emptySubtitle, { color: colors.mutedForeground }]}
+            >
+              Send your first message to Groot on WhatsApp or Telegram to begin
+              building your second brain.
+            </Animated.Text>
+          </View>
+        </GradientBackground>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Mood data ──────────────────────────────
+
+  const moodColor = home.recentMood
+    ? getMoodColorFromName(home.recentMood, colors)
+    : undefined;
+
+  // ── Main render ────────────────────────────
+
   return (
-    <SafeAreaView style={s.container}>
-      <ScrollView
-        contentContainerStyle={s.scroll}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefetching}
-            onRefresh={onRefresh}
-            tintColor={colors.primary}
-          />
-        }
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Greeting */}
-        <Text style={s.greeting}>
-          {getGreeting()},{" "}
-          <Text style={s.name}>{home?.displayName ?? "there"}</Text>
-        </Text>
-
-        {/* Today's mood */}
-        {home?.recentMood && (
-          <View style={s.moodRow}>
-            <View
-              style={[
-                s.moodDot,
-                {
-                  backgroundColor: getMoodColorFromName(
-                    home.recentMood,
-                    colors,
-                  ),
-                },
-              ]}
+    <SafeAreaView style={styles.flex}>
+      <GradientBackground>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
             />
-            <Text style={s.moodText}>
-              Feeling{" "}
-              <Text style={s.moodLabel}>{home.recentMood.toLowerCase()}</Text>{" "}
-              today
+          }
+          showsVerticalScrollIndicator={false}
+        >
+          {/* ── Hero Greeting ───────────────── */}
+          <Animated.View
+            entering={FadeIn.duration(700)}
+            style={styles.heroSection}
+          >
+            <Text style={[styles.greeting, { color: colors.foreground }]}>
+              {getGreeting()},
             </Text>
+            <Text style={[styles.heroName, { color: colors.foreground }]}>
+              {home.displayName ?? "there"}
+            </Text>
+            <Text
+              style={[styles.subGreeting, { color: colors.mutedForeground }]}
+            >
+              {getSubGreeting()}
+            </Text>
+          </Animated.View>
+
+          {/* ── Mood Pill ──────────────────── */}
+          {home.recentMood && moodColor && (
+            <Animated.View
+              entering={FadeInDown.delay(100).duration(420)}
+              style={styles.moodSection}
+            >
+              <View style={styles.moodPillRow}>
+                <View
+                  style={[styles.moodDot, { backgroundColor: moodColor }]}
+                />
+                <PillBadge
+                  label={`Feeling ${home.recentMood.toLowerCase()}`}
+                  style={styles.moodPill}
+                />
+              </View>
+            </Animated.View>
+          )}
+
+          {/* ── Stats Grid ─────────────────── */}
+          <View style={styles.sectionSpacing}>
+            <SectionHeader title="Overview" />
+            <View style={styles.statsGrid}>
+              <PressScale
+                style={styles.statCardHalf}
+                onPress={() => router.push("/(tabs)/journal")}
+              >
+                <GlassCard delay={0} padding={16}>
+                  <AnimatedStat
+                    value={home.memoriesCount ?? 0}
+                    label="Memories"
+                    icon={
+                      <Brain
+                        size={20}
+                        color={colors.chart1}
+                        strokeWidth={1.5}
+                      />
+                    }
+                  />
+                </GlassCard>
+              </PressScale>
+
+              <PressScale
+                style={styles.statCardHalf}
+                onPress={() => router.push("/tasks" as never)}
+              >
+                <GlassCard delay={50} padding={16}>
+                  <AnimatedStat
+                    value={home.pendingTasks ?? 0}
+                    label="Tasks"
+                    icon={
+                      <CheckSquare
+                        size={20}
+                        color={colors.chart2}
+                        strokeWidth={1.5}
+                      />
+                    }
+                  />
+                </GlassCard>
+              </PressScale>
+
+              <PressScale
+                style={styles.statCardHalf}
+                onPress={() => router.push("/tasks" as never)}
+              >
+                <GlassCard delay={100} padding={16}>
+                  <AnimatedStat
+                    value={home.upcomingReminders ?? 0}
+                    label="Reminders"
+                    icon={
+                      <Bell
+                        size={20}
+                        color={colors.chart3}
+                        strokeWidth={1.5}
+                      />
+                    }
+                  />
+                </GlassCard>
+              </PressScale>
+
+              <PressScale
+                style={styles.statCardHalf}
+                onPress={() => router.push("/habits" as never)}
+              >
+                <GlassCard delay={150} padding={16}>
+                  <AnimatedStat
+                    value={home.habitsCount ?? 0}
+                    label="Habits"
+                    icon={
+                      <Flame
+                        size={20}
+                        color={colors.chart4}
+                        strokeWidth={1.5}
+                      />
+                    }
+                  />
+                </GlassCard>
+              </PressScale>
+            </View>
           </View>
-        )}
 
-        {/* Stats grid */}
-        <View style={s.statsGrid}>
-          <StatCard
-            icon={<Brain size={18} color={colors.chart1} strokeWidth={1.5} />}
-            label="Memories"
-            value={home?.memoriesCount ?? 0}
-            colors={colors}
-          />
-          <StatCard
-            icon={
-              <CheckSquare size={18} color={colors.chart2} strokeWidth={1.5} />
-            }
-            label="Pending"
-            value={home?.pendingTasks ?? 0}
-            colors={colors}
-          />
-          <StatCard
-            icon={<Bell size={18} color={colors.chart3} strokeWidth={1.5} />}
-            label="Reminders"
-            value={home?.upcomingReminders ?? 0}
-            colors={colors}
-          />
-          <StatCard
-            icon={<Flame size={18} color={colors.chart4} strokeWidth={1.5} />}
-            label="Habits"
-            value={home?.habitsCount ?? 0}
-            colors={colors}
-          />
-          <StatCard
-            icon={<Users size={18} color={colors.chart5} strokeWidth={1.5} />}
-            label="People"
-            value={home?.peopleCount ?? 0}
-            colors={colors}
-          />
-        </View>
-
-        {/* Flashback */}
-        {home?.flashback && (
-          <View style={s.section}>
-            <View style={s.sectionHeader}>
-              <Sparkles
-                size={16}
-                color={colors.accent}
-                strokeWidth={1.5}
-              />
-              <Text style={s.sectionTitle}>Flashback</Text>
-            </View>
-            <View style={s.flashbackCard}>
-              <Text style={s.flashbackContent} numberOfLines={4}>
-                {home.flashback.content}
-              </Text>
-              <Text style={s.flashbackDate}>
-                {new Date(home.flashback.created_at).toLocaleDateString(
-                  "en-US",
-                  { month: "long", day: "numeric", year: "numeric" },
-                )}
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* Recent entries */}
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>Recent Entries</Text>
-
-          {!home?.recentMemories?.length ? (
-            <View style={s.emptyState}>
-              <Heart
-                size={32}
-                color={colors.mutedForeground}
-                strokeWidth={1}
-              />
-              <Text style={s.emptyTitle}>Your story starts here</Text>
-              <Text style={s.emptySubtitle}>
-                Send your first message to Groot on WhatsApp or Telegram to
-                begin building your second brain.
-              </Text>
-            </View>
-          ) : (
-            home.recentMemories.slice(0, 5).map((memory: RecentMemory) => (
-              <View key={memory.id} style={s.entryCard}>
-                <View style={s.entryHeader}>
-                  <View style={s.typeBadge}>
-                    <Text style={s.typeBadgeText}>
-                      {getTypeBadge(memory.message_type)}
-                    </Text>
-                  </View>
-                  <Text style={s.entryTime}>
-                    {formatRelativeTime(memory.created_at)}
+          {/* ── Flashback ──────────────────── */}
+          {home.flashback && (
+            <View style={styles.sectionSpacing}>
+              <SectionHeader title="Flashback" />
+              <GlassCard
+                accentColor={colors.accent}
+                delay={200}
+                padding={18}
+              >
+                <View style={styles.flashbackHeader}>
+                  <Sparkles
+                    size={16}
+                    color={colors.accent}
+                    strokeWidth={1.5}
+                  />
+                  <Text
+                    style={[
+                      styles.flashbackLabel,
+                      { color: colors.accent },
+                    ]}
+                  >
+                    From your memory
                   </Text>
                 </View>
-                <Text style={s.entryContent} numberOfLines={2}>
-                  {memory.content}
+                <Text
+                  style={[
+                    styles.flashbackContent,
+                    { color: colors.foreground },
+                  ]}
+                  numberOfLines={4}
+                >
+                  {home.flashback.content}
                 </Text>
-              </View>
-            ))
+                <Text
+                  style={[
+                    styles.flashbackDate,
+                    { color: colors.mutedForeground },
+                  ]}
+                >
+                  {new Date(home.flashback.created_at).toLocaleDateString(
+                    "en-US",
+                    { month: "long", day: "numeric", year: "numeric" },
+                  )}
+                </Text>
+              </GlassCard>
+            </View>
           )}
-        </View>
-      </ScrollView>
+
+          {/* ── Journal Link ───────────────── */}
+          <View style={styles.sectionSpacing}>
+            <SectionHeader title="Journal" />
+            <PressScale onPress={() => router.push("/(tabs)/journal")}>
+              <GlassCard delay={250} padding={20}>
+                <View style={styles.journalRow}>
+                  <View style={styles.journalLeft}>
+                    <View
+                      style={[
+                        styles.journalIconWrap,
+                        { backgroundColor: colors.primary + "18" },
+                      ]}
+                    >
+                      <BookOpen
+                        size={20}
+                        color={colors.primary}
+                        strokeWidth={1.5}
+                      />
+                    </View>
+                    <View>
+                      <Text
+                        style={[
+                          styles.journalTitle,
+                          { color: colors.foreground },
+                        ]}
+                      >
+                        Open Journal
+                      </Text>
+                      <Text
+                        style={[
+                          styles.journalSubtitle,
+                          { color: colors.mutedForeground },
+                        ]}
+                      >
+                        {home.memoriesCount ?? 0}{" "}
+                        {home.memoriesCount === 1 ? "memory" : "memories"}{" "}
+                        stored
+                      </Text>
+                    </View>
+                  </View>
+                  <ChevronRight
+                    size={20}
+                    color={colors.mutedForeground}
+                    strokeWidth={1.5}
+                  />
+                </View>
+              </GlassCard>
+            </PressScale>
+          </View>
+
+          {/* bottom spacer */}
+          <View style={styles.bottomSpacer} />
+        </ScrollView>
+      </GradientBackground>
     </SafeAreaView>
-  );
-}
-
-// ── Stat card ────────────────────────────────
-
-function StatCard({
-  icon,
-  label,
-  value,
-  colors,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  colors: ReturnType<typeof useTheme>["colors"];
-}) {
-  return (
-    <View
-      style={{
-        backgroundColor: colors.card,
-        borderRadius: 12,
-        padding: 14,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: colors.border,
-        flex: 1,
-        minWidth: "28%",
-      }}
-    >
-      {icon}
-      <Text
-        style={{
-          fontFamily: "Inter_700Bold",
-          ...typography["2xl"],
-          color: colors.foreground,
-          marginTop: 6,
-        }}
-      >
-        {value}
-      </Text>
-      <Text
-        style={{
-          fontFamily: "Inter_400Regular",
-          ...typography.xs,
-          color: colors.mutedForeground,
-          marginTop: 2,
-        }}
-      >
-        {label}
-      </Text>
-    </View>
   );
 }
 
 // ── Styles ───────────────────────────────────
 
-const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: c.background,
-    },
-    center: {
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    scroll: {
-      padding: 20,
-      paddingBottom: 40,
-    },
-    greeting: {
-      fontFamily: "Inter_400Regular",
-      ...typography["2xl"],
-      color: c.foreground,
-      marginBottom: 4,
-    },
-    name: {
-      fontFamily: "Inter_700Bold",
-    },
-    moodRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      marginTop: 8,
-      marginBottom: 20,
-    },
-    moodDot: {
-      width: 10,
-      height: 10,
-      borderRadius: 5,
-      marginRight: 8,
-    },
-    moodText: {
-      fontFamily: "Inter_400Regular",
-      ...typography.sm,
-      color: c.mutedForeground,
-    },
-    moodLabel: {
-      fontFamily: "Inter_500Medium",
-      color: c.foreground,
-    },
-    statsGrid: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 10,
-      marginBottom: 28,
-    },
-    section: {
-      marginBottom: 28,
-    },
-    sectionHeader: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 6,
-      marginBottom: 12,
-    },
-    sectionTitle: {
-      fontFamily: "Inter_600SemiBold",
-      ...typography.lg,
-      color: c.foreground,
-      marginBottom: 12,
-    },
-    flashbackCard: {
-      backgroundColor: c.card,
-      borderRadius: 12,
-      padding: 16,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border,
-      borderLeftWidth: 3,
-      borderLeftColor: c.accent,
-    },
-    flashbackContent: {
-      fontFamily: "Inter_400Regular",
-      ...typography.sm,
-      color: c.foreground,
-      fontStyle: "italic",
-    },
-    flashbackDate: {
-      fontFamily: "Inter_400Regular",
-      ...typography.xs,
-      color: c.mutedForeground,
-      marginTop: 10,
-    },
-    entryCard: {
-      backgroundColor: c.card,
-      borderRadius: 10,
-      padding: 14,
-      marginBottom: 8,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border,
-    },
-    entryHeader: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: 6,
-    },
-    typeBadge: {
-      backgroundColor: c.secondary,
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 4,
-    },
-    typeBadgeText: {
-      fontFamily: "Inter_500Medium",
-      ...typography.xs,
-      color: c.mutedForeground,
-    },
-    entryTime: {
-      fontFamily: "Inter_400Regular",
-      ...typography.xs,
-      color: c.mutedForeground,
-    },
-    entryContent: {
-      fontFamily: "Inter_400Regular",
-      ...typography.sm,
-      color: c.foreground,
-    },
-    emptyState: {
-      alignItems: "center",
-      paddingVertical: 40,
-      paddingHorizontal: 20,
-    },
-    emptyTitle: {
-      fontFamily: "Inter_600SemiBold",
-      ...typography.lg,
-      color: c.foreground,
-      marginTop: 16,
-      marginBottom: 8,
-    },
-    emptySubtitle: {
-      fontFamily: "Inter_400Regular",
-      ...typography.sm,
-      color: c.mutedForeground,
-      textAlign: "center",
-      lineHeight: 22,
-    },
-  });
+const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
+
+  // Loading
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  // Empty state
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 40,
+  },
+  emptyIconWrap: {
+    marginBottom: 24,
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  emptyTitle: {
+    fontFamily: "Inter_700Bold",
+    ...typography.title,
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  emptySubtitle: {
+    fontFamily: "Inter_400Regular",
+    ...typography.base,
+    textAlign: "center",
+    lineHeight: 24,
+  },
+
+  // Scroll
+  scroll: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 40,
+  },
+
+  // Hero greeting
+  heroSection: {
+    marginBottom: 8,
+  },
+  greeting: {
+    fontFamily: "Inter_400Regular",
+    ...typography.xl,
+    marginBottom: 2,
+  },
+  heroName: {
+    fontFamily: "Inter_700Bold",
+    ...typography.hero,
+    marginBottom: 6,
+  },
+  subGreeting: {
+    fontFamily: "Inter_400Regular",
+    ...typography.sm,
+  },
+
+  // Mood
+  moodSection: {
+    marginBottom: 8,
+    marginTop: 4,
+  },
+  moodPillRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  moodDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  moodPill: {
+    borderWidth: 0,
+  },
+
+  // Section spacing
+  sectionSpacing: {
+    marginTop: 24,
+  },
+
+  // Stats grid
+  statsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  statCardHalf: {
+    width: "47%",
+    flexGrow: 1,
+  },
+
+  // Flashback
+  flashbackHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+  },
+  flashbackLabel: {
+    fontFamily: "Inter_600SemiBold",
+    ...typography.xs,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
+  flashbackContent: {
+    fontFamily: "Inter_400Regular",
+    ...typography.sm,
+    fontStyle: "italic",
+    lineHeight: 22,
+  },
+  flashbackDate: {
+    fontFamily: "Inter_400Regular",
+    ...typography.xs,
+    marginTop: 12,
+  },
+
+  // Journal link
+  journalRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  journalLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  journalIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  journalTitle: {
+    fontFamily: "Inter_600SemiBold",
+    ...typography.base,
+    marginBottom: 2,
+  },
+  journalSubtitle: {
+    fontFamily: "Inter_400Regular",
+    ...typography.xs,
+  },
+
+  // Bottom
+  bottomSpacer: {
+    height: 20,
+  },
+});

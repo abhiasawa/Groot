@@ -41,6 +41,17 @@ export interface ThemeColors {
   chart3: string;
   chart4: string;
   chart5: string;
+  // Glassmorphic
+  glassSurface: string;
+  glassBorder: string;
+  glassHighlight: string;
+  // Gradients
+  gradientStart: string;
+  gradientMid: string;
+  gradientEnd: string;
+  // Elevated shadows
+  shadowColor: string;
+  elevatedShadowColor: string;
 }
 
 export const lightTheme: ThemeColors = {
@@ -81,6 +92,17 @@ export const lightTheme: ThemeColors = {
   chart3: "#D9730D",
   chart4: "#6940A5",
   chart5: "#448361",
+  // Glassmorphic
+  glassSurface: 'rgba(255, 255, 255, 0.72)',
+  glassBorder: 'rgba(255, 255, 255, 0.5)',
+  glassHighlight: 'rgba(255, 255, 255, 0.9)',
+  // Gradients
+  gradientStart: '#EEF2FF',
+  gradientMid: '#F0EBFF',
+  gradientEnd: '#FFF1EB',
+  // Elevated shadows
+  shadowColor: 'rgba(0, 0, 0, 0.06)',
+  elevatedShadowColor: 'rgba(0, 0, 0, 0.12)',
 };
 
 export const darkTheme: ThemeColors = {
@@ -121,4 +143,15 @@ export const darkTheme: ThemeColors = {
   chart3: "#FFA344",
   chart4: "#9A6DD7",
   chart5: "#6BAF8D",
+  // Glassmorphic
+  glassSurface: 'rgba(35, 35, 35, 0.75)',
+  glassBorder: 'rgba(255, 255, 255, 0.08)',
+  glassHighlight: 'rgba(255, 255, 255, 0.05)',
+  // Gradients
+  gradientStart: '#0F0F1A',
+  gradientMid: '#12101E',
+  gradientEnd: '#1A1015',
+  // Elevated shadows
+  shadowColor: 'rgba(0, 0, 0, 0.3)',
+  elevatedShadowColor: 'rgba(0, 0, 0, 0.5)',
 };

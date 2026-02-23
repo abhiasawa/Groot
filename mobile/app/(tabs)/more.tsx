@@ -4,7 +4,7 @@ import {
   Text,
   ScrollView,
   StyleSheet,
-  Pressable,
+  Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -16,11 +16,18 @@ import {
   Users,
   User,
   Settings,
-  ChevronRight,
 } from "lucide-react-native";
 
 import { useTheme } from "../../lib/theme/provider";
 import { typography } from "../../constants/typography";
+import { GradientBackground } from "../../components/ui/gradient-background";
+import { GlassCard } from "../../components/ui/glass-card";
+import { PressScale } from "../../components/ui/press-scale";
+
+const SCREEN_WIDTH = Dimensions.get("window").width;
+const PADDING = 20;
+const GAP = 12;
+const CARD_WIDTH = (SCREEN_WIDTH - PADDING * 2 - GAP) / 2;
 
 // ── Menu items ───────────────────────────────
 
@@ -30,6 +37,7 @@ interface MenuItem {
   description: string;
   icon: React.ReactNode;
   route: string;
+  fullWidth?: boolean;
 }
 
 function useMenuItems(): MenuItem[] {
@@ -40,50 +48,51 @@ function useMenuItems(): MenuItem[] {
       key: "habits",
       label: "Habits",
       description: "Track your daily habits and streaks",
-      icon: <Flame size={22} color={colors.chart3} strokeWidth={1.5} />,
+      icon: <Flame size={24} color={colors.chart3} strokeWidth={1.5} />,
       route: "/habits",
     },
     {
       key: "tasks",
       label: "Tasks",
       description: "View and manage your to-dos",
-      icon: <CheckSquare size={22} color={colors.chart2} strokeWidth={1.5} />,
+      icon: <CheckSquare size={24} color={colors.chart2} strokeWidth={1.5} />,
       route: "/tasks",
     },
     {
       key: "insights",
       label: "Insights",
       description: "Weekly reports and analysis",
-      icon: <BarChart3 size={22} color={colors.chart1} strokeWidth={1.5} />,
+      icon: <BarChart3 size={24} color={colors.chart1} strokeWidth={1.5} />,
       route: "/insights",
     },
     {
       key: "topics",
       label: "Topics",
-      description: "Explore themes from your conversations",
-      icon: <Hash size={22} color={colors.chart4} strokeWidth={1.5} />,
+      description: "Explore themes from conversations",
+      icon: <Hash size={24} color={colors.chart4} strokeWidth={1.5} />,
       route: "/topics",
     },
     {
       key: "people",
       label: "People",
       description: "People mentioned in your memories",
-      icon: <Users size={22} color={colors.chart5} strokeWidth={1.5} />,
+      icon: <Users size={24} color={colors.chart5} strokeWidth={1.5} />,
       route: "/people",
     },
     {
       key: "profile",
       label: "Profile",
       description: "Facts Groot has learned about you",
-      icon: <User size={22} color={colors.primary} strokeWidth={1.5} />,
+      icon: <User size={24} color={colors.primary} strokeWidth={1.5} />,
       route: "/profile",
     },
     {
       key: "settings",
       label: "Settings",
       description: "Theme, notifications, and preferences",
-      icon: <Settings size={22} color={colors.mutedForeground} strokeWidth={1.5} />,
+      icon: <Settings size={24} color={colors.mutedForeground} strokeWidth={1.5} />,
       route: "/settings",
+      fullWidth: true,
     },
   ];
 }
@@ -95,104 +104,146 @@ export default function MoreScreen() {
   const router = useRouter();
   const items = useMenuItems();
 
-  const s = styles(colors);
+  const gridItems = items.filter((item) => !item.fullWidth);
+  const fullWidthItems = items.filter((item) => item.fullWidth);
 
   return (
-    <SafeAreaView style={s.container}>
-      <ScrollView
-        contentContainerStyle={s.scroll}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={s.pageTitle}>More</Text>
+    <SafeAreaView style={s.safeArea}>
+      <GradientBackground>
+        <ScrollView
+          contentContainerStyle={s.scroll}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={[s.pageTitle, { color: colors.foreground }]}>More</Text>
 
-        <View style={s.list}>
-          {items.map((item, index) => (
-            <Pressable
+          {/* 2-column grid */}
+          <View style={s.grid}>
+            {gridItems.map((item, index) => (
+              <PressScale
+                key={item.key}
+                onPress={() => router.push(item.route as never)}
+                style={{ width: CARD_WIDTH }}
+              >
+                <GlassCard padding={16} delay={index * 80}>
+                  <View style={s.cardContent}>
+                    <View
+                      style={[
+                        s.iconContainer,
+                        { backgroundColor: colors.glassSurface },
+                      ]}
+                    >
+                      {item.icon}
+                    </View>
+                    <Text
+                      style={[s.cardLabel, { color: colors.foreground }]}
+                      numberOfLines={1}
+                    >
+                      {item.label}
+                    </Text>
+                    <Text
+                      style={[s.cardDescription, { color: colors.mutedForeground }]}
+                      numberOfLines={2}
+                    >
+                      {item.description}
+                    </Text>
+                  </View>
+                </GlassCard>
+              </PressScale>
+            ))}
+          </View>
+
+          {/* Full-width settings card at the bottom */}
+          {fullWidthItems.map((item, index) => (
+            <PressScale
               key={item.key}
-              style={({ pressed }) => [
-                s.menuItem,
-                pressed && s.menuItemPressed,
-                index === items.length - 1 && s.menuItemLast,
-              ]}
               onPress={() => router.push(item.route as never)}
+              style={s.fullWidthCard}
             >
-              <View style={s.menuIcon}>{item.icon}</View>
-              <View style={s.menuContent}>
-                <Text style={s.menuLabel}>{item.label}</Text>
-                <Text style={s.menuDescription}>{item.description}</Text>
-              </View>
-              <ChevronRight
-                size={18}
-                color={colors.mutedForeground}
-                strokeWidth={1.5}
-              />
-            </Pressable>
+              <GlassCard padding={16} delay={gridItems.length * 80 + index * 80}>
+                <View style={s.fullWidthContent}>
+                  <View
+                    style={[
+                      s.iconContainer,
+                      { backgroundColor: colors.glassSurface },
+                    ]}
+                  >
+                    {item.icon}
+                  </View>
+                  <View style={s.fullWidthText}>
+                    <Text
+                      style={[s.cardLabel, { color: colors.foreground }]}
+                      numberOfLines={1}
+                    >
+                      {item.label}
+                    </Text>
+                    <Text
+                      style={[s.cardDescription, { color: colors.mutedForeground }]}
+                      numberOfLines={1}
+                    >
+                      {item.description}
+                    </Text>
+                  </View>
+                </View>
+              </GlassCard>
+            </PressScale>
           ))}
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </GradientBackground>
     </SafeAreaView>
   );
 }
 
 // ── Styles ───────────────────────────────────
 
-const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: c.background,
-    },
-    scroll: {
-      padding: 20,
-      paddingBottom: 40,
-    },
-    pageTitle: {
-      fontFamily: "Inter_700Bold",
-      ...typography["2xl"],
-      color: c.foreground,
-      marginBottom: 20,
-    },
-    list: {
-      backgroundColor: c.card,
-      borderRadius: 12,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border,
-      overflow: "hidden",
-    },
-    menuItem: {
-      flexDirection: "row",
-      alignItems: "center",
-      padding: 16,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: c.border,
-    },
-    menuItemLast: {
-      borderBottomWidth: 0,
-    },
-    menuItemPressed: {
-      backgroundColor: c.secondary,
-    },
-    menuIcon: {
-      width: 40,
-      height: 40,
-      borderRadius: 10,
-      backgroundColor: c.secondary,
-      justifyContent: "center",
-      alignItems: "center",
-      marginRight: 14,
-    },
-    menuContent: {
-      flex: 1,
-    },
-    menuLabel: {
-      fontFamily: "Inter_600SemiBold",
-      ...typography.base,
-      color: c.foreground,
-      marginBottom: 2,
-    },
-    menuDescription: {
-      fontFamily: "Inter_400Regular",
-      ...typography.xs,
-      color: c.mutedForeground,
-    },
-  });
+const s = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
+  scroll: {
+    padding: PADDING,
+    paddingBottom: 40,
+  },
+  pageTitle: {
+    fontFamily: "Inter_700Bold",
+    ...typography.title,
+    marginBottom: 20,
+  },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: GAP,
+  },
+  cardContent: {
+    alignItems: "center",
+  },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  cardLabel: {
+    fontFamily: "Inter_600SemiBold",
+    ...typography.sm,
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  cardDescription: {
+    fontFamily: "Inter_400Regular",
+    ...typography.xs,
+    textAlign: "center",
+  },
+  fullWidthCard: {
+    marginTop: GAP,
+  },
+  fullWidthContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  fullWidthText: {
+    flex: 1,
+    marginLeft: 14,
+  },
+});

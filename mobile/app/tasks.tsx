@@ -6,7 +6,6 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
-  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -21,6 +20,11 @@ import { useTheme } from "../lib/theme/provider";
 import { useTasks } from "../lib/api/queries";
 import { useToggleTask } from "../lib/api/mutations";
 import { typography } from "../constants/typography";
+import { GlassCard } from "../components/ui/glass-card";
+import { GradientBackground } from "../components/ui/gradient-background";
+import { PressScale } from "../components/ui/press-scale";
+import { SectionHeader } from "../components/ui/section-header";
+import { PillBadge } from "../components/ui/pill-badge";
 import type { Task } from "../../shared/types/api";
 
 // ── Helpers ──────────────────────────────────
@@ -62,44 +66,112 @@ export default function TasksScreen() {
     [toggleTask],
   );
 
-  const s = styles(colors);
+  // ── Loading state ──────────────────────────
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.flex}>
+        <GradientBackground>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        </GradientBackground>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Empty state ────────────────────────────
+
+  if (!data?.tasks?.length) {
+    return (
+      <SafeAreaView style={styles.flex}>
+        <GradientBackground>
+          {/* Header */}
+          <View style={styles.header}>
+            <PressScale onPress={() => router.back()}>
+              <ArrowLeft
+                size={24}
+                color={colors.foreground}
+                strokeWidth={1.5}
+              />
+            </PressScale>
+            <View style={styles.headerTitleGroup}>
+              <Text style={[styles.pageTitle, { color: colors.foreground }]}>
+                Tasks
+              </Text>
+              <Text
+                style={[styles.pageSubtitle, { color: colors.mutedForeground }]}
+              >
+                Stay on track
+              </Text>
+            </View>
+          </View>
+
+          <ScrollView
+            contentContainerStyle={styles.emptyContainer}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefetching}
+                onRefresh={onRefresh}
+                tintColor={colors.primary}
+              />
+            }
+          >
+            <View
+              style={[
+                styles.emptyIconWrap,
+                { backgroundColor: colors.glassSurface },
+              ]}
+            >
+              <ListTodo
+                size={36}
+                color={colors.mutedForeground}
+                strokeWidth={1}
+              />
+            </View>
+            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+              No tasks yet
+            </Text>
+            <Text
+              style={[styles.emptySubtitle, { color: colors.mutedForeground }]}
+            >
+              Ask Groot to remind you of things or create tasks, and they will
+              show up here.
+            </Text>
+          </ScrollView>
+        </GradientBackground>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Main content ───────────────────────────
 
   return (
-    <SafeAreaView style={s.container}>
-      {/* Header */}
-      <View style={s.header}>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <ArrowLeft size={24} color={colors.foreground} strokeWidth={1.5} />
-        </Pressable>
-        <Text style={s.headerTitle}>Tasks</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      {isLoading ? (
-        <View style={s.center}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      ) : !data?.tasks?.length ? (
-        <ScrollView
-          contentContainerStyle={s.center}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefetching}
-              onRefresh={onRefresh}
-              tintColor={colors.primary}
+    <SafeAreaView style={styles.flex}>
+      <GradientBackground>
+        {/* Header */}
+        <View style={styles.header}>
+          <PressScale onPress={() => router.back()}>
+            <ArrowLeft
+              size={24}
+              color={colors.foreground}
+              strokeWidth={1.5}
             />
-          }
-        >
-          <ListTodo size={32} color={colors.mutedForeground} strokeWidth={1} />
-          <Text style={s.emptyTitle}>No tasks yet</Text>
-          <Text style={s.emptySubtitle}>
-            Ask Groot to remind you of things or create tasks, and they will
-            show up here.
-          </Text>
-        </ScrollView>
-      ) : (
+          </PressScale>
+          <View style={styles.headerTitleGroup}>
+            <Text style={[styles.pageTitle, { color: colors.foreground }]}>
+              Tasks
+            </Text>
+            <Text
+              style={[styles.pageSubtitle, { color: colors.mutedForeground }]}
+            >
+              Stay on track
+            </Text>
+          </View>
+        </View>
+
         <ScrollView
-          contentContainerStyle={s.scroll}
+          contentContainerStyle={styles.scroll}
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
@@ -111,16 +183,15 @@ export default function TasksScreen() {
         >
           {/* Pending section */}
           {pending.length > 0 && (
-            <View style={s.section}>
-              <Text style={s.sectionTitle}>
-                Pending ({pending.length})
-              </Text>
-              {pending.map((task) => (
+            <View style={styles.section}>
+              <SectionHeader title={`Pending (${pending.length})`} />
+              {pending.map((task, index) => (
                 <TaskRow
                   key={task.id}
                   task={task}
                   colors={colors}
                   onToggle={handleToggle}
+                  delay={0 * 60 + index * 60}
                 />
               ))}
             </View>
@@ -128,22 +199,24 @@ export default function TasksScreen() {
 
           {/* Completed section */}
           {completed.length > 0 && (
-            <View style={s.section}>
-              <Text style={s.sectionTitle}>
-                Completed ({completed.length})
-              </Text>
-              {completed.map((task) => (
+            <View style={styles.section}>
+              <SectionHeader title={`Completed (${completed.length})`} />
+              {completed.map((task, index) => (
                 <TaskRow
                   key={task.id}
                   task={task}
                   colors={colors}
                   onToggle={handleToggle}
+                  delay={1 * 60 + index * 60}
                 />
               ))}
             </View>
           )}
+
+          {/* Bottom spacer */}
+          <View style={styles.bottomSpacer} />
         </ScrollView>
-      )}
+      </GradientBackground>
     </SafeAreaView>
   );
 }
@@ -154,150 +227,179 @@ function TaskRow({
   task,
   colors,
   onToggle,
+  delay,
 }: {
   task: Task;
   colors: ReturnType<typeof useTheme>["colors"];
   onToggle: (task: Task) => void;
+  delay: number;
 }) {
-  const s = styles(colors);
   const done = task.is_completed;
 
   return (
-    <Pressable
-      style={({ pressed }) => [s.taskRow, pressed && s.taskRowPressed]}
-      onPress={() => onToggle(task)}
-    >
-      {done ? (
-        <CheckSquare size={20} color={colors.moodGood} strokeWidth={1.5} />
-      ) : (
-        <Square size={20} color={colors.mutedForeground} strokeWidth={1.5} />
-      )}
-      <View style={s.taskContent}>
-        <Text
-          style={[s.taskText, done && s.taskTextDone]}
-          numberOfLines={2}
+    <View style={styles.taskRowOuter}>
+      <PressScale onPress={() => onToggle(task)}>
+        <GlassCard
+          padding={14}
+          delay={delay}
+          accentColor={done ? colors.moodGood : undefined}
         >
-          {task.content}
-        </Text>
-        <View style={s.taskMeta}>
-          {task.category && (
-            <View style={s.categoryBadge}>
-              <Text style={s.categoryText}>{task.category}</Text>
+          <View style={styles.taskRowInner}>
+            {done ? (
+              <CheckSquare
+                size={20}
+                color={colors.moodGood}
+                strokeWidth={1.5}
+              />
+            ) : (
+              <Square
+                size={20}
+                color={colors.mutedForeground}
+                strokeWidth={1.5}
+              />
+            )}
+            <View style={styles.taskContent}>
+              <Text
+                style={[
+                  styles.taskText,
+                  { color: done ? colors.mutedForeground : colors.foreground },
+                  done && styles.taskTextDone,
+                ]}
+                numberOfLines={2}
+              >
+                {task.content}
+              </Text>
+              <View style={styles.taskMeta}>
+                {task.category && (
+                  <PillBadge small label={task.category} />
+                )}
+                {task.due_date && (
+                  <Text
+                    style={[
+                      styles.dueDate,
+                      { color: colors.mutedForeground },
+                    ]}
+                  >
+                    Due {formatDate(task.due_date)}
+                  </Text>
+                )}
+              </View>
             </View>
-          )}
-          {task.due_date && (
-            <Text style={s.dueDate}>Due {formatDate(task.due_date)}</Text>
-          )}
-        </View>
-      </View>
-    </Pressable>
+          </View>
+        </GlassCard>
+      </PressScale>
+    </View>
   );
 }
 
 // ── Styles ───────────────────────────────────
 
-const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: c.background,
-    },
-    center: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      paddingHorizontal: 40,
-    },
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: 20,
-      paddingVertical: 14,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: c.border,
-    },
-    headerTitle: {
-      fontFamily: "Inter_600SemiBold",
-      ...typography.lg,
-      color: c.foreground,
-    },
-    scroll: {
-      padding: 20,
-      paddingBottom: 40,
-    },
-    section: {
-      marginBottom: 28,
-    },
-    sectionTitle: {
-      fontFamily: "Inter_600SemiBold",
-      ...typography.sm,
-      color: c.mutedForeground,
-      marginBottom: 12,
-      textTransform: "uppercase",
-      letterSpacing: 0.5,
-    },
-    taskRow: {
-      flexDirection: "row",
-      alignItems: "flex-start",
-      gap: 12,
-      backgroundColor: c.card,
-      padding: 14,
-      borderRadius: 10,
-      marginBottom: 8,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.border,
-    },
-    taskRowPressed: {
-      backgroundColor: c.secondary,
-    },
-    taskContent: {
-      flex: 1,
-    },
-    taskText: {
-      fontFamily: "Inter_400Regular",
-      ...typography.sm,
-      color: c.foreground,
-      lineHeight: 22,
-    },
-    taskTextDone: {
-      textDecorationLine: "line-through",
-      color: c.mutedForeground,
-    },
-    taskMeta: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-      marginTop: 6,
-    },
-    categoryBadge: {
-      backgroundColor: c.secondary,
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 4,
-    },
-    categoryText: {
-      fontFamily: "Inter_500Medium",
-      ...typography.xs,
-      color: c.mutedForeground,
-    },
-    dueDate: {
-      fontFamily: "Inter_400Regular",
-      ...typography.xs,
-      color: c.mutedForeground,
-    },
-    emptyTitle: {
-      fontFamily: "Inter_600SemiBold",
-      ...typography.lg,
-      color: c.foreground,
-      marginTop: 16,
-      marginBottom: 8,
-    },
-    emptySubtitle: {
-      fontFamily: "Inter_400Regular",
-      ...typography.sm,
-      color: c.mutedForeground,
-      textAlign: "center",
-      lineHeight: 22,
-    },
-  });
+const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
+
+  // Loading
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  // Header
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+  },
+  headerTitleGroup: {
+    flex: 1,
+  },
+  pageTitle: {
+    fontFamily: "Inter_700Bold",
+    ...typography.title,
+    letterSpacing: -0.3,
+  },
+  pageSubtitle: {
+    fontFamily: "Inter_400Regular",
+    ...typography.sm,
+    marginTop: 2,
+  },
+
+  // Scroll
+  scroll: {
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
+
+  // Sections
+  section: {
+    marginBottom: 28,
+  },
+
+  // Task row
+  taskRowOuter: {
+    marginBottom: 10,
+  },
+  taskRowInner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  taskContent: {
+    flex: 1,
+  },
+  taskText: {
+    fontFamily: "Inter_400Regular",
+    ...typography.sm,
+    lineHeight: 22,
+  },
+  taskTextDone: {
+    textDecorationLine: "line-through",
+  },
+  taskMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 6,
+  },
+  dueDate: {
+    fontFamily: "Inter_400Regular",
+    ...typography.xs,
+  },
+
+  // Empty state
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 40,
+  },
+  emptyIconWrap: {
+    marginBottom: 24,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  emptyTitle: {
+    fontFamily: "Inter_700Bold",
+    ...typography.lg,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontFamily: "Inter_400Regular",
+    ...typography.sm,
+    textAlign: "center",
+    lineHeight: 22,
+  },
+
+  // Bottom
+  bottomSpacer: {
+    height: 20,
+  },
+});
