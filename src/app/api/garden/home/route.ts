@@ -32,14 +32,12 @@ export async function GET(request: NextRequest) {
 
   // All queries in parallel — single DB connection, no extra cold starts
   const [memoriesRes, tasksRes, remindersRes, flashbackRes, moodRes, peopleProfileRes, contactsRes, habitsRes] = await Promise.all([
-    // 1. Recent memories (5) — includes voice messages (content=null, media_description has transcription)
+    // 1. Memories count only (recent entries now live in journal page)
     supabase
       .from("messages")
-      .select("id, message_type, content, media_description, created_at", { count: "exact" })
+      .select("id", { count: "exact", head: true })
       .eq("user_id", userId)
-      .eq("direction", "inbound")
-      .order("created_at", { ascending: false })
-      .limit(10),
+      .eq("direction", "inbound"),
 
     // 2. Pending tasks count
     supabase
@@ -123,22 +121,10 @@ export async function GET(request: NextRequest) {
     if (name) seen.add(name);
   }
 
-  // Filter out truly empty messages and limit to 5
-  const recentMemories = (memoriesRes.data ?? [])
-    .filter((m) => m.content || m.media_description)
-    .slice(0, 5)
-    .map((m) => ({
-      id: m.id,
-      message_type: m.message_type,
-      content: (m.content as string) || (m.media_description as string) || "",
-      created_at: m.created_at,
-    }));
-
   const response = NextResponse.json({
     displayName,
     createdAt,
     memoriesCount: memoriesRes.count ?? 0,
-    recentMemories,
     pendingTasks: tasksRes.count ?? 0,
     upcomingReminders: remindersRes.count ?? 0,
     flashback: flashbackRes.data?.[0]

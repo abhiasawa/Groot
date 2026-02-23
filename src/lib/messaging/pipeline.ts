@@ -3,6 +3,7 @@ import { getOrCreateUser } from "@/lib/whatsapp/onboarding";
 import { storeOutboundMessage } from "@/lib/memory/short-term";
 import { addMemory } from "@/lib/memory/supermemory-client";
 import { processMediaFromBuffer } from "@/lib/media/media-handler";
+import { uploadMediaToStorage } from "@/lib/media/storage";
 import { generateGrootResponse, getErrorResponse } from "@/lib/ai/groot-engine";
 import {
   handlePendingOutboundReply,
@@ -355,7 +356,22 @@ async function handleMedia(
       "Media downloaded",
     );
 
+    // Upload original media to permanent storage (non-blocking — don't fail the pipeline)
+    const mediaType = parsed.type === "audio" ? "audio" as const : "image" as const;
+    const storageUpload = uploadMediaToStorage(userId, buffer, mime, mediaType);
+
     result = await processMediaFromBuffer(buffer, parsed.type, mime);
+
+    // Wait for storage upload to complete and update media_url with permanent path
+    const storagePath = await storageUpload;
+    if (storagePath) {
+      const supabase = getSupabaseAdmin();
+      await supabase
+        .from("messages")
+        .update({ media_url: `storage:${storagePath}` })
+        .eq("user_id", userId)
+        .eq("platform_message_id", parsed.messageId);
+    }
   } catch (error) {
     logger.error({ error, mediaId: parsed.mediaId }, "Media download/processing failed");
     result = null;

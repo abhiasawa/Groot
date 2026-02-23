@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
     const pattern = `%${query}%`;
     const { data: fallbackData, count: fallbackCount } = await supabase
       .from("messages")
-      .select("id, direction, message_type, content, media_description, metadata, created_at", { count: "exact" })
+      .select("id, direction, message_type, content, media_url, media_description, metadata, created_at", { count: "exact" })
       .eq("user_id", userId)
       .eq("direction", "inbound")
       .or(`content.ilike.${pattern},media_description.ilike.${pattern}`)
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
   // List from Supabase messages — includes voice (media_description) and text (content)
   let queryBuilder = supabase
     .from("messages")
-    .select("id, direction, message_type, content, media_description, metadata, created_at", { count: "exact" })
+    .select("id, direction, message_type, content, media_url, media_description, metadata, created_at", { count: "exact" })
     .eq("user_id", userId)
     .eq("direction", "inbound")
     .order("created_at", { ascending: false })

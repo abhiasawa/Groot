@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 interface Memory {
   id: string;
   content: string;
+  media_url?: string | null;
   media_description?: string;
   message_type: string;
   metadata?: Record<string, unknown>;
@@ -308,6 +309,14 @@ function JournalContent() {
                             </div>
                           )}
 
+                          {/* Stored media: audio player or image */}
+                          {m.media_url?.startsWith("storage:") && (
+                            <MediaPlayer
+                              mediaUrl={m.media_url}
+                              messageType={m.message_type}
+                            />
+                          )}
+
                           <MarkdownContent content={m.content || m.media_description || ""} />
 
                           {m.content && m.media_description && (
@@ -490,6 +499,39 @@ function CalendarGrid({
       </CardContent>
     </Card>
   );
+}
+
+function MediaPlayer({ mediaUrl, messageType }: { mediaUrl: string; messageType: string }) {
+  // Convert storage:userId/type/file.ext → /api/media/userId/type/file.ext
+  const storagePath = mediaUrl.replace("storage:", "");
+  const src = `/api/media/${encodeURIComponent(storagePath)}`;
+
+  if (messageType === "audio") {
+    return (
+      <div className="mb-3">
+        <audio controls preload="none" className="w-full h-10 rounded-lg">
+          <source src={src} />
+          Your browser does not support audio playback.
+        </audio>
+      </div>
+    );
+  }
+
+  if (messageType === "image") {
+    return (
+      <div className="mb-3">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt="Shared image"
+          loading="lazy"
+          className="rounded-lg max-h-72 w-auto object-contain"
+        />
+      </div>
+    );
+  }
+
+  return null;
 }
 
 function LoadingSkeleton() {

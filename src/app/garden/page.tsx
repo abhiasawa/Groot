@@ -18,7 +18,6 @@ interface HomeData {
   displayName: string;
   createdAt: string;
   memoriesCount: number;
-  recentMemories: Array<{ id: string; content: string; message_type: string; created_at: string }>;
   pendingTasks: number;
   upcomingReminders: number;
   flashback: { content: string; created_at: string } | null;
@@ -199,59 +198,30 @@ export default function GardenHome() {
         </section>
       )}
 
-      {/* Recent Activity */}
+      {/* Journal Link — nudge to open journal for full entries */}
       <section>
-        <div className="flex items-center justify-between mb-1">
-          <SectionLabel text="Recent Entries" />
-          <a href="/garden/journal" className="text-xs underline text-primary">
-            View all &rarr;
-          </a>
-        </div>
-
-        {data.recentMemories.length === 0 ? (
-          <Card className="text-center py-10">
-            <CardContent className="flex flex-col items-center">
-              <Sprout className="size-10 text-muted-foreground mb-3" />
-              <p className="font-semibold text-base mb-1 text-foreground">
-                Your Garden is ready to grow
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Start talking to Groot on WhatsApp — your memories will appear here.
-              </p>
+        <a href="/garden/journal" className="block group">
+          <Card className="hover:shadow-md transition-shadow">
+            <CardContent className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Sprout className="size-5 text-primary" />
+                <div>
+                  <p className="text-sm font-semibold text-foreground group-hover:underline">
+                    {data.memoriesCount > 0
+                      ? `${data.memoriesCount} memories in your journal`
+                      : "Your journal is ready to grow"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {data.memoriesCount > 0
+                      ? "View your full conversation history"
+                      : "Start talking to Groot — your memories will appear here"}
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs text-primary">Open &rarr;</span>
             </CardContent>
           </Card>
-        ) : (
-          <div className="relative pl-5">
-            {/* Vertical timeline line */}
-            <div className="absolute left-0 top-3 bottom-3 w-[2px] rounded-full bg-border" />
-
-            <div className="space-y-3">
-              {data.recentMemories.map((m) => {
-                const time = new Date(m.created_at).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-                const typeLabel = m.message_type === "audio" ? "Voice" : m.message_type === "image" ? "Photo" : "Text";
-                const wordCount = m.content?.split(/\s+/).length ?? 0;
-
-                return (
-                  <div key={m.id}>
-                    <Card>
-                      <CardContent>
-                        <MarkdownContent content={m.content} truncate={180} />
-
-                        <div className="flex items-center gap-3 mt-3 pt-2 border-t border-dashed border-border opacity-60">
-                          <span className="text-[11px] text-muted-foreground">{time}</span>
-                          <span className="text-[11px] text-muted-foreground">{typeLabel}</span>
-                          {wordCount > 0 && (
-                            <span className="text-[11px] text-muted-foreground">{wordCount} words</span>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        </a>
       </section>
 
       {/* Quick Navigation */}
@@ -282,7 +252,6 @@ function isHomeData(value: unknown): value is HomeData {
     typeof data.displayName === "string" &&
     typeof data.createdAt === "string" &&
     typeof data.memoriesCount === "number" &&
-    Array.isArray(data.recentMemories) &&
     typeof data.pendingTasks === "number" &&
     typeof data.upcomingReminders === "number" &&
     typeof data.peopleCount === "number" &&

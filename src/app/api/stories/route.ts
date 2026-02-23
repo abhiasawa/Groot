@@ -74,13 +74,16 @@ async function getStoryStats(supabase: any, userId: string) {
   const lastMonthStart = `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, "0")}-01T00:00:00`;
   const lastMonthEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01T00:00:00`;
 
+  // Only count messages explicitly marked as storyworthy (shouldStoreMemory=true in metadata JSONB)
+  // Using .filter() for JSONB arrow operator — avoids the .or() Supabase JS bug
+
   // Total stories
   const { count: total } = await supabase
     .from("messages")
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
     .eq("direction", "inbound")
-    .not("metadata", "is", null);
+    .filter("metadata->>shouldStoreMemory", "eq", "true");
 
   // This month count
   const { count: thisMonth } = await supabase
@@ -88,7 +91,7 @@ async function getStoryStats(supabase: any, userId: string) {
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
     .eq("direction", "inbound")
-    .not("metadata", "is", null)
+    .filter("metadata->>shouldStoreMemory", "eq", "true")
     .gte("created_at", thisMonthStart);
 
   // Last month count
@@ -97,29 +100,29 @@ async function getStoryStats(supabase: any, userId: string) {
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
     .eq("direction", "inbound")
-    .not("metadata", "is", null)
+    .filter("metadata->>shouldStoreMemory", "eq", "true")
     .gte("created_at", lastMonthStart)
     .lt("created_at", lastMonthEnd);
 
-  // Streak calculation: count consecutive days with at least one story
+  // Streak calculation: count consecutive days with at least one storyworthy message
   const { data: recentDays } = await supabase
     .from("messages")
     .select("created_at")
     .eq("user_id", userId)
     .eq("direction", "inbound")
-    .not("metadata", "is", null)
+    .filter("metadata->>shouldStoreMemory", "eq", "true")
     .order("created_at", { ascending: false })
     .limit(200);
 
   const streak = calculateStreak(recentDays ?? []);
 
-  // Top tags
+  // Top tags from storyworthy messages
   const { data: taggedMessages } = await supabase
     .from("messages")
     .select("metadata")
     .eq("user_id", userId)
     .eq("direction", "inbound")
-    .not("metadata", "is", null)
+    .filter("metadata->>shouldStoreMemory", "eq", "true")
     .order("created_at", { ascending: false })
     .limit(100);
 
