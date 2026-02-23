@@ -39,8 +39,9 @@
       "typedRoutes": true
     },
     "extra": {
+      "router": {},
       "eas": {
-        "projectId": "the-garden"
+        "projectId": "42c122e3-dfca-422b-b031-d126618981af"
       }
     }
   }
