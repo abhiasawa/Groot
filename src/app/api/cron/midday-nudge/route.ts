@@ -3,15 +3,22 @@ import { getEligibleUsers } from "@/lib/proactive/scheduler";
 import { sendMessage, getUserPlatform } from "@/lib/messaging/dispatcher";
 import { logger } from "@/lib/logger";
 
+/**
+ * Storyworthy-inspired midday prompts — storytelling lens on the present moment.
+ * Designed to catch moments as they happen, not just in retrospect.
+ */
 const MIDDAY_PROMPTS = [
-  "What's happening today?",
-  "Anything on your mind right now?",
-  "How's your day going so far?",
-  "What are you working on today?",
+  // Present-moment awareness
+  "Anything happening right now you'd want to remember later?",
+  "What's the most interesting thing about today so far?",
+  "If someone asked you about your day right now, what would you tell them?",
+  // Gentle nudges
   "Quick thought dump — what's top of mind?",
   "Anything worth remembering from today so far?",
-  "How's the energy today?",
-  "What's one thing you've done today that matters?",
+  "What's one thing you've noticed today that you usually wouldn't?",
+  // Energy/mood check (still useful)
+  "How's the energy right now?",
+  "What are you in the middle of?",
 ];
 
 /**

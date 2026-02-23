@@ -2,12 +2,12 @@
 
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Home, BookOpen, Users, Heart, Settings } from "lucide-react";
+import { Home, BookOpen, Sparkles, Heart, Settings } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/garden", label: "Home", icon: Home },
   { href: "/garden/journal", label: "Journal", icon: BookOpen },
-  { href: "/garden/people", label: "People", icon: Users },
+  { href: "/garden/stories", label: "Stories", icon: Sparkles },
   { href: "/garden/mood", label: "Mood", icon: Heart },
   { href: "/garden/settings", label: "Settings", icon: Settings },
 ] as const;

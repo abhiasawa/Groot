@@ -11,17 +11,36 @@ import { logger } from "@/lib/logger";
  * - Keep prompts warm and inviting, never clinical
  */
 
+/**
+ * Storyworthy-inspired prompts — blended with Groot's natural voice.
+ *
+ * Based on Matthew Dicks' "Homework for Life" practice:
+ * - Every day has a five-second moment when something shifts
+ * - Small moments > dramatic events
+ * - Transformation is what makes a moment storyworthy
+ * - The goal is to build a storytelling lens over time
+ */
 const DEFAULT_PROMPTS = [
-  "What was the best part of your day?",
-  "What's one thing you learned today?",
-  "If you could change one thing about today, what would it be?",
-  "What are you grateful for today?",
-  "What's something you're looking forward to tomorrow?",
-  "How are you feeling right now, in one word?",
-  "What made you smile today?",
-  "What challenged you today, and how did you handle it?",
-  "What's one thing you did today that you're proud of?",
-  "If you could describe your day in three words, what would they be?",
+  // Homework for Life — direct
+  "What's one moment from today you'd actually tell someone about?",
+  "If you had to pick one scene from today — just one — what would it be?",
+  // Five-second moment probes
+  "Was there a moment today where something clicked — or shifted?",
+  "Did you see anything differently today than you did yesterday?",
+  // Small > Big
+  "Any small thing happen today that felt surprisingly meaningful?",
+  "What's one tiny detail from today you don't want to forget?",
+  // Transformation
+  "Did anything change how you see something — even a little?",
+  "What caught you off guard today?",
+  // Softer rotations
+  "What stuck with you today?",
+  "Anything unexpected happen?",
+  "If today had a title, what would it be?",
+  "What's the one thing from today worth remembering?",
+  // First/Last/Best/Worst (periodic)
+  "Random one — what's the best conversation you had today?",
+  "What was the last thing that made you laugh today?",
 ];
 
 /**
@@ -54,6 +73,8 @@ export async function generateReflectionPrompt(
       const response = await provider.generateResponse(
         `Generate ONE short evening reflection question for ${name}.
 Use their day's context to make it personal. Keep it warm and inviting.
+Your goal is to surface the STORYWORTHY moment of the day — the one scene, shift, or five-second moment that made today different from any other day.
+Prefer questions about small meaningful moments over big events. Ask about what shifted, surprised, or stuck with them.
 Output only the question, nothing else.
 Use WhatsApp formatting (_italic_ for emphasis if needed).`,
         [

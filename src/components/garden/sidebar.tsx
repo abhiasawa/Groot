@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import {
   Home,
   BookOpen,
+  Sparkles,
   Users,
   Heart,
   BarChart3,
@@ -18,6 +19,7 @@ import {
 const NAV_ITEMS = [
   { href: "/garden", label: "Home", icon: Home },
   { href: "/garden/journal", label: "Journal", icon: BookOpen },
+  { href: "/garden/stories", label: "Stories", icon: Sparkles },
   { href: "/garden/people", label: "People", icon: Users },
   { href: "/garden/mood", label: "Mood", icon: Heart },
   { href: "/garden/habits", label: "Habits", icon: BarChart3 },
