@@ -59,7 +59,7 @@ export async function getAuthenticatedPortalUser(request?: NextRequest): Promise
   const { data: user, error } = await supabase
     .from("users")
     .select(USER_SELECT_FIELDS)
-    .order("created_at", { ascending: true })
+    .order("last_responded_at", { ascending: false })
     .limit(1)
     .single();
 

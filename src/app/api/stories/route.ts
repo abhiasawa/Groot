@@ -42,18 +42,27 @@ export async function GET(request: NextRequest) {
 
   // Fetch stories: inbound messages that are stored as long-term memories
   // Strategy: messages with shouldStoreMemory=true in metadata, OR messages with memoryTags
+  // No null-content filter — voice messages have content=null, transcription in media_description
   const { data, count } = await supabase
     .from("messages")
     .select("id, content, media_description, message_type, metadata, created_at", { count: "exact" })
     .eq("user_id", userId)
     .eq("direction", "inbound")
-    .not("content", "is", null)
-    .or("metadata->shouldStoreMemory.eq.true,metadata->memoryTags.neq.[]")
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
+  // Filter in JS: must have content or media_description, and be storyworthy (has tags or shouldStoreMemory)
+  const stories = (data ?? []).filter((m) => {
+    if (!m.content && !m.media_description) return false;
+    const meta = m.metadata as Record<string, unknown> | null;
+    if (!meta) return false;
+    const hasTags = Array.isArray(meta.memoryTags) && (meta.memoryTags as string[]).length > 0;
+    const isStoryworthy = meta.shouldStoreMemory === true;
+    return hasTags || isStoryworthy;
+  });
+
   return NextResponse.json(
-    { stories: data ?? [], total: count ?? 0 },
+    { stories, total: count ?? 0 },
     { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" } },
   );
 }
@@ -72,8 +81,7 @@ async function getStoryStats(supabase: any, userId: string) {
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
     .eq("direction", "inbound")
-    .not("content", "is", null)
-    .or("metadata->shouldStoreMemory.eq.true,metadata->memoryTags.neq.[]");
+    .not("metadata", "is", null);
 
   // This month count
   const { count: thisMonth } = await supabase
@@ -81,8 +89,7 @@ async function getStoryStats(supabase: any, userId: string) {
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
     .eq("direction", "inbound")
-    .not("content", "is", null)
-    .or("metadata->shouldStoreMemory.eq.true,metadata->memoryTags.neq.[]")
+    .not("metadata", "is", null)
     .gte("created_at", thisMonthStart);
 
   // Last month count
@@ -91,8 +98,7 @@ async function getStoryStats(supabase: any, userId: string) {
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
     .eq("direction", "inbound")
-    .not("content", "is", null)
-    .or("metadata->shouldStoreMemory.eq.true,metadata->memoryTags.neq.[]")
+    .not("metadata", "is", null)
     .gte("created_at", lastMonthStart)
     .lt("created_at", lastMonthEnd);
 
@@ -102,8 +108,7 @@ async function getStoryStats(supabase: any, userId: string) {
     .select("created_at")
     .eq("user_id", userId)
     .eq("direction", "inbound")
-    .not("content", "is", null)
-    .or("metadata->shouldStoreMemory.eq.true,metadata->memoryTags.neq.[]")
+    .not("metadata", "is", null)
     .order("created_at", { ascending: false })
     .limit(200);
 
@@ -115,8 +120,7 @@ async function getStoryStats(supabase: any, userId: string) {
     .select("metadata")
     .eq("user_id", userId)
     .eq("direction", "inbound")
-    .not("content", "is", null)
-    .or("metadata->shouldStoreMemory.eq.true,metadata->memoryTags.neq.[]")
+    .not("metadata", "is", null)
     .order("created_at", { ascending: false })
     .limit(100);
 
