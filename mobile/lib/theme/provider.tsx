@@ -32,7 +32,6 @@ const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const systemScheme = useColorScheme();
   const [mode, setModeState] = useState<ThemeMode>("system");
-  const [loaded, setLoaded] = useState(false);
 
   // Load persisted preference on mount
   useEffect(() => {
@@ -42,7 +41,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
           setModeState(stored);
         }
       })
-      .finally(() => setLoaded(true));
+      .catch((err) => {
+        console.warn("[Theme] Failed to load persisted theme:", err);
+      });
   }, []);
 
   const setMode = useCallback((next: ThemeMode) => {
@@ -71,11 +72,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     [mode, resolvedMode, colors, setMode, toggleTheme],
   );
 
-  // Avoid rendering children until the persisted theme is loaded
-  if (!loaded) {
-    return null;
-  }
-
+  // Always render children — default "system" theme is used until the
+  // persisted preference finishes loading from AsyncStorage.
   return (
     <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
   );

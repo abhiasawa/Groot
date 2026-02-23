@@ -11,7 +11,8 @@ import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persi
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import React, { useEffect } from "react";
+import { View, Text, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ThemeProvider } from "../lib/theme/provider";
@@ -24,7 +25,9 @@ export const unstable_settings = {
 };
 
 // Prevent the splash screen from auto-hiding before assets are loaded.
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {
+  // Already hidden or not available — safe to ignore.
+});
 
 // ---------------------------------------------------------------------------
 // React Query
@@ -40,9 +43,21 @@ const queryClient = new QueryClient({
   },
 });
 
-const asyncStoragePersister = createAsyncStoragePersister({
-  storage: AsyncStorage,
-});
+let asyncStoragePersister: ReturnType<typeof createAsyncStoragePersister>;
+try {
+  asyncStoragePersister = createAsyncStoragePersister({
+    storage: AsyncStorage,
+  });
+} catch {
+  // If persister creation fails, create a no-op persister
+  asyncStoragePersister = createAsyncStoragePersister({
+    storage: {
+      getItem: async () => null,
+      setItem: async () => {},
+      removeItem: async () => {},
+    },
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Auth gate — redirects unauthenticated users to the login screen
@@ -83,17 +98,28 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (fontError) throw fontError;
+    if (fontError) {
+      // Log the error but don't throw — the app can still render with system fonts
+      console.warn("[Fonts] Failed to load Inter fonts:", fontError);
+    }
   }, [fontError]);
 
   useEffect(() => {
-    if (fontsLoaded) {
-      SplashScreen.hideAsync();
+    if (fontsLoaded || fontError) {
+      SplashScreen.hideAsync().catch(() => {
+        // Safe to ignore — splash may already be hidden
+      });
     }
-  }, [fontsLoaded]);
+  }, [fontsLoaded, fontError]);
 
-  if (!fontsLoaded) {
-    return null;
+  // Show a minimal loading view while fonts load (instead of null which can
+  // cause Android to think the app has no UI and kill it)
+  if (!fontsLoaded && !fontError) {
+    return (
+      <View style={fallbackStyles.container}>
+        <Text style={fallbackStyles.text}>Loading…</Text>
+      </View>
+    );
   }
 
   return (
@@ -123,3 +149,16 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+
+const fallbackStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#0A0A0A",
+  },
+  text: {
+    color: "#888",
+    fontSize: 16,
+  },
+});

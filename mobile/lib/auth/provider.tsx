@@ -15,12 +15,13 @@ import * as SecureStore from "expo-secure-store";
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? "";
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "";
+const missingSupabaseEnvMessage =
+  "App is missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY. " +
+  "Set them in mobile/.env.local for local dev and EAS build env for production.";
+const hasSupabaseConfig = !!supabaseUrl && !!supabaseAnonKey;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    "[Auth] Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY. " +
-      "Auth will not work. Check your .env.local file.",
-  );
+if (!hasSupabaseConfig) {
+  console.warn(`[Auth] ${missingSupabaseEnvMessage}`);
 }
 
 /**
@@ -29,24 +30,39 @@ if (!supabaseUrl || !supabaseAnonKey) {
  */
 const secureStoreAdapter = {
   getItem: async (key: string): Promise<string | null> => {
-    return SecureStore.getItemAsync(key);
+    try {
+      return await SecureStore.getItemAsync(key);
+    } catch (err) {
+      console.warn("[Auth] SecureStore.getItem failed:", err);
+      return null;
+    }
   },
   setItem: async (key: string, value: string): Promise<void> => {
-    await SecureStore.setItemAsync(key, value);
+    try {
+      await SecureStore.setItemAsync(key, value);
+    } catch (err) {
+      console.warn("[Auth] SecureStore.setItem failed:", err);
+    }
   },
   removeItem: async (key: string): Promise<void> => {
-    await SecureStore.deleteItemAsync(key);
+    try {
+      await SecureStore.deleteItemAsync(key);
+    } catch (err) {
+      console.warn("[Auth] SecureStore.removeItem failed:", err);
+    }
   },
 };
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    storage: secureStoreAdapter,
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: false,
-  },
-});
+export const supabase = hasSupabaseConfig
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        storage: secureStoreAdapter,
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: false,
+      },
+    })
+  : null;
 
 // ---------------------------------------------------------------------------
 // Auth context
@@ -70,11 +86,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Restore session on mount
-    supabase.auth.getSession().then(({ data: { session: restored } }) => {
-      setSession(restored);
+    if (!supabase) {
       setLoading(false);
-    });
+      return;
+    }
+
+    // Restore session on mount
+    supabase.auth
+      .getSession()
+      .then(({ data: { session: restored } }) => {
+        setSession(restored);
+      })
+      .catch((err) => {
+        console.warn("[Auth] Failed to restore session:", err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
 
     // Subscribe to future auth changes (sign-in, sign-out, token refresh)
     const {
@@ -89,6 +117,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = useCallback(async (email: string) => {
+    if (!supabase) {
+      throw new Error(missingSupabaseEnvMessage);
+    }
+
     const { error } = await supabase.auth.signInWithOtp({ email });
     if (error) {
       throw error;
@@ -96,6 +128,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    if (!supabase) {
+      throw new Error(missingSupabaseEnvMessage);
+    }
+
     const { error } = await supabase.auth.signOut();
     if (error) {
       throw error;
