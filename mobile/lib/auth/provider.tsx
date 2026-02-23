@@ -13,8 +13,15 @@ import * as SecureStore from "expo-secure-store";
 // Supabase client with expo-secure-store backed persistence
 // ---------------------------------------------------------------------------
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? "";
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "";
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn(
+    "[Auth] Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY. " +
+      "Auth will not work. Check your .env.local file.",
+  );
+}
 
 /**
  * Custom storage adapter that delegates to expo-secure-store so that tokens

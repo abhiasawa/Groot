@@ -12,6 +12,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ThemeProvider } from "../lib/theme/provider";
 import { AuthProvider, useAuth } from "../lib/auth/provider";
@@ -34,6 +35,7 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 30_000,
       gcTime: 24 * 60 * 60 * 1000,
+      retry: 1,
     },
   },
 });
@@ -95,27 +97,29 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider>
-      <PersistQueryClientProvider
-        client={queryClient}
-        persistOptions={{ persister: asyncStoragePersister }}
-      >
-        <AuthProvider>
-          <AuthGate>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="habits" />
-              <Stack.Screen name="tasks" />
-              <Stack.Screen name="insights" />
-              <Stack.Screen name="topics" />
-              <Stack.Screen name="people" />
-              <Stack.Screen name="profile" />
-              <Stack.Screen name="settings" />
-            </Stack>
-          </AuthGate>
-        </AuthProvider>
-      </PersistQueryClientProvider>
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <PersistQueryClientProvider
+          client={queryClient}
+          persistOptions={{ persister: asyncStoragePersister }}
+        >
+          <AuthProvider>
+            <AuthGate>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="(auth)" />
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="habits" />
+                <Stack.Screen name="tasks" />
+                <Stack.Screen name="insights" />
+                <Stack.Screen name="topics" />
+                <Stack.Screen name="people" />
+                <Stack.Screen name="profile" />
+                <Stack.Screen name="settings" />
+              </Stack>
+            </AuthGate>
+          </AuthProvider>
+        </PersistQueryClientProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
