@@ -297,9 +297,9 @@ function JournalContent() {
                         className={cn("border-l-[3px]", borderClass)}
                       >
                         <CardContent>
-                          <MarkdownContent content={m.content} />
+                          <MarkdownContent content={m.content || m.media_description || ""} />
 
-                          {m.media_description && (
+                          {m.content && m.media_description && (
                             <p className="text-xs mt-2 italic text-muted-foreground">
                               {m.media_description}
                             </p>

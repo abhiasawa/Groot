@@ -236,9 +236,9 @@ export default function StoriesPage() {
                           </div>
 
                           {/* Content */}
-                          <MarkdownContent content={story.content} />
+                          <MarkdownContent content={story.content || story.media_description || ""} />
 
-                          {story.media_description && (
+                          {story.content && story.media_description && (
                             <p className="text-xs mt-2 italic text-muted-foreground">
                               {story.media_description}
                             </p>
@@ -318,9 +318,9 @@ function TodayHero({ stories, prompt }: { stories: Story[]; prompt: string }) {
           </span>
         </div>
 
-        <MarkdownContent content={latest.content} />
+        <MarkdownContent content={latest.content || latest.media_description || ""} />
 
-        {latest.media_description && (
+        {latest.content && latest.media_description && (
           <p className="text-xs mt-2 italic text-muted-foreground">
             {latest.media_description}
           </p>

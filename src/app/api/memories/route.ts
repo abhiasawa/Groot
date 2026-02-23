@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
       .select("created_at")
       .eq("user_id", userId)
       .eq("direction", "inbound")
-      .not("content", "is", null)
+      .or("content.not.is.null,media_description.not.is.null")
       .gte("created_at", startOfMonth)
       .lte("created_at", endOfMonth);
 
@@ -64,15 +64,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ memories: results, total: results.length }, { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" } });
     }
 
-    // Fallback: search messages table directly with ilike
+    // Fallback: search messages table directly with ilike (content OR media_description)
     const pattern = `%${query}%`;
     const { data: fallbackData, count: fallbackCount } = await supabase
       .from("messages")
       .select("id, direction, message_type, content, media_description, metadata, created_at", { count: "exact" })
       .eq("user_id", userId)
       .eq("direction", "inbound")
-      .not("content", "is", null)
-      .ilike("content", pattern)
+      .or(`content.ilike.${pattern},media_description.ilike.${pattern}`)
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -85,7 +84,7 @@ export async function GET(request: NextRequest) {
     .select("id, direction, message_type, content, media_description, metadata, created_at", { count: "exact" })
     .eq("user_id", userId)
     .eq("direction", "inbound")
-    .not("content", "is", null)
+    .or("content.not.is.null,media_description.not.is.null")
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
