@@ -31,7 +31,7 @@ interface NotificationPrefs {
  * - user timezone
  */
 export async function getEligibleUsers(
-  messageType: "morning_checkin" | "evening_reflection" | "weekly_report",
+  messageType: "morning_checkin" | "midday_nudge" | "evening_reflection" | "weekly_report",
 ): Promise<UserProactiveState[]> {
   const supabase = getSupabaseAdmin();
 
@@ -79,6 +79,11 @@ export async function getEligibleUsers(
 
     // Morning check-in still runs at level >= 3 so we can show preference prompt.
     if (messageType === "evening_reflection" && daysSinceResponse >= 2) {
+      continue;
+    }
+
+    // Mid-day nudge: skip if user hasn't responded in 1+ days (lighter threshold)
+    if (messageType === "midday_nudge" && daysSinceResponse >= 1) {
       continue;
     }
 
@@ -220,7 +225,7 @@ function getDaysSince(lastRespondedAt: string | null, now: Date): number {
 
 function isWithinScheduleWindow(
   timezone: string | null,
-  messageType: "morning_checkin" | "evening_reflection" | "weekly_report",
+  messageType: "morning_checkin" | "midday_nudge" | "evening_reflection" | "weekly_report",
   now: Date,
 ): boolean {
   const tz = timezone || "UTC";
@@ -238,7 +243,11 @@ function isWithinScheduleWindow(
     const hour = hourPart ? parseInt(hourPart, 10) : -1;
 
     if (messageType === "morning_checkin") {
-      return hour === 8;
+      return hour === 9;
+    }
+
+    if (messageType === "midday_nudge") {
+      return hour === 14;
     }
 
     if (messageType === "evening_reflection") {
@@ -255,7 +264,8 @@ function isWithinScheduleWindow(
     const utcHour = now.getUTCHours();
     const utcDay = now.getUTCDay();
 
-    if (messageType === "morning_checkin") return utcHour === 8;
+    if (messageType === "morning_checkin") return utcHour === 9;
+    if (messageType === "midday_nudge") return utcHour === 14;
     if (messageType === "evening_reflection") return utcHour === 21;
     if (messageType === "weekly_report") return utcDay === 0 && utcHour === 10;
     return false;

@@ -62,6 +62,34 @@ export async function getOrCreateUser(
   }
 
   logger.info({ userId: newUser.id, platform, platformId }, "New user created");
+
+  // Seed starter habits for new users
+  try {
+    const { createHabit } = await import("@/lib/habits/tracker");
+    await Promise.allSettled([
+      createHabit(newUser.id as string, "Daily Journal", {
+        description: "Write or voice-note your thoughts for the day",
+        category: "wellness",
+        frequency: "daily",
+      }),
+      createHabit(newUser.id as string, "Fitness — Weight", {
+        description: "Log your daily weight",
+        category: "fitness",
+        targetUnit: "kg",
+        frequency: "daily",
+      }),
+      createHabit(newUser.id as string, "Reading", {
+        description: "Track pages read per day",
+        category: "learning",
+        targetUnit: "pages",
+        frequency: "daily",
+      }),
+    ]);
+    logger.info({ userId: newUser.id }, "Starter habits seeded");
+  } catch (error) {
+    logger.warn({ error, userId: newUser.id }, "Failed to seed starter habits (non-critical)");
+  }
+
   return { user: newUser as UserRecord, isNewUser: true };
 }
 
