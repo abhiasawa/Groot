@@ -76,7 +76,7 @@ async function deleteSchedule(scheduleId: string): Promise<void> {
 async function createSchedule(schedule: (typeof SCHEDULES)[number]): Promise<void> {
   const url = `${APP_URL}${schedule.endpoint}`;
 
-  const res = await fetch("https://qstash.upstash.io/v2/schedules", {
+  const res = await fetch(`https://qstash.upstash.io/v2/schedules/${url}`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${QSTASH_TOKEN}`,
@@ -84,7 +84,6 @@ async function createSchedule(schedule: (typeof SCHEDULES)[number]): Promise<voi
       "Upstash-Cron": schedule.cron,
       "Upstash-Forward-Authorization": `Bearer ${CRON_SECRET}`,
     },
-    body: JSON.stringify({ destination: url }),
   });
 
   if (!res.ok) {
