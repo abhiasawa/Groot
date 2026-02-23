@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
   let userId: string;
   try {
-    const user = await getAuthenticatedPortalUser();
+    const user = await getAuthenticatedPortalUser(request);
     userId = user.id;
   } catch (error) {
     if (error instanceof PortalAuthError) {

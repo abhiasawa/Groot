@@ -5,10 +5,10 @@ import { getAuthenticatedPortalUser, PortalAuthError } from "@/lib/auth/portal-u
 /**
  * GET /api/settings — Fetch notification preferences for a user.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   let userId: string;
   try {
-    const user = await getAuthenticatedPortalUser();
+    const user = await getAuthenticatedPortalUser(request);
     userId = user.id;
   } catch (error) {
     if (error instanceof PortalAuthError) {
@@ -44,7 +44,7 @@ export async function GET() {
 export async function PATCH(request: NextRequest) {
   let userId: string;
   try {
-    const user = await getAuthenticatedPortalUser();
+    const user = await getAuthenticatedPortalUser(request);
     userId = user.id;
   } catch (error) {
     if (error instanceof PortalAuthError) {

@@ -1,12 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedPortalUser, PortalAuthError } from "@/lib/auth/portal-user";
 
 /**
  * GET /api/me — Returns the authenticated portal user's linked WhatsApp user.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const user = await getAuthenticatedPortalUser();
+    const user = await getAuthenticatedPortalUser(request);
     return NextResponse.json({ user }, { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=120" } });
   } catch (error) {
     if (error instanceof PortalAuthError) {

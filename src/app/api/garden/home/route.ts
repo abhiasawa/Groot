@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { getAuthenticatedPortalUser, PortalAuthError } from "@/lib/auth/portal-user";
 
@@ -7,12 +7,12 @@ import { getAuthenticatedPortalUser, PortalAuthError } from "@/lib/auth/portal-u
  * Single request replaces 6 separate API calls.
  * All DB queries run in parallel after a single auth check.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   let userId: string;
   let displayName: string;
   let createdAt: string;
   try {
-    const user = await getAuthenticatedPortalUser();
+    const user = await getAuthenticatedPortalUser(request);
     userId = user.id;
     displayName = user.display_name || "friend";
     createdAt = user.created_at;

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { getAuthenticatedPortalUser, PortalAuthError } from "@/lib/auth/portal-user";
 import { logger } from "@/lib/logger";
@@ -14,10 +14,10 @@ interface PersonEntry {
 /**
  * GET /api/people — Auto-extracted people from profile + contacts.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   let userId: string;
   try {
-    const user = await getAuthenticatedPortalUser();
+    const user = await getAuthenticatedPortalUser(request);
     userId = user.id;
   } catch (error) {
     if (error instanceof PortalAuthError) {
