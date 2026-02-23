@@ -4,6 +4,13 @@ import { useEffect, useRef } from "react";
 import { useInView, useMotionValue, useSpring } from "motion/react";
 import { cn } from "@/lib/utils";
 
+function formatNumber(n: number, decimalPlaces: number): string {
+  return Intl.NumberFormat("en-US", {
+    minimumFractionDigits: decimalPlaces,
+    maximumFractionDigits: decimalPlaces,
+  }).format(Number(n.toFixed(decimalPlaces)));
+}
+
 export function NumberTicker({
   value,
   direction = "up",
@@ -25,6 +32,16 @@ export function NumberTicker({
   });
   const isInView = useInView(ref, { once: true, margin: "0px" });
 
+  // Set initial text content immediately so 0 values aren't blank
+  useEffect(() => {
+    if (ref.current && !ref.current.textContent) {
+      ref.current.textContent = formatNumber(
+        direction === "down" ? value : 0,
+        decimalPlaces,
+      );
+    }
+  }, [value, direction, decimalPlaces]);
+
   useEffect(() => {
     if (isInView) {
       setTimeout(() => {
@@ -37,10 +54,7 @@ export function NumberTicker({
     () =>
       springValue.on("change", (latest) => {
         if (ref.current) {
-          ref.current.textContent = Intl.NumberFormat("en-US", {
-            minimumFractionDigits: decimalPlaces,
-            maximumFractionDigits: decimalPlaces,
-          }).format(Number(latest.toFixed(decimalPlaces)));
+          ref.current.textContent = formatNumber(latest, decimalPlaces);
         }
       }),
     [springValue, decimalPlaces],

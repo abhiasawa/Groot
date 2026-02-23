@@ -57,10 +57,26 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ dates }, { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" } });
   }
 
-  // Semantic search
+  // Semantic search — try Supermemory first, fall back to Supabase ilike
   if (query) {
     const results = await searchMemories(query, userId, limit);
-    return NextResponse.json({ memories: results, total: results.length }, { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" } });
+    if (results.length > 0) {
+      return NextResponse.json({ memories: results, total: results.length }, { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" } });
+    }
+
+    // Fallback: search messages table directly with ilike
+    const pattern = `%${query}%`;
+    const { data: fallbackData, count: fallbackCount } = await supabase
+      .from("messages")
+      .select("id, direction, message_type, content, media_description, metadata, created_at", { count: "exact" })
+      .eq("user_id", userId)
+      .eq("direction", "inbound")
+      .not("content", "is", null)
+      .ilike("content", pattern)
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    return NextResponse.json({ memories: fallbackData ?? [], total: fallbackCount ?? 0 }, { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" } });
   }
 
   // List from Supabase messages
