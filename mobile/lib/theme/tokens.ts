@@ -52,6 +52,11 @@ export interface ThemeColors {
   // Elevated shadows
   shadowColor: string;
   elevatedShadowColor: string;
+  // Surface (replaces glass)
+  surface: string;
+  surfaceElevated: string;
+  subtle: string;
+  tint: string;
 }
 
 export const lightTheme: ThemeColors = {
@@ -103,6 +108,11 @@ export const lightTheme: ThemeColors = {
   // Elevated shadows
   shadowColor: 'rgba(0, 0, 0, 0.06)',
   elevatedShadowColor: 'rgba(0, 0, 0, 0.12)',
+  // Surface
+  surface: "#FFFFFF",
+  surfaceElevated: "#FFFFFF",
+  subtle: "rgba(55, 53, 47, 0.09)",
+  tint: "rgba(35, 131, 226, 0.05)",
 };
 
 export const darkTheme: ThemeColors = {
@@ -154,4 +164,9 @@ export const darkTheme: ThemeColors = {
   // Elevated shadows
   shadowColor: 'rgba(0, 0, 0, 0.3)',
   elevatedShadowColor: 'rgba(0, 0, 0, 0.5)',
+  // Surface
+  surface: "#202020",
+  surfaceElevated: "#202020",
+  subtle: "rgba(255, 255, 255, 0.094)",
+  tint: "rgba(82, 156, 202, 0.05)",
 };
