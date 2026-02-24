@@ -2,6 +2,48 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { getAuthenticatedPortalUser, PortalAuthError } from "@/lib/auth/portal-user";
 
+interface HabitWithStats {
+  id: string;
+  name: string;
+  category: string;
+  target_value: number | null;
+  target_unit: string | null;
+  frequency: string | null;
+  current_streak: number;
+  longest_streak: number;
+  last_checkin_date: string | null;
+  recentCheckins?: string[];
+}
+
+function mergeHabitEntries(existing: HabitWithStats, incoming: HabitWithStats, includeCheckins: boolean): HabitWithStats {
+  const merged: HabitWithStats = {
+    ...existing,
+    target_value: existing.target_value ?? incoming.target_value,
+    target_unit: existing.target_unit ?? incoming.target_unit,
+    frequency: existing.frequency ?? incoming.frequency,
+    current_streak: Math.max(existing.current_streak, incoming.current_streak),
+    longest_streak: Math.max(existing.longest_streak, incoming.longest_streak),
+    last_checkin_date:
+      !existing.last_checkin_date
+        ? incoming.last_checkin_date
+        : !incoming.last_checkin_date
+          ? existing.last_checkin_date
+          : existing.last_checkin_date > incoming.last_checkin_date
+            ? existing.last_checkin_date
+            : incoming.last_checkin_date,
+  };
+
+  if (includeCheckins) {
+    const union = new Set<string>([
+      ...(existing.recentCheckins ?? []),
+      ...(incoming.recentCheckins ?? []),
+    ]);
+    merged.recentCheckins = [...union].sort();
+  }
+
+  return merged;
+}
+
 /**
  * GET /api/habits — List habits with streak info and optional check-in history.
  *
@@ -71,7 +113,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Merge habits with streaks (and optionally checkins)
-  const habitsWithStreaks = habits.map((h) => {
+  const expandedHabits: HabitWithStats[] = habits.map((h) => {
     const streak = streakMap.get(h.id);
     return {
       id: h.id,
@@ -86,6 +128,31 @@ export async function GET(request: NextRequest) {
       ...(includeCheckins ? { recentCheckins: checkinMap.get(h.id) ?? [] } : {}),
     };
   });
+
+  // Historical duplicate rows can exist for the same habit name.
+  // Deduplicate by normalized name for consistent UI and reporting.
+  const dedupedByName = new Map<string, HabitWithStats>();
+  const orderedKeys: string[] = [];
+  for (const habit of expandedHabits) {
+    const key = habit.name.trim().toLowerCase();
+    const existing = dedupedByName.get(key);
+    if (!existing) {
+      dedupedByName.set(key, habit);
+      orderedKeys.push(key);
+      continue;
+    }
+    dedupedByName.set(key, mergeHabitEntries(existing, habit, includeCheckins));
+  }
+
+  const habitsWithStreaks = orderedKeys
+    .map((key) => dedupedByName.get(key)!)
+    .map((habit) => {
+      if (!includeCheckins) return habit;
+      return {
+        ...habit,
+        recentCheckins: (habit.recentCheckins ?? []).slice(-30),
+      };
+    });
 
   return NextResponse.json({ habits: habitsWithStreaks }, { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" } });
 }

@@ -2,6 +2,40 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { getAuthenticatedPortalUser, PortalAuthError } from "@/lib/auth/portal-user";
 
+const KNOWN_MOODS = new Set([
+  "great", "happy", "excited", "energetic",
+  "good", "positive", "motivated", "calm", "grateful",
+  "okay", "neutral", "fine", "busy",
+  "low", "tired", "anxious", "stressed", "overwhelmed",
+  "bad", "sad", "angry", "frustrated", "upset",
+]);
+
+const POSITIVE_WORDS = [
+  "happy", "great", "excited", "awesome", "nice", "good", "grateful",
+  "motivated", "progress", "win", "worked", "better",
+];
+
+const NEGATIVE_WORDS = [
+  "sad", "stressed", "anxious", "overwhelmed", "angry", "upset",
+  "frustrated", "tired", "bad", "worried", "burnout", "exhausted",
+];
+
+function normalizeMood(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const normalized = raw.trim().toLowerCase();
+  return KNOWN_MOODS.has(normalized) ? normalized : null;
+}
+
+function inferMoodFromText(text: string): string | null {
+  const normalized = text.toLowerCase();
+  const positiveHits = POSITIVE_WORDS.filter((word) => normalized.includes(word)).length;
+  const negativeHits = NEGATIVE_WORDS.filter((word) => normalized.includes(word)).length;
+  if (positiveHits === 0 && negativeHits === 0) return null;
+  if (positiveHits > negativeHits) return "good";
+  if (negativeHits > positiveHits) return "low";
+  return "okay";
+}
+
 interface TopicMemory {
   id: string;
   content: string;
@@ -58,6 +92,7 @@ export async function GET(request: NextRequest) {
     messages: typeof messages;
     moods: Map<string, number>;
   }>();
+  const messageMoodMap = new Map<string, string | null>();
 
   let taggedCount = 0;
 
@@ -70,7 +105,14 @@ export async function GET(request: NextRequest) {
     if (!tags || !Array.isArray(tags) || tags.length === 0) continue;
 
     taggedCount++;
-    const mood = (metadata?.detectedMood as string) ?? null;
+    const explicitMood = normalizeMood(
+      ((metadata?.detectedMood as string | undefined) ?? (metadata?.mood as string | undefined)),
+    );
+    const inferredMood = !explicitMood
+      ? inferMoodFromText(`${msg.content ?? ""}\n${msg.media_description ?? ""}`)
+      : null;
+    const mood = explicitMood ?? inferredMood;
+    messageMoodMap.set(msg.id as string, mood);
 
     for (const tag of tags) {
       // Remap "general" → "daily-life" for legacy messages
@@ -111,7 +153,7 @@ export async function GET(request: NextRequest) {
           content: ((m.content as string) || (m.media_description as string) || "").substring(0, 200),
           message_type: m.message_type as string,
           created_at: m.created_at as string,
-          mood: ((m.metadata as Record<string, unknown>)?.detectedMood as string) ?? null,
+          mood: messageMoodMap.get(m.id as string) ?? null,
         })),
       };
     })

@@ -71,7 +71,10 @@ function getTypeBadge(type: string): { label: string; icon: string } {
 
 function getMoodFromMetadata(memory: Memory): string | null {
   if (memory.metadata && typeof memory.metadata === "object") {
-    const mood = (memory.metadata as Record<string, unknown>).mood;
+    const meta = memory.metadata as Record<string, unknown>;
+    const detectedMood = meta.detectedMood;
+    const mood = meta.mood;
+    if (typeof detectedMood === "string") return detectedMood;
     if (typeof mood === "string") return mood;
   }
   return null;
@@ -107,6 +110,9 @@ export default function JournalScreen() {
     refetch();
   }, [refetch]);
 
+  // This effect synchronizes paginated query results into a merged local list.
+  // We intentionally append/replace state here when network data changes.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!data) return;
 
@@ -123,6 +129,7 @@ export default function JournalScreen() {
       return next.length > 0 ? [...prev, ...next] : prev;
     });
   }, [data, offset]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const sortedMemories = useMemo(
     () =>
@@ -479,7 +486,9 @@ export default function JournalScreen() {
                     </View>
 
                     {/* Media player — audio playback or image display */}
-                    {selectedMemory.media_url?.startsWith("storage:") && (
+                    {selectedMemory.media_url &&
+                      (selectedMemory.media_url.startsWith("storage:") ||
+                        selectedMemory.media_url.startsWith("media:")) && (
                       <View style={{ marginBottom: 14 }}>
                         <MediaPlayer
                           mediaUrl={selectedMemory.media_url}

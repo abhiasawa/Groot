@@ -87,6 +87,14 @@ function getTagsFromMetadata(story: Story): string[] {
   return [];
 }
 
+function getStoryText(story: Story): string {
+  const content = story.content?.trim();
+  if (content) return content;
+  const mediaDescription = story.media_description?.trim();
+  if (mediaDescription) return mediaDescription;
+  return "No story text available yet.";
+}
+
 // ── Component ────────────────────────────────
 
 export default function StoriesScreen() {
@@ -262,10 +270,10 @@ export default function StoriesScreen() {
                     color={colors.accent}
                     strokeWidth={1.5}
                   />
-                  <Text style={s.heroLabel}>TODAY'S STORY</Text>
+                  <Text style={s.heroLabel}>TODAY HIGHLIGHT</Text>
                 </View>
                 <Text style={s.heroContent} numberOfLines={6}>
-                  {todaysStory.content}
+                  {getStoryText(todaysStory)}
                 </Text>
               </GlassCard>
             ) : (
@@ -328,7 +336,7 @@ export default function StoriesScreen() {
                           {formatDate(story.created_at)}
                         </Text>
                         <Text style={s.storyContent} numberOfLines={4}>
-                          {story.content}
+                          {getStoryText(story)}
                         </Text>
                         {tags.length > 0 && (
                           <View style={s.tagsRow}>
@@ -390,7 +398,7 @@ export default function StoriesScreen() {
                     </View>
 
                     <Text style={s.modalContent}>
-                      {selectedStory.content}
+                      {getStoryText(selectedStory)}
                     </Text>
 
                     {getTagsFromMetadata(selectedStory).length > 0 && (

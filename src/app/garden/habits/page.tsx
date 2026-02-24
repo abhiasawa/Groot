@@ -47,7 +47,7 @@ export default function HabitsPage() {
       .then((data) => setHabits(data.habits ?? []))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   if (loading) {
     return (
@@ -157,13 +157,13 @@ export default function HabitsPage() {
                           Best
                         </p>
                       </div>
-                      {h.target_value && h.target_unit && (
+                      {(h.target_value != null || h.target_unit) && (
                         <div>
                           <p className="text-2xl font-bold text-accent-foreground">
-                            {h.target_value}
+                            {h.target_value ?? "—"}
                           </p>
                           <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                            {h.target_unit}/day
+                            {h.target_unit ? `${h.target_unit}/day` : "target"}
                           </p>
                         </div>
                       )}

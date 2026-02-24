@@ -40,6 +40,15 @@ function getDayLabel(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", { weekday: "narrow" });
 }
 
+function formatHabitTarget(habit: Habit): string {
+  const value = habit.target_value;
+  const unit = habit.target_unit;
+  if (value != null && unit) return `${value} ${unit}`;
+  if (value != null) return String(value);
+  if (unit) return `Track in ${unit}`;
+  return "No daily target set yet";
+}
+
 // ── Component ────────────────────────────────
 
 export default function HabitsScreen() {
@@ -171,7 +180,7 @@ export default function HabitsScreen() {
 
                   {/* Target info */}
                   <Text style={[s.habitTarget, { color: colors.mutedForeground }]}>
-                    {habit.target_value} {habit.target_unit}
+                    {formatHabitTarget(habit)}
                   </Text>
 
                   {/* 7-day mini heatmap */}

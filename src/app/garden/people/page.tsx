@@ -22,7 +22,7 @@ interface Person {
   relationship: string | null;
   lastMentioned: string | null;
   mentionCount: number;
-  source: "profile" | "contacts";
+  source: "profile" | "contacts" | "ai_detected";
 }
 
 // Deterministic avatar colors — Notion palette
@@ -49,7 +49,7 @@ export default function PeoplePage() {
       .then((data) => setPeople(data.people ?? []))
       .catch(() => setPeople([]))
       .finally(() => setLoading(false));
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleExpand = async (name: string) => {
     if (expandedPerson === name) {

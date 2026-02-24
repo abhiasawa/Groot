@@ -1,6 +1,8 @@
 import * as SecureStore from "expo-secure-store";
 
-const API_BASE = "https://groot-three.vercel.app";
+const API_BASE = (
+  process.env.EXPO_PUBLIC_API_BASE_URL ?? "https://groot-three.vercel.app"
+).replace(/\/$/, "");
 const TOKEN_KEY = "groot-jwt";
 
 // ── Error class ──────────────────────────────

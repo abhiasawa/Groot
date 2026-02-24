@@ -12,6 +12,18 @@ interface PersonEntry {
   source: "profile" | "contacts" | "ai_detected";
 }
 
+const SOURCE_PRIORITY: Record<PersonEntry["source"], number> = {
+  ai_detected: 3,
+  profile: 2,
+  contacts: 1,
+};
+
+function chooseLatestDate(a: string | null, b: string | null): string | null {
+  if (!a) return b;
+  if (!b) return a;
+  return a > b ? a : b;
+}
+
 /**
  * GET /api/people — Auto-extracted people from profile + contacts.
  */
@@ -28,8 +40,32 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = getSupabaseAdmin();
-  const people: PersonEntry[] = [];
-  const seen = new Set<string>();
+  const peopleMap = new Map<string, PersonEntry>();
+
+  function upsertPerson(entry: PersonEntry) {
+    const normalized = entry.name.toLowerCase().trim();
+    if (!normalized) return;
+
+    const existing = peopleMap.get(normalized);
+    if (!existing) {
+      peopleMap.set(normalized, entry);
+      return;
+    }
+
+    const source =
+      SOURCE_PRIORITY[entry.source] > SOURCE_PRIORITY[existing.source]
+        ? entry.source
+        : existing.source;
+
+    peopleMap.set(normalized, {
+      name: existing.name.length >= entry.name.length ? existing.name : entry.name,
+      relationship: existing.relationship ?? entry.relationship,
+      context: existing.context ?? entry.context,
+      lastMentioned: chooseLatestDate(existing.lastMentioned, entry.lastMentioned),
+      mentionCount: existing.mentionCount + entry.mentionCount,
+      source,
+    });
+  }
 
   // Fetch profile facts, AI-detected people, and contacts in parallel
   const [{ data: profileFacts }, { data: detectedPeople }, { data: contacts }] = await Promise.all([
@@ -57,18 +93,14 @@ export async function GET(request: NextRequest) {
     const key = (fact.key as string).toLowerCase();
     if (PEOPLE_KEYS.some(pk => key.includes(pk))) {
       const name = fact.value as string;
-      const normalized = name.toLowerCase().trim();
-      if (!seen.has(normalized)) {
-        seen.add(normalized);
-        people.push({
-          name,
-          relationship: (fact.key as string).replace(/_/g, " "),
-          context: null,
-          lastMentioned: fact.last_mentioned_at as string | null,
-          mentionCount: 1,
-          source: "profile",
-        });
-      }
+      upsertPerson({
+        name,
+        relationship: (fact.key as string).replace(/_/g, " "),
+        context: null,
+        lastMentioned: fact.last_mentioned_at as string | null,
+        mentionCount: 1,
+        source: "profile",
+      });
     }
   }
 
@@ -81,50 +113,40 @@ export async function GET(request: NextRequest) {
         context?: string | null;
       };
       const name = parsed.name ?? (entry.key as string).replace(/_/g, " ");
-      const normalized = name.toLowerCase().trim();
-      if (!seen.has(normalized)) {
-        seen.add(normalized);
-        people.push({
-          name,
-          relationship: parsed.relationship ?? null,
-          context: parsed.context ?? null,
-          lastMentioned: entry.last_mentioned_at as string | null,
-          mentionCount: 1,
-          source: "ai_detected",
-        });
-      }
+      upsertPerson({
+        name,
+        relationship: parsed.relationship ?? null,
+        context: parsed.context ?? null,
+        lastMentioned: entry.last_mentioned_at as string | null,
+        mentionCount: 1,
+        source: "ai_detected",
+      });
     } catch {
       // value isn't valid JSON — use key as name fallback
       const name = (entry.key as string).replace(/_/g, " ");
-      const normalized = name.toLowerCase().trim();
-      if (!seen.has(normalized)) {
-        seen.add(normalized);
-        people.push({
-          name,
-          relationship: null,
-          context: null,
-          lastMentioned: entry.last_mentioned_at as string | null,
-          mentionCount: 1,
-          source: "ai_detected",
-        });
-      }
+      upsertPerson({
+        name,
+        relationship: null,
+        context: null,
+        lastMentioned: entry.last_mentioned_at as string | null,
+        mentionCount: 1,
+        source: "ai_detected",
+      });
     }
   }
 
   for (const contact of contacts ?? []) {
-    const normalized = (contact.name as string).toLowerCase().trim();
-    if (!seen.has(normalized)) {
-      seen.add(normalized);
-      people.push({
-        name: contact.name as string,
-        relationship: "contact",
-        context: null,
-        lastMentioned: contact.last_messaged_at as string | null,
-        mentionCount: 1,
-        source: "contacts",
-      });
-    }
+    upsertPerson({
+      name: contact.name as string,
+      relationship: "contact",
+      context: null,
+      lastMentioned: contact.last_messaged_at as string | null,
+      mentionCount: 1,
+      source: "contacts",
+    });
   }
+
+  const people = [...peopleMap.values()];
 
   // Sort: most recently mentioned first
   people.sort((a, b) => {

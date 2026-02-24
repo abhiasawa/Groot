@@ -209,7 +209,7 @@ export default function SettingsScreen() {
             <SectionHeader title="Notifications" />
             <GlassCard delay={200} padding={0}>
               {notificationPrefs.map((pref, index) => {
-                const enabled = data?.preferences?.[pref.key] ?? false;
+                const enabled = data?.preferences?.[pref.key] ?? true;
                 const isLast = index === notificationPrefs.length - 1;
 
                 return (

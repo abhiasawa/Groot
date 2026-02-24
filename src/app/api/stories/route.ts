@@ -41,7 +41,9 @@ export async function GET(request: NextRequest) {
   }
 
   const allStories = await loadStoryCandidates(supabase, userId);
-  const stories = allStories.slice(offset, offset + limit);
+  const stories = allStories
+    .slice(offset, offset + limit)
+    .map(normalizeStoryForResponse);
 
   return NextResponse.json(
     { stories, total: allStories.length },
@@ -57,6 +59,13 @@ interface StoryRow {
   metadata: Record<string, unknown> | null;
   created_at: string;
   synced_to_supermemory: boolean | null;
+}
+
+function normalizeStoryForResponse(story: StoryRow): StoryRow & { content: string } {
+  return {
+    ...story,
+    content: story.content ?? story.media_description ?? "",
+  };
 }
 
 const GENERIC_TAGS = new Set(["general", "daily-life", "daily_life"]);
@@ -88,9 +97,13 @@ function isStoryCandidate(message: StoryRow): boolean {
   if (message.synced_to_supermemory) return true;
 
   const tags = getMemoryTags(meta);
-  if (tags.some((tag) => !GENERIC_TAGS.has(tag))) return true;
+  const hasSpecificTag = tags.some((tag) => !GENERIC_TAGS.has(tag));
+  if (hasSpecificTag && hasSubstantiveContent(message)) return true;
 
-  return hasSubstantiveContent(message);
+  // Fallback for long entries even if tags are generic/missing.
+  const contentLength = message.content?.trim().length ?? 0;
+  const mediaLength = message.media_description?.trim().length ?? 0;
+  return contentLength + mediaLength >= 220;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

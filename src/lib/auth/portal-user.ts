@@ -31,6 +31,7 @@ const CACHE_TTL_MS = 60_000; // 60 seconds
 
 const USER_SELECT_FIELDS =
   "id, whatsapp_number, display_name, onboarding_step, onboarding_completed_at, created_at, timezone" as const;
+const ALLOW_SINGLE_USER_FALLBACK = process.env.ALLOW_SINGLE_USER_FALLBACK === "true";
 
 /**
  * Returns the authenticated portal user.
@@ -38,7 +39,7 @@ const USER_SELECT_FIELDS =
  * Auth resolution order:
  * 1. Bearer token in Authorization header (mobile app — custom JWT)
  * 2. groot-token cookie (web portal — custom JWT)
- * 3. Single-user fallback (backward compat — will be removed)
+ * 3. Optional single-user fallback (dev-only, behind ALLOW_SINGLE_USER_FALLBACK=true)
  */
 export async function getAuthenticatedPortalUser(
   request?: NextRequest,
@@ -56,8 +57,11 @@ export async function getAuthenticatedPortalUser(
     return authenticateWithJWT(cookieToken);
   }
 
-  // ── Path 3: Single-user fallback ──
-  // DEPRECATION: This fallback will be removed once all clients use JWT.
+  if (!ALLOW_SINGLE_USER_FALLBACK) {
+    throw new PortalAuthError("Authentication required", 401);
+  }
+
+  // ── Path 3: Single-user fallback (opt-in for local/dev only) ──
   logger.debug("Portal: using single-user fallback (no JWT found)");
 
   if (cachedPortalUser && Date.now() < cacheExpiry) {

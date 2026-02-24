@@ -3,6 +3,13 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { getAuthenticatedPortalUser, PortalAuthError } from "@/lib/auth/portal-user";
 import { logger } from "@/lib/logger";
 
+const PROFILE_CATEGORIES = ["static", "dynamic", "preference", "goal"] as const;
+type ProfileCategory = typeof PROFILE_CATEGORIES[number];
+
+function isProfileCategory(value: string): value is ProfileCategory {
+  return (PROFILE_CATEGORIES as readonly string[]).includes(value);
+}
+
 /**
  * GET /api/profile — User profile facts grouped by category.
  */
@@ -31,7 +38,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Failed to fetch profile" }, { status: 500 });
   }
 
-  const facts: Record<string, Array<{ id: string; key: string; value: string; confidence: number; source: string; lastMentioned: string | null }>> = {
+  const facts: Record<ProfileCategory, Array<{ id: string; key: string; value: string; confidence: number; source: string; lastMentioned: string | null }>> = {
     static: [],
     dynamic: [],
     preference: [],
@@ -39,9 +46,11 @@ export async function GET(request: NextRequest) {
   };
 
   for (const row of data ?? []) {
-    const cat = (row.category as string) || "dynamic";
-    if (!facts[cat]) facts[cat] = [];
-    facts[cat]!.push({
+    const rawCategory = (row.category as string) || "dynamic";
+    if (!isProfileCategory(rawCategory)) {
+      continue;
+    }
+    facts[rawCategory].push({
       id: row.id as string,
       key: (row.key as string).replace(/_/g, " "),
       value: row.value as string,

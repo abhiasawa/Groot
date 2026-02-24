@@ -2,6 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { getAuthenticatedPortalUser, PortalAuthError } from "@/lib/auth/portal-user";
 
+const NOTIFICATION_KEYS = [
+  "morning_checkin",
+  "evening_journal",
+  "weekly_report",
+  "feature_tips",
+] as const;
+
+type NotificationKey = typeof NOTIFICATION_KEYS[number];
+
+function isNotificationKey(value: string): value is NotificationKey {
+  return (NOTIFICATION_KEYS as readonly string[]).includes(value);
+}
+
 /**
  * GET /api/settings — Fetch notification preferences for a user.
  */
@@ -22,9 +35,10 @@ export async function GET(request: NextRequest) {
     .from("user_profile")
     .select("key, value")
     .eq("user_id", userId)
-    .eq("category", "preference");
+    .eq("category", "preference")
+    .in("key", [...NOTIFICATION_KEYS]);
 
-  const prefs: Record<string, boolean> = {
+  const prefs: Record<NotificationKey, boolean> = {
     morning_checkin: true,
     evening_journal: true,
     weekly_report: true,
@@ -32,7 +46,10 @@ export async function GET(request: NextRequest) {
   };
 
   for (const row of data ?? []) {
-    prefs[row.key as string] = row.value === "true";
+    const key = row.key as string;
+    if (isNotificationKey(key)) {
+      prefs[key] = row.value === "true";
+    }
   }
 
   return NextResponse.json({ preferences: prefs }, { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" } });
@@ -53,15 +70,20 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 
-  const body = await request.json();
-  const { key, value } = body;
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+  const { key, value } = (body ?? {}) as { key?: string; value?: boolean };
 
-  if (!key || typeof value !== "boolean") {
+  if (!key || typeof value !== "boolean" || !isNotificationKey(key)) {
     return NextResponse.json({ error: "key and value (boolean) required" }, { status: 400 });
   }
 
   const supabase = getSupabaseAdmin();
-  await supabase
+  const { error } = await supabase
     .from("user_profile")
     .upsert(
       {
@@ -70,10 +92,14 @@ export async function PATCH(request: NextRequest) {
         key,
         value: String(value),
         confidence: 1.0,
-        source: "web_portal",
+        source: "portal_settings",
       },
       { onConflict: "user_id,category,key" },
     );
+
+  if (error) {
+    return NextResponse.json({ error: "Failed to update preference" }, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true });
 }
