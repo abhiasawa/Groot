@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useSegments } from "expo-router";
 import {
   ArrowLeft,
   Square,
@@ -36,13 +36,18 @@ function formatDate(dateStr: string): string {
   });
 }
 
+type TaskFilter = "all" | "pending" | "completed";
+
 // ── Component ────────────────────────────────
 
 export default function TasksScreen() {
   const { colors } = useTheme();
   const router = useRouter();
+  const segments = useSegments();
   const { data, isLoading, isRefetching, refetch } = useTasks();
   const toggleTask = useToggleTask();
+  const [filter, setFilter] = useState<TaskFilter>("all");
+  const isTabRoute = segments[0] === "(tabs)";
 
   const onRefresh = useCallback(() => {
     refetch();
@@ -55,6 +60,9 @@ export default function TasksScreen() {
       completed: all.filter((t) => t.is_completed),
     };
   }, [data?.tasks]);
+
+  const visiblePending = filter === "completed" ? [] : pending;
+  const visibleCompleted = filter === "pending" ? [] : completed;
 
   const handleToggle = useCallback(
     (task: Task) => {
@@ -88,13 +96,17 @@ export default function TasksScreen() {
         <GradientBackground>
           {/* Header */}
           <View style={styles.header}>
-            <PressScale onPress={() => router.back()}>
-              <ArrowLeft
-                size={24}
-                color={colors.foreground}
-                strokeWidth={1.5}
-              />
-            </PressScale>
+            {isTabRoute ? (
+              <View style={styles.headerSpacer} />
+            ) : (
+              <PressScale onPress={() => router.back()}>
+                <ArrowLeft
+                  size={24}
+                  color={colors.foreground}
+                  strokeWidth={1.5}
+                />
+              </PressScale>
+            )}
             <View style={styles.headerTitleGroup}>
               <Text style={[styles.pageTitle, { color: colors.foreground }]}>
                 Tasks
@@ -151,13 +163,17 @@ export default function TasksScreen() {
       <GradientBackground>
         {/* Header */}
         <View style={styles.header}>
-          <PressScale onPress={() => router.back()}>
-            <ArrowLeft
-              size={24}
-              color={colors.foreground}
-              strokeWidth={1.5}
-            />
-          </PressScale>
+          {isTabRoute ? (
+            <View style={styles.headerSpacer} />
+          ) : (
+            <PressScale onPress={() => router.back()}>
+              <ArrowLeft
+                size={24}
+                color={colors.foreground}
+                strokeWidth={1.5}
+              />
+            </PressScale>
+          )}
           <View style={styles.headerTitleGroup}>
             <Text style={[styles.pageTitle, { color: colors.foreground }]}>
               Tasks
@@ -181,37 +197,72 @@ export default function TasksScreen() {
           }
           showsVerticalScrollIndicator={false}
         >
+          <View style={styles.filterWrap}>
+            <PressScale onPress={() => setFilter("all")} haptic={false}>
+              <PillBadge
+                label={`All (${pending.length + completed.length})`}
+                color={filter === "all" ? colors.secondaryForeground : colors.glassSurface}
+                textColor={filter === "all" ? "#FFFFFF" : colors.mutedForeground}
+              />
+            </PressScale>
+            <PressScale onPress={() => setFilter("pending")} haptic={false}>
+              <PillBadge
+                label={`Pending (${pending.length})`}
+                color={filter === "pending" ? colors.primary : colors.glassSurface}
+                textColor={filter === "pending" ? colors.primaryForeground : colors.mutedForeground}
+              />
+            </PressScale>
+            <PressScale onPress={() => setFilter("completed")} haptic={false}>
+              <PillBadge
+                label={`Done (${completed.length})`}
+                color={filter === "completed" ? colors.moodGood : colors.glassSurface}
+                textColor={filter === "completed" ? "#FFFFFF" : colors.mutedForeground}
+              />
+            </PressScale>
+          </View>
+
           {/* Pending section */}
-          {pending.length > 0 && (
+          {visiblePending.length > 0 && (
             <View style={styles.section}>
-              <SectionHeader title={`Pending (${pending.length})`} />
-              {pending.map((task, index) => (
+              <SectionHeader title={`Pending (${visiblePending.length})`} />
+              {visiblePending.map((task, index) => (
                 <TaskRow
                   key={task.id}
                   task={task}
                   colors={colors}
                   onToggle={handleToggle}
-                  delay={0 * 60 + index * 60}
+                  delay={index * 60}
                 />
               ))}
             </View>
           )}
 
           {/* Completed section */}
-          {completed.length > 0 && (
+          {visibleCompleted.length > 0 && (
             <View style={styles.section}>
-              <SectionHeader title={`Completed (${completed.length})`} />
-              {completed.map((task, index) => (
+              <SectionHeader title={`Completed (${visibleCompleted.length})`} />
+              {visibleCompleted.map((task, index) => (
                 <TaskRow
                   key={task.id}
                   task={task}
                   colors={colors}
                   onToggle={handleToggle}
-                  delay={1 * 60 + index * 60}
+                  delay={120 + index * 60}
                 />
               ))}
             </View>
           )}
+
+          {visiblePending.length === 0 && visibleCompleted.length === 0 ? (
+            <GlassCard padding={18}>
+              <Text style={[styles.filterEmptyTitle, { color: colors.foreground }]}>
+                Nothing in this view
+              </Text>
+              <Text style={[styles.filterEmptyCopy, { color: colors.mutedForeground }]}>
+                Switch filters to see other tasks.
+              </Text>
+            </GlassCard>
+          ) : null}
 
           {/* Bottom spacer */}
           <View style={styles.bottomSpacer} />
@@ -317,13 +368,16 @@ const styles = StyleSheet.create({
   headerTitleGroup: {
     flex: 1,
   },
+  headerSpacer: {
+    width: 24,
+  },
   pageTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Sora_700Bold",
     ...typography.title,
     letterSpacing: -0.3,
   },
   pageSubtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.sm,
     marginTop: 2,
   },
@@ -337,6 +391,12 @@ const styles = StyleSheet.create({
   // Sections
   section: {
     marginBottom: 28,
+  },
+  filterWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 18,
   },
 
   // Task row
@@ -352,7 +412,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   taskText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.sm,
     lineHeight: 22,
   },
@@ -366,7 +426,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   dueDate: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.xs,
   },
 
@@ -386,16 +446,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   emptyTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Sora_700Bold",
     ...typography.lg,
     textAlign: "center",
     marginBottom: 8,
   },
   emptySubtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.sm,
     textAlign: "center",
     lineHeight: 22,
+  },
+  filterEmptyTitle: {
+    fontFamily: "Sora_600SemiBold",
+    ...typography.base,
+    marginBottom: 4,
+  },
+  filterEmptyCopy: {
+    fontFamily: "Manrope_400Regular",
+    ...typography.sm,
   },
 
   // Bottom

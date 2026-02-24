@@ -235,11 +235,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   headerTitle: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Sora_600SemiBold",
     ...typography.lg,
   },
   headerSubtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.xs,
     marginTop: 2,
   },
@@ -265,11 +265,11 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   reportDate: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Sora_600SemiBold",
     ...typography.sm,
   },
   reportSummary: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.sm,
     lineHeight: 22,
     marginBottom: 12,
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
   },
   insightsText: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.xs,
     fontStyle: "italic",
     lineHeight: 18,
@@ -302,13 +302,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   emptyTitle: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Sora_600SemiBold",
     ...typography.lg,
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.sm,
     textAlign: "center",
     lineHeight: 22,

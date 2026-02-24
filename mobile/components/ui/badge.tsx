@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
   },
   label: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Manrope_500Medium",
     fontSize: 12,
     lineHeight: 16,
   },

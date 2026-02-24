@@ -65,14 +65,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Sora_600SemiBold",
     fontSize: typography.base.fontSize,
     lineHeight: typography.base.lineHeight,
     textAlign: "center",
     marginBottom: 8,
   },
   description: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     fontSize: typography.sm.fontSize,
     lineHeight: typography.sm.lineHeight,
     textAlign: "center",

@@ -17,10 +17,10 @@ export function SectionHeader({ title, action, onAction }: SectionHeaderProps) {
       <Text
         style={[
           styles.title,
-          { color: colors.mutedForeground },
+          { color: colors.foreground },
         ]}
       >
-        {title.toUpperCase()}
+        {title}
       </Text>
       {action && onAction && (
         <Pressable onPress={onAction} style={styles.action}>
@@ -39,13 +39,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 14,
     paddingHorizontal: 2,
   },
   title: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 11,
-    letterSpacing: 1.5,
+    fontFamily: "Sora_600SemiBold",
+    fontSize: 18,
+    lineHeight: 24,
+    letterSpacing: -0.2,
   },
   action: {
     flexDirection: "row",
@@ -53,7 +54,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   actionText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Manrope_600SemiBold",
     fontSize: 13,
     letterSpacing: 0,
   },

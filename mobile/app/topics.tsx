@@ -268,11 +268,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   headerTitle: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Sora_600SemiBold",
     ...typography.lg,
   },
   headerSubtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.xs,
     marginTop: 2,
   },
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   summaryText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.sm,
     marginBottom: 16,
   },
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   topicName: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Sora_600SemiBold",
     ...typography.base,
   },
   topicMoodDot: {
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   lastMentioned: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.xs,
   },
   samplesContainer: {
@@ -337,12 +337,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sampleContent: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.sm,
     lineHeight: 20,
   },
   sampleDate: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.xs,
     marginTop: 6,
   },
@@ -354,13 +354,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   emptyTitle: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Sora_600SemiBold",
     ...typography.lg,
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.sm,
     textAlign: "center",
     lineHeight: 22,

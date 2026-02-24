@@ -52,106 +52,118 @@ export interface ThemeColors {
   // Elevated shadows
   shadowColor: string;
   elevatedShadowColor: string;
+  // Ambient accent overlays
+  auraPrimary: string;
+  auraSecondary: string;
+  auraTertiary: string;
 }
 
 export const lightTheme: ThemeColors = {
   // Core
-  background: "#FFFFFF",
-  foreground: "#37352F",
+  background: "#FFF8F7",
+  foreground: "#221928",
   // Card
   card: "#FFFFFF",
-  cardForeground: "#37352F",
+  cardForeground: "#221928",
   // Primary
-  primary: "#2383E2",
+  primary: "#E1306C",
   primaryForeground: "#FFFFFF",
   // Secondary
-  secondary: "#F7F6F3",
-  secondaryForeground: "#37352F",
+  secondary: "#FEE7EF",
+  secondaryForeground: "#8A1D46",
   // Muted
-  muted: "#F7F6F3",
-  mutedForeground: "#787774",
+  muted: "#FFF0F5",
+  mutedForeground: "#87657A",
   // Accent
-  accent: "#D9730D",
+  accent: "#F77737",
   accentForeground: "#FFFFFF",
   // Destructive
-  destructive: "#E03E3E",
+  destructive: "#EB4758",
   // Borders & inputs
-  border: "rgba(55, 53, 47, 0.09)",
-  input: "rgba(55, 53, 47, 0.09)",
-  ring: "#2383E2",
+  border: "rgba(175, 44, 99, 0.14)",
+  input: "rgba(175, 44, 99, 0.14)",
+  ring: "#E1306C",
   // Mood colors
-  moodGreat: "#0F7B6C",
-  moodGood: "#448361",
-  moodOkay: "#CB912F",
-  moodLow: "#D9730D",
-  moodBad: "#E03E3E",
-  moodNone: "#E3E2E0",
+  moodGreat: "#00A675",
+  moodGood: "#2EBA8B",
+  moodOkay: "#EEB03B",
+  moodLow: "#F98836",
+  moodBad: "#EB4758",
+  moodNone: "#EFD9E4",
   // Chart colors
-  chart1: "#2383E2",
-  chart2: "#0F7B6C",
-  chart3: "#D9730D",
-  chart4: "#6940A5",
-  chart5: "#448361",
+  chart1: "#E1306C",
+  chart2: "#F77737",
+  chart3: "#00A675",
+  chart4: "#CB3EEB",
+  chart5: "#3B7BFF",
   // Glassmorphic
-  glassSurface: 'rgba(255, 255, 255, 0.72)',
-  glassBorder: 'rgba(255, 255, 255, 0.5)',
-  glassHighlight: 'rgba(255, 255, 255, 0.9)',
+  glassSurface: "rgba(255, 255, 255, 0.78)",
+  glassBorder: "rgba(177, 42, 99, 0.14)",
+  glassHighlight: "rgba(255, 255, 255, 0.92)",
   // Gradients
-  gradientStart: '#EEF2FF',
-  gradientMid: '#F0EBFF',
-  gradientEnd: '#FFF1EB',
+  gradientStart: "#FFF1E8",
+  gradientMid: "#FFEAF3",
+  gradientEnd: "#FFF2FA",
   // Elevated shadows
-  shadowColor: 'rgba(0, 0, 0, 0.06)',
-  elevatedShadowColor: 'rgba(0, 0, 0, 0.12)',
+  shadowColor: "rgba(97, 21, 54, 0.12)",
+  elevatedShadowColor: "rgba(97, 21, 54, 0.24)",
+  // Ambient accent overlays
+  auraPrimary: "rgba(225, 48, 108, 0.24)",
+  auraSecondary: "rgba(247, 119, 55, 0.2)",
+  auraTertiary: "rgba(203, 62, 235, 0.16)",
 };
 
 export const darkTheme: ThemeColors = {
   // Core
-  background: "#191919",
-  foreground: "rgba(255, 255, 255, 0.81)",
+  background: "#140913",
+  foreground: "#FFEFF7",
   // Card
-  card: "#202020",
-  cardForeground: "rgba(255, 255, 255, 0.81)",
+  card: "#271325",
+  cardForeground: "#FFEFF7",
   // Primary
-  primary: "#529CCA",
+  primary: "#FF4D8D",
   primaryForeground: "#FFFFFF",
   // Secondary
-  secondary: "#2F2F2F",
-  secondaryForeground: "rgba(255, 255, 255, 0.81)",
+  secondary: "#3A1A33",
+  secondaryForeground: "#FFD8EA",
   // Muted
-  muted: "#2F2F2F",
-  mutedForeground: "rgba(255, 255, 255, 0.443)",
+  muted: "#31172F",
+  mutedForeground: "#CE9CB9",
   // Accent
-  accent: "#FFA344",
-  accentForeground: "#191919",
+  accent: "#FF9A53",
+  accentForeground: "#2A1218",
   // Destructive
-  destructive: "#E03E3E",
+  destructive: "#FF6D7B",
   // Borders & inputs
-  border: "rgba(255, 255, 255, 0.094)",
-  input: "rgba(255, 255, 255, 0.15)",
-  ring: "#529CCA",
+  border: "rgba(255, 139, 193, 0.24)",
+  input: "rgba(255, 139, 193, 0.24)",
+  ring: "#FF4D8D",
   // Mood colors
-  moodGreat: "#0F7B6C",
-  moodGood: "#448361",
-  moodOkay: "#CB912F",
-  moodLow: "#D9730D",
-  moodBad: "#E03E3E",
-  moodNone: "#E3E2E0",
+  moodGreat: "#31D6A2",
+  moodGood: "#5EE2BC",
+  moodOkay: "#F8C469",
+  moodLow: "#FFAD5C",
+  moodBad: "#FF7A88",
+  moodNone: "#5A3A58",
   // Chart colors
-  chart1: "#529CCA",
-  chart2: "#4DB8A4",
-  chart3: "#FFA344",
-  chart4: "#9A6DD7",
-  chart5: "#6BAF8D",
+  chart1: "#FF4D8D",
+  chart2: "#FF9A53",
+  chart3: "#31D6A2",
+  chart4: "#D86BFF",
+  chart5: "#7EAAFF",
   // Glassmorphic
-  glassSurface: 'rgba(35, 35, 35, 0.75)',
-  glassBorder: 'rgba(255, 255, 255, 0.08)',
-  glassHighlight: 'rgba(255, 255, 255, 0.05)',
+  glassSurface: "rgba(50, 20, 45, 0.72)",
+  glassBorder: "rgba(255, 145, 196, 0.24)",
+  glassHighlight: "rgba(255, 255, 255, 0.08)",
   // Gradients
-  gradientStart: '#0F0F1A',
-  gradientMid: '#12101E',
-  gradientEnd: '#1A1015',
+  gradientStart: "#170813",
+  gradientMid: "#3C1435",
+  gradientEnd: "#4A2114",
   // Elevated shadows
-  shadowColor: 'rgba(0, 0, 0, 0.3)',
-  elevatedShadowColor: 'rgba(0, 0, 0, 0.5)',
+  shadowColor: "rgba(0, 0, 0, 0.34)",
+  elevatedShadowColor: "rgba(0, 0, 0, 0.56)",
+  // Ambient accent overlays
+  auraPrimary: "rgba(255, 77, 141, 0.24)",
+  auraSecondary: "rgba(255, 154, 83, 0.2)",
+  auraTertiary: "rgba(216, 107, 255, 0.14)",
 };

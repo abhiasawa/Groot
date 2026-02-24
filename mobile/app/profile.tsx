@@ -320,12 +320,12 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   pageTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Sora_700Bold",
     ...typography.hero,
     marginBottom: 4,
   },
   pageSubtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.sm,
   },
   categorySection: {
@@ -345,11 +345,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   categoryLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Sora_600SemiBold",
     ...typography.base,
   },
   categoryDesc: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.xs,
   },
   factCardSpacing: {
@@ -363,19 +363,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   factKey: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Manrope_500Medium",
     ...typography.xs,
     textTransform: "uppercase",
     letterSpacing: 0.5,
     marginBottom: 2,
   },
   factValue: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.sm,
     lineHeight: 22,
   },
   factMeta: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.xs,
     marginTop: 4,
   },
@@ -398,13 +398,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   emptyTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Sora_700Bold",
     ...typography.title,
     textAlign: "center",
     marginBottom: 12,
   },
   emptySubtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.base,
     textAlign: "center",
     lineHeight: 24,

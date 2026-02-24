@@ -75,17 +75,17 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   value: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Sora_700Bold",
     fontSize: typography.xl.fontSize,
     lineHeight: typography.xl.lineHeight,
   },
   label: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     fontSize: typography.xs.fontSize,
     lineHeight: typography.xs.lineHeight,
   },
   trend: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Manrope_500Medium",
     fontSize: typography.xs.fontSize,
     lineHeight: typography.xs.lineHeight,
   },

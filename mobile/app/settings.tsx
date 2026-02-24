@@ -381,7 +381,7 @@ function ThemeOption({
             style={[
               styles.themeOptionLabel,
               {
-                fontFamily: active ? "Inter_600SemiBold" : "Inter_400Regular",
+                fontFamily: active ? "Sora_600SemiBold" : "Manrope_400Regular",
                 color: active ? colors.primary : colors.mutedForeground,
               },
             ]}
@@ -420,12 +420,12 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   pageTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Sora_700Bold",
     ...typography.hero,
     marginBottom: 4,
   },
   pageSubtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.sm,
   },
   section: {
@@ -462,12 +462,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   notifLabel: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Manrope_500Medium",
     ...typography.sm,
     marginBottom: 2,
   },
   notifDesc: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.xs,
   },
   signOutRow: {
@@ -476,11 +476,11 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   signOutLabel: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Sora_600SemiBold",
     ...typography.sm,
   },
   versionText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.xs,
     textAlign: "center",
     marginTop: 8,

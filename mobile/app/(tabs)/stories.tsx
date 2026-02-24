@@ -225,7 +225,7 @@ export default function StoriesScreen() {
                       style={{
                         ...typography.caption,
                         color: trendPct > 0 ? colors.moodGood : colors.moodLow,
-                        fontFamily: "Inter_500Medium",
+                        fontFamily: "Manrope_500Medium",
                       }}
                     >
                       {" "}
@@ -442,12 +442,12 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       marginBottom: 20,
     },
     pageTitle: {
-      fontFamily: "Inter_700Bold",
+      fontFamily: "Sora_700Bold",
       ...typography.title,
       color: c.foreground,
     },
     pageSubtitle: {
-      fontFamily: "Inter_400Regular",
+      fontFamily: "Manrope_400Regular",
       ...typography.sm,
       color: c.mutedForeground,
       marginTop: 4,
@@ -484,20 +484,20 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       marginBottom: 8,
     },
     statValue: {
-      fontFamily: "Inter_700Bold",
+      fontFamily: "Sora_700Bold",
       ...typography.lg,
       color: c.foreground,
       marginBottom: 2,
     },
     statLabel: {
-      fontFamily: "Inter_600SemiBold",
+      fontFamily: "Sora_600SemiBold",
       ...typography.caption,
       color: c.mutedForeground,
       textTransform: "uppercase",
       letterSpacing: 0.5,
     },
     statHint: {
-      fontFamily: "Inter_400Regular",
+      fontFamily: "Manrope_400Regular",
       ...typography.xs,
       color: c.mutedForeground,
       marginTop: 2,
@@ -515,13 +515,13 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       marginBottom: 12,
     },
     heroLabel: {
-      fontFamily: "Inter_700Bold",
+      fontFamily: "Sora_700Bold",
       ...typography.caption,
       color: c.accent,
       letterSpacing: 1.5,
     },
     heroContent: {
-      fontFamily: "Inter_400Regular",
+      fontFamily: "Manrope_400Regular",
       ...typography.sm,
       color: c.foreground,
       lineHeight: 22,
@@ -532,14 +532,14 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       alignItems: "center",
     },
     promptTitle: {
-      fontFamily: "Inter_600SemiBold",
+      fontFamily: "Sora_600SemiBold",
       ...typography.base,
       color: c.foreground,
       marginTop: 14,
       marginBottom: 6,
     },
     promptSubtitle: {
-      fontFamily: "Inter_400Regular",
+      fontFamily: "Manrope_400Regular",
       ...typography.sm,
       color: c.mutedForeground,
       textAlign: "center",
@@ -554,7 +554,7 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       marginBottom: 10,
     },
     storyDate: {
-      fontFamily: "Inter_500Medium",
+      fontFamily: "Manrope_500Medium",
       ...typography.caption,
       color: c.mutedForeground,
       marginBottom: 6,
@@ -562,7 +562,7 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       letterSpacing: 0.5,
     },
     storyContent: {
-      fontFamily: "Inter_400Regular",
+      fontFamily: "Manrope_400Regular",
       ...typography.sm,
       color: c.foreground,
       lineHeight: 22,
@@ -581,7 +581,7 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       paddingHorizontal: 24,
     },
     emptyTitle: {
-      fontFamily: "Inter_600SemiBold",
+      fontFamily: "Sora_600SemiBold",
       ...typography.lg,
       color: c.foreground,
       marginTop: 18,
@@ -589,7 +589,7 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       textAlign: "center",
     },
     emptySubtitle: {
-      fontFamily: "Inter_400Regular",
+      fontFamily: "Manrope_400Regular",
       ...typography.sm,
       color: c.mutedForeground,
       textAlign: "center",
@@ -619,7 +619,7 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       marginBottom: 12,
     },
     modalTitle: {
-      fontFamily: "Inter_700Bold",
+      fontFamily: "Sora_700Bold",
       ...typography.lg,
       color: c.foreground,
     },
@@ -637,12 +637,12 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       marginBottom: 14,
     },
     modalMetaDate: {
-      fontFamily: "Inter_400Regular",
+      fontFamily: "Manrope_400Regular",
       ...typography.xs,
       color: c.mutedForeground,
     },
     modalContent: {
-      fontFamily: "Inter_400Regular",
+      fontFamily: "Manrope_400Regular",
       ...typography.base,
       color: c.foreground,
       lineHeight: 24,

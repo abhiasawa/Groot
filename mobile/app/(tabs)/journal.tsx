@@ -1,54 +1,51 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import {
   View,
   Text,
   ScrollView,
-  FlatList,
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
-  Pressable,
-  TextInput,
   Modal,
+  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Animated, { FadeIn } from "react-native-reanimated";
-import { Search, X, BookOpen } from "lucide-react-native";
+import {
+  BookOpen,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  X,
+} from "lucide-react-native";
 
 import { useTheme } from "../../lib/theme/provider";
-import { useMemories, type MemoriesParams } from "../../lib/api/queries";
-import { getMoodColorFromName } from "../../constants/mood";
+import {
+  useMemories,
+  useCalendarDots,
+  type MemoriesParams,
+} from "../../lib/api/queries";
 import { typography } from "../../constants/typography";
 import type { Memory } from "../../../shared/types/api";
-
-import { GlassCard } from "../../components/ui/glass-card";
 import { GradientBackground } from "../../components/ui/gradient-background";
+import { GlassCard } from "../../components/ui/glass-card";
 import { PressScale } from "../../components/ui/press-scale";
 import { PillBadge } from "../../components/ui/pill-badge";
 import { MediaPlayer } from "../../components/ui/media-player";
+import { SearchInput } from "../../components/ui/search-input";
 
-// ── Constants ────────────────────────────────
-
-const TYPE_FILTERS = [
+const FILTERS = [
   { key: "all", label: "All" },
   { key: "text", label: "Text" },
   { key: "audio", label: "Voice" },
   { key: "image", label: "Photo" },
 ] as const;
 
-const PAGE_SIZE = 20;
+const VIEW_MODES = [
+  { key: "timeline", label: "Timeline" },
+  { key: "calendar", label: "Calendar" },
+] as const;
 
-// ── Helpers ──────────────────────────────────
-
-function formatTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-}
-
-function formatDateHeading(dateStr: string): string {
+function formatDateHeading(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("en-US", {
     weekday: "long",
     month: "short",
@@ -56,709 +53,525 @@ function formatDateHeading(dateStr: string): string {
   });
 }
 
-function getTypeBadge(type: string): { label: string; icon: string } {
-  switch (type) {
-    case "text":
-      return { label: "Text", icon: "text" };
-    case "audio":
-      return { label: "Voice", icon: "audio" };
-    case "image":
-      return { label: "Photo", icon: "image" };
-    default:
-      return { label: type, icon: "text" };
-  }
+function formatTime(dateStr: string) {
+  return new Date(dateStr).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
-function getMoodFromMetadata(memory: Memory): string | null {
-  if (memory.metadata && typeof memory.metadata === "object") {
-    const meta = memory.metadata as Record<string, unknown>;
-    const detectedMood = meta.detectedMood;
-    const mood = meta.mood;
-    if (typeof detectedMood === "string") return detectedMood;
-    if (typeof mood === "string") return mood;
-  }
-  return null;
+function monthKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
-
-// ── Component ────────────────────────────────
 
 export default function JournalScreen() {
   const { colors } = useTheme();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilter, setActiveFilter] = useState<string>("all");
-  const [offset, setOffset] = useState(0);
-  const [memoryPages, setMemoryPages] = useState<Memory[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
+  const [query, setQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState<(typeof FILTERS)[number]["key"]>("all");
+  const [viewMode, setViewMode] = useState<(typeof VIEW_MODES)[number]["key"]>("timeline");
+  const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
 
   const params: MemoriesParams = useMemo(
     () => ({
-      q: searchQuery || undefined,
+      q: query || undefined,
       type: activeFilter === "all" ? undefined : activeFilter,
-      limit: PAGE_SIZE,
-      offset,
+      date: selectedDate,
+      limit: 100,
     }),
-    [searchQuery, activeFilter, offset],
+    [query, activeFilter, selectedDate],
   );
 
   const { data, isLoading, isRefetching, refetch } = useMemories(params);
+  const { data: dotData } = useCalendarDots(monthKey(calendarMonth));
 
   const onRefresh = useCallback(() => {
-    setMemoryPages([]);
-    setTotalCount(0);
-    setOffset(0);
     refetch();
   }, [refetch]);
 
-  // This effect synchronizes paginated query results into a merged local list.
-  // We intentionally append/replace state here when network data changes.
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    if (!data) return;
-
-    setTotalCount(data.total ?? 0);
-
-    if (offset === 0) {
-      setMemoryPages(data.memories);
-      return;
+  const memories = data?.memories ?? [];
+  const grouped = useMemo(() => {
+    const groups = new Map<string, Memory[]>();
+    for (const memory of memories) {
+      const dateLabel = formatDateHeading(memory.created_at);
+      const list = groups.get(dateLabel);
+      if (list) list.push(memory);
+      else groups.set(dateLabel, [memory]);
     }
-
-    setMemoryPages((prev) => {
-      const existingIds = new Set(prev.map((m) => m.id));
-      const next = data.memories.filter((m) => !existingIds.has(m.id));
-      return next.length > 0 ? [...prev, ...next] : prev;
-    });
-  }, [data, offset]);
-  /* eslint-enable react-hooks/set-state-in-effect */
-
-  const sortedMemories = useMemo(
-    () =>
-      [...memoryPages].sort(
-        (a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-      ),
-    [memoryPages],
-  );
-
-  const hasMore = memoryPages.length < totalCount;
-
-  const loadMore = useCallback(() => {
-    if (hasMore && !isLoading && !isRefetching) {
-      setOffset((prev) => prev + PAGE_SIZE);
-    }
-  }, [hasMore, isLoading, isRefetching]);
-
-  const clearSearch = useCallback(() => {
-    setMemoryPages([]);
-    setTotalCount(0);
-    setSearchQuery("");
-    setOffset(0);
-  }, []);
-
-  const handleFilterChange = useCallback((key: string) => {
-    setMemoryPages([]);
-    setTotalCount(0);
-    setActiveFilter(key);
-    setOffset(0);
-  }, []);
-
-  const closeMemoryDetail = useCallback(() => {
-    setSelectedMemory(null);
-  }, []);
+    return [...groups.entries()];
+  }, [memories]);
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <SafeAreaView style={styles.safe}>
       <GradientBackground>
-        {/* Header */}
-        <View style={styles.headerContainer}>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>
-            Journal
-          </Text>
-        </View>
-
-        {/* Search bar */}
-        <View style={styles.searchContainer}>
-          <View
-            style={[
-              styles.searchBar,
-              {
-                backgroundColor: colors.glassSurface,
-                borderColor: colors.glassBorder,
-              },
-            ]}
-          >
-            <Search
-              size={16}
-              color={colors.mutedForeground}
-              strokeWidth={1.5}
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
             />
-            <TextInput
-              style={[styles.searchInput, { color: colors.foreground }]}
-              placeholder="Search memories..."
-              placeholderTextColor={colors.mutedForeground}
-              value={searchQuery}
-              onChangeText={(text) => {
-                setMemoryPages([]);
-                setTotalCount(0);
-                setSearchQuery(text);
-                setOffset(0);
-              }}
-              returnKeyType="search"
-            />
-            {searchQuery.length > 0 && (
-              <Pressable onPress={clearSearch} hitSlop={8}>
-                <X
-                  size={16}
-                  color={colors.mutedForeground}
-                  strokeWidth={1.5}
-                />
-              </Pressable>
-            )}
+          }
+        >
+          <View style={styles.header}>
+            <Text style={[styles.pageTitle, { color: colors.foreground }]}>Journal</Text>
+            <Text style={[styles.pageSubtitle, { color: colors.mutedForeground }]}>
+              Private timeline • {memories.length} entries
+            </Text>
+            <View style={styles.headerMetaRow}>
+              <PillBadge label="Feed View" small />
+              {selectedDate ? <PillBadge label="Date Filtered" small /> : null}
+            </View>
           </View>
-        </View>
 
-        {/* Type filter chips */}
-        <View style={styles.filterRow}>
-          {TYPE_FILTERS.map((filter) => {
-            const active = activeFilter === filter.key;
-            return (
-              <PressScale
-                key={filter.key}
-                onPress={() => handleFilterChange(filter.key)}
-                scale={0.95}
-              >
+          <SearchInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search by memory, person, place..."
+          />
+
+          <View style={styles.filtersRow}>
+            {VIEW_MODES.map((mode) => (
+              <PressScale key={mode.key} onPress={() => setViewMode(mode.key)}>
                 <PillBadge
-                  label={filter.label}
-                  color={active ? colors.primary : colors.glassSurface}
-                  textColor={
-                    active ? colors.primaryForeground : colors.mutedForeground
-                  }
+                  label={mode.label}
+                  color={viewMode === mode.key ? colors.primary : colors.glassSurface}
+                  textColor={viewMode === mode.key ? colors.primaryForeground : colors.mutedForeground}
                 />
               </PressScale>
-            );
-          })}
-        </View>
-
-        {/* Content */}
-        {isLoading && offset === 0 ? (
-          <View style={styles.center}>
-            <ActivityIndicator size="large" color={colors.primary} />
+            ))}
           </View>
-        ) : memoryPages.length === 0 ? (
-          <ScrollView
-            contentContainerStyle={styles.emptyScrollContent}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefetching}
-                onRefresh={onRefresh}
-                tintColor={colors.primary}
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRail}>
+            {FILTERS.map((filter) => (
+              <PressScale key={filter.key} onPress={() => setActiveFilter(filter.key)} scale={0.96}>
+                <PillBadge
+                  label={filter.label}
+                  color={activeFilter === filter.key ? colors.secondaryForeground : colors.glassSurface}
+                  textColor={activeFilter === filter.key ? "#FFFFFF" : colors.mutedForeground}
+                  small
+                />
+              </PressScale>
+            ))}
+          </ScrollView>
+
+          {viewMode === "calendar" ? (
+            <CalendarSection
+              month={calendarMonth}
+              onMonthChange={setCalendarMonth}
+              markedDates={new Set(dotData?.dates ?? [])}
+              selectedDate={selectedDate}
+              onSelectDate={(date) => setSelectedDate((prev) => (prev === date ? undefined : date))}
+            />
+          ) : selectedDate ? (
+            <View style={styles.selectedDateRow}>
+              <PillBadge
+                label={new Date(`${selectedDate}T12:00:00`).toLocaleDateString("en-US", {
+                  month: "long",
+                  day: "numeric",
+                })}
+                color={colors.secondary}
+                textColor={colors.secondaryForeground}
               />
-            }
-          >
-            <GlassCard delay={100} padding={32}>
+              <PressScale onPress={() => setSelectedDate(undefined)} haptic={false}>
+                <PillBadge label="Clear" small />
+              </PressScale>
+            </View>
+          ) : null}
+
+          {isLoading ? (
+            <View style={styles.loadingWrap}>
+              <ActivityIndicator color={colors.primary} size="large" />
+            </View>
+          ) : memories.length === 0 ? (
+            <GlassCard style={styles.emptyCard} padding={26}>
               <View style={styles.emptyInner}>
-                <View
-                  style={[
-                    styles.emptyIconCircle,
-                    { backgroundColor: colors.glassSurface },
-                  ]}
-                >
-                  <BookOpen
-                    size={32}
-                    color={colors.mutedForeground}
-                    strokeWidth={1.2}
-                  />
-                </View>
-                <Text
-                  style={[styles.emptyTitle, { color: colors.foreground }]}
-                >
-                  No entries yet
-                </Text>
-                <Text
-                  style={[
-                    styles.emptySubtitle,
-                    { color: colors.mutedForeground },
-                  ]}
-                >
-                  {searchQuery
-                    ? "No memories match your search. Try different keywords."
-                    : "Your journal entries will appear here as you chat with Groot."}
+                <BookOpen size={34} color={colors.mutedForeground} strokeWidth={1.5} />
+                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No entries found</Text>
+                <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>
+                  Try another search or clear filters to view more journal memories.
                 </Text>
               </View>
             </GlassCard>
-          </ScrollView>
-        ) : (
-          <Animated.View entering={FadeIn.duration(400)} style={styles.flex}>
-            <FlatList
-              data={sortedMemories}
-              keyExtractor={(item) => item.id}
-              contentContainerStyle={styles.listContent}
-              showsVerticalScrollIndicator={false}
-              onEndReached={loadMore}
-              onEndReachedThreshold={0.2}
-              renderItem={({ item, index }) => {
-                const mood = getMoodFromMetadata(item);
-                const moodColor = mood
-                  ? getMoodColorFromName(mood, colors)
-                  : undefined;
-                const badge = getTypeBadge(item.message_type);
-                const dateLabel = formatDateHeading(item.created_at);
-                const previous = index > 0 ? sortedMemories[index - 1] : null;
-                const previousDateLabel = previous
-                  ? formatDateHeading(previous.created_at)
-                  : null;
-                const showDateHeading = previousDateLabel !== dateLabel;
-                const next = index < sortedMemories.length - 1
-                  ? sortedMemories[index + 1]
-                  : null;
-                const nextDateLabel = next
-                  ? formatDateHeading(next.created_at)
-                  : null;
-                const isLastInDateGroup = nextDateLabel !== dateLabel;
-
-                return (
-                  <View
-                    style={
-                      isLastInDateGroup
-                        ? styles.entryRowLastInGroup
-                        : styles.entryRow
-                    }
-                  >
-                    {showDateHeading && (
-                      <Text
-                        style={[styles.dateHeading, { color: colors.mutedForeground }]}
-                      >
-                        {dateLabel}
-                      </Text>
-                    )}
-
-                    <PressScale
-                      scale={0.985}
-                      onPress={() => setSelectedMemory(item)}
-                    >
-                      <GlassCard
-                        accentColor={moodColor}
-                        delay={Math.min(index * 40, 300)}
-                        padding={16}
-                      >
-                        {/* Card header row */}
-                        <View style={styles.entryHeader}>
-                          <View style={styles.entryHeaderLeft}>
-                            {mood && (
-                              <View
-                                style={[
-                                  styles.moodDot,
-                                  {
-                                    backgroundColor: moodColor,
-                                    shadowColor: moodColor,
-                                  },
-                                ]}
-                              />
-                            )}
-                            <Text
-                              style={[
-                                styles.entryTime,
-                                { color: colors.mutedForeground },
-                              ]}
-                            >
-                              {formatTime(item.created_at)}
-                            </Text>
-                          </View>
-                          <PillBadge label={badge.label} small />
-                        </View>
-
-                        {/* Inline media (image thumbnail / audio indicator) */}
-                        {item.media_url && (item.media_url.startsWith("storage:") || item.media_url.startsWith("media:")) && (item.message_type === "image" || item.message_type === "audio") && (
-                          <MediaPlayer mediaUrl={item.media_url} messageType={item.message_type} />
-                        )}
-
-                        {/* Content — for voice messages, show transcription as main content */}
-                        {item.message_type === "audio" && !item.content && item.media_description ? (
-                          <Text
-                            style={[
-                              styles.entryContent,
-                              { color: colors.foreground },
-                            ]}
-                            numberOfLines={3}
-                          >
-                            {item.media_description}
-                          </Text>
-                        ) : (
-                          <>
-                            {(item.content ?? "").length > 0 && (
-                              <Text
-                                style={[
-                                  styles.entryContent,
-                                  { color: colors.foreground },
-                                ]}
-                                numberOfLines={3}
-                              >
-                                {item.content}
-                              </Text>
-                            )}
-                            {/* Media description (for image captions, etc.) */}
-                            {item.media_description && item.message_type !== "audio" && (
-                              <Text
-                                style={[
-                                  styles.mediaDesc,
-                                  { color: colors.mutedForeground },
-                                ]}
-                                numberOfLines={2}
-                              >
-                                {item.media_description}
-                              </Text>
-                            )}
-                          </>
-                        )}
-                      </GlassCard>
-                    </PressScale>
-                  </View>
-                );
-              }}
-              ListFooterComponent={
-                isLoading && offset > 0 ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={colors.primary}
-                    style={styles.loadingMore}
-                  />
-                ) : !hasMore && memoryPages.length > 0 ? (
-                  <Text style={[styles.endText, { color: colors.mutedForeground }]}>
-                    {totalCount} {totalCount === 1 ? "memory" : "memories"} total
-                  </Text>
-                ) : null
-              }
-            />
-          </Animated.View>
-        )}
-
-        <Modal
-          visible={!!selectedMemory}
-          transparent
-          animationType="fade"
-          onRequestClose={closeMemoryDetail}
-        >
-          <View style={styles.modalOverlay}>
-            <Pressable
-              style={styles.modalBackdrop}
-              onPress={closeMemoryDetail}
-            />
-            <View style={styles.modalCardWrap}>
-              <GlassCard padding={18} style={styles.modalCard}>
-                <View style={styles.modalHeader}>
-                  <Text style={[styles.modalTitle, { color: colors.foreground }]}>
-                    Journal Entry
-                  </Text>
+          ) : (
+            grouped.map(([dateLabel, entries]) => (
+              <View key={dateLabel} style={styles.groupWrap}>
+                <Text style={[styles.groupTitle, { color: colors.mutedForeground }]}>{dateLabel}</Text>
+                {entries.map((memory, index) => (
                   <PressScale
-                    onPress={closeMemoryDetail}
-                    scale={0.94}
-                    haptic={false}
-                    style={styles.modalCloseButton}
+                    key={memory.id}
+                    onPress={() => setSelectedMemory(memory)}
+                    style={index < entries.length - 1 ? styles.entryGap : undefined}
+                    scale={0.987}
                   >
-                    <X size={18} color={colors.mutedForeground} strokeWidth={2} />
-                  </PressScale>
-                </View>
-
-                {selectedMemory ? (
-                  <ScrollView
-                    style={styles.modalBody}
-                    showsVerticalScrollIndicator={false}
-                  >
-                    <View style={styles.modalMetaRow}>
-                      <PillBadge
-                        label={getTypeBadge(selectedMemory.message_type).label}
-                        small
-                      />
-                      <Text
-                        style={[
-                          styles.modalMetaText,
-                          { color: colors.mutedForeground },
-                        ]}
-                      >
-                        {new Date(selectedMemory.created_at).toLocaleString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                          hour: "numeric",
-                          minute: "2-digit",
-                        })}
-                      </Text>
-                    </View>
-
-                    {/* Media player — audio playback or image display */}
-                    {selectedMemory.media_url &&
-                      (selectedMemory.media_url.startsWith("storage:") ||
-                        selectedMemory.media_url.startsWith("media:")) && (
-                      <View style={{ marginBottom: 14 }}>
-                        <MediaPlayer
-                          mediaUrl={selectedMemory.media_url}
-                          messageType={selectedMemory.message_type}
-                        />
+                    <GlassCard padding={14}>
+                      <View style={styles.entryHead}>
+                        <Text style={[styles.entryTime, { color: colors.mutedForeground }]}>
+                          {formatTime(memory.created_at)}
+                        </Text>
+                        <PillBadge label={memory.message_type || "Entry"} small />
                       </View>
-                    )}
 
-                    {/* For voice messages: show transcription as the main content */}
-                    {selectedMemory.message_type === "audio" && !selectedMemory.content && selectedMemory.media_description ? (
-                      <Text style={[styles.modalContent, { color: colors.foreground }]}>
-                        {selectedMemory.media_description}
-                      </Text>
-                    ) : (
-                      <>
-                        {(selectedMemory.content ?? "").length > 0 && (
-                          <Text style={[styles.modalContent, { color: colors.foreground }]}>
-                            {selectedMemory.content}
-                          </Text>
-                        )}
+                      {memory.media_url &&
+                        (memory.media_url.startsWith("storage:") || memory.media_url.startsWith("media:")) &&
+                        (memory.message_type === "image" || memory.message_type === "audio") ? (
+                        <MediaPlayer mediaUrl={memory.media_url} messageType={memory.message_type} />
+                      ) : null}
 
-                        {selectedMemory.media_description ? (
-                          <View
-                            style={[
-                              styles.modalMediaBlock,
-                              {
-                                backgroundColor: colors.glassSurface,
-                                borderColor: colors.glassBorder,
-                              },
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.modalMediaLabel,
-                                { color: colors.mutedForeground },
-                              ]}
-                            >
-                              {selectedMemory.message_type === "image" ? "Description" : "Transcription"}
-                            </Text>
-                            <Text
-                              style={[
-                                styles.modalMediaText,
-                                { color: colors.foreground },
-                              ]}
-                            >
-                              {selectedMemory.media_description}
-                            </Text>
-                          </View>
-                        ) : null}
-                      </>
-                    )}
-                  </ScrollView>
-                ) : null}
-              </GlassCard>
-            </View>
-          </View>
-        </Modal>
+                      {(memory.content || memory.media_description) ? (
+                        <Text style={[styles.entryText, { color: colors.foreground }]} numberOfLines={3}>
+                          {memory.content || memory.media_description}
+                        </Text>
+                      ) : null}
+                    </GlassCard>
+                  </PressScale>
+                ))}
+              </View>
+            ))
+          )}
+
+          <View style={styles.bottomGap} />
+        </ScrollView>
+
+        <MemoryModal memory={selectedMemory} onClose={() => setSelectedMemory(null)} />
       </GradientBackground>
     </SafeAreaView>
   );
 }
 
-// ── Styles ───────────────────────────────────
+function CalendarSection({
+  month,
+  onMonthChange,
+  markedDates,
+  selectedDate,
+  onSelectDate,
+}: {
+  month: Date;
+  onMonthChange: (d: Date) => void;
+  markedDates: Set<string>;
+  selectedDate?: string;
+  onSelectDate: (d: string) => void;
+}) {
+  const { colors } = useTheme();
+  const year = month.getFullYear();
+  const monthIndex = month.getMonth();
+  const firstWeekday = new Date(year, monthIndex, 1).getDay();
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  const mondayOffset = firstWeekday === 0 ? 6 : firstWeekday - 1;
+  const today = new Date().toISOString().slice(0, 10);
+
+  const cells: Array<{ day: number; date: string } | null> = [];
+  for (let i = 0; i < mondayOffset; i++) cells.push(null);
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    cells.push({ day, date });
+  }
+
+  return (
+    <GlassCard padding={16} style={styles.calendarCard}>
+      <View style={styles.calendarHeader}>
+        <PressScale onPress={() => onMonthChange(new Date(year, monthIndex - 1, 1))} haptic={false}>
+          <ChevronLeft size={18} color={colors.foreground} strokeWidth={1.8} />
+        </PressScale>
+        <View style={styles.calendarTitleRow}>
+          <CalendarDays size={15} color={colors.primary} strokeWidth={1.8} />
+          <Text style={[styles.calendarTitle, { color: colors.foreground }]}>
+            {month.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+          </Text>
+        </View>
+        <PressScale onPress={() => onMonthChange(new Date(year, monthIndex + 1, 1))} haptic={false}>
+          <ChevronRight size={18} color={colors.foreground} strokeWidth={1.8} />
+        </PressScale>
+      </View>
+
+      <View style={styles.weekLabelRow}>
+        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+          <Text key={day} style={[styles.weekLabel, { color: colors.mutedForeground }]}>
+            {day}
+          </Text>
+        ))}
+      </View>
+
+      <View style={styles.calendarGrid}>
+        {cells.map((cell, idx) => {
+          if (!cell) return <View key={`empty-${idx}`} style={styles.dayCell} />;
+          const isSelected = selectedDate === cell.date;
+          const hasEntry = markedDates.has(cell.date);
+          const isToday = today === cell.date;
+
+          return (
+            <PressScale key={cell.date} onPress={() => onSelectDate(cell.date)} haptic={false} scale={0.96}>
+              <View
+                style={[
+                  styles.dayCell,
+                  {
+                    backgroundColor: isSelected ? colors.primary : colors.glassSurface,
+                    borderColor: isToday ? colors.primary : "transparent",
+                    borderWidth: isToday ? 1.5 : 0,
+                  },
+                ]}
+              >
+                <Text style={[styles.dayText, { color: isSelected ? colors.primaryForeground : colors.foreground }]}>
+                  {cell.day}
+                </Text>
+                {hasEntry ? (
+                  <View
+                    style={[
+                      styles.dayDot,
+                      {
+                        backgroundColor: isSelected ? colors.primaryForeground : colors.accent,
+                      },
+                    ]}
+                  />
+                ) : null}
+              </View>
+            </PressScale>
+          );
+        })}
+      </View>
+    </GlassCard>
+  );
+}
+
+function MemoryModal({ memory, onClose }: { memory: Memory | null; onClose: () => void }) {
+  const { colors } = useTheme();
+  if (!memory) return null;
+
+  return (
+    <Modal transparent animationType="fade" visible={!!memory} onRequestClose={onClose}>
+      <View style={styles.modalOverlay}>
+        <Pressable style={styles.modalBackdrop} onPress={onClose} />
+        <View style={styles.modalWrap}>
+          <GlassCard padding={18}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.foreground }]}>Journal Entry</Text>
+              <PressScale onPress={onClose} haptic={false}>
+                <View style={styles.modalClose}>
+                  <X size={18} color={colors.mutedForeground} strokeWidth={2} />
+                </View>
+              </PressScale>
+            </View>
+
+            <Text style={[styles.modalMeta, { color: colors.mutedForeground }]}>
+              {new Date(memory.created_at).toLocaleString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+              })}
+            </Text>
+
+            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              {memory.media_url &&
+              (memory.media_url.startsWith("storage:") || memory.media_url.startsWith("media:")) ? (
+                <View style={styles.modalMedia}>
+                  <MediaPlayer mediaUrl={memory.media_url} messageType={memory.message_type} />
+                </View>
+              ) : null}
+              <Text style={[styles.modalContent, { color: colors.foreground }]}>
+                {memory.content || memory.media_description || "No text available"}
+              </Text>
+            </ScrollView>
+          </GlassCard>
+        </View>
+      </View>
+    </Modal>
+  );
+}
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
+  safe: { flex: 1 },
+  scroll: {
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 48,
   },
-  flex: {
-    flex: 1,
+  header: {
+    marginBottom: 14,
   },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 4,
-  },
-  headerTitle: {
-    fontFamily: "Inter_700Bold",
+  pageTitle: {
+    fontFamily: "Sora_700Bold",
     ...typography.title,
   },
-  searchContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 8,
-  },
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    height: 44,
-    gap: 10,
-  },
-  searchInput: {
-    flex: 1,
-    fontFamily: "Inter_400Regular",
+  pageSubtitle: {
+    fontFamily: "Manrope_400Regular",
     ...typography.sm,
-    padding: 0,
+    marginTop: 2,
   },
-  filterRow: {
+  headerMetaRow: {
+    marginTop: 8,
     flexDirection: "row",
-    paddingHorizontal: 20,
-    paddingBottom: 16,
     gap: 8,
   },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingTop: 0,
-    paddingBottom: 40,
+  filtersRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 12,
+    flexWrap: "wrap",
   },
-  dateHeading: {
-    fontFamily: "Inter_600SemiBold",
+  filterRail: {
+    marginTop: 10,
+    gap: 8,
+    paddingRight: 8,
+  },
+  selectedDateRow: {
+    marginTop: 14,
+    flexDirection: "row",
+    gap: 8,
+  },
+  loadingWrap: {
+    paddingTop: 90,
+    alignItems: "center",
+  },
+  emptyCard: {
+    marginTop: 26,
+  },
+  emptyInner: {
+    alignItems: "center",
+  },
+  emptyTitle: {
+    fontFamily: "Sora_600SemiBold",
+    ...typography.lg,
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  emptySubtitle: {
+    fontFamily: "Manrope_400Regular",
+    ...typography.sm,
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  groupWrap: {
+    marginTop: 24,
+  },
+  groupTitle: {
+    fontFamily: "Manrope_600SemiBold",
     ...typography.xs,
-    letterSpacing: 0.4,
     marginBottom: 10,
-    paddingHorizontal: 2,
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
   },
-  entryRow: {
-    marginBottom: 16,
+  entryGap: {
+    marginBottom: 10,
   },
-  entryRowLastInGroup: {
-    marginBottom: 22,
-  },
-  entryHeader: {
+  entryHead: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 10,
   },
-  entryHeaderLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  moodDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    // Glow effect on Android via elevation is limited,
-    // but the shadowColor on iOS adds a soft halo
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 4,
-    elevation: 2,
-  },
   entryTime: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_500Medium",
     ...typography.xs,
   },
-  entryContent: {
-    fontFamily: "Inter_400Regular",
+  entryText: {
+    fontFamily: "Manrope_400Regular",
     ...typography.sm,
     lineHeight: 22,
   },
-  mediaDesc: {
-    fontFamily: "Inter_400Regular",
-    ...typography.xs,
-    fontStyle: "italic",
-    marginTop: 8,
+  bottomGap: {
+    height: 90,
   },
-  loadingMore: {
-    paddingVertical: 20,
+  calendarCard: {
+    marginTop: 14,
   },
-  endText: {
-    fontFamily: "Inter_400Regular",
-    ...typography.xs,
-    textAlign: "center",
-    paddingVertical: 16,
-  },
-  emptyScrollContent: {
-    flexGrow: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 32,
-  },
-  emptyInner: {
-    alignItems: "center",
-  },
-  emptyIconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  emptyTitle: {
-    fontFamily: "Inter_600SemiBold",
-    ...typography.lg,
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontFamily: "Inter_400Regular",
-    ...typography.sm,
-    textAlign: "center",
-    lineHeight: 22,
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "center",
-    paddingHorizontal: 20,
-  },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(8, 10, 16, 0.66)",
-  },
-  modalCardWrap: {
-    maxHeight: "76%",
-  },
-  modalCard: {
-    borderRadius: 18,
-  },
-  modalHeader: {
+  calendarHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 12,
   },
+  calendarTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  calendarTitle: {
+    fontFamily: "Sora_600SemiBold",
+    ...typography.base,
+  },
+  weekLabelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  weekLabel: {
+    width: "14.2%",
+    textAlign: "center",
+    fontFamily: "Manrope_500Medium",
+    ...typography.xs,
+  },
+  calendarGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+  dayCell: {
+    width: "13.5%",
+    aspectRatio: 1,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  dayText: {
+    fontFamily: "Manrope_600SemiBold",
+    ...typography.xs,
+  },
+  dayDot: {
+    marginTop: 3,
+    width: 4,
+    height: 4,
+    borderRadius: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 18,
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(5, 12, 28, 0.68)",
+  },
+  modalWrap: {
+    maxHeight: "80%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
   modalTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Sora_600SemiBold",
     ...typography.lg,
   },
-  modalCloseButton: {
+  modalClose: {
     width: 30,
     height: 30,
     borderRadius: 15,
-    justifyContent: "center",
     alignItems: "center",
+    justifyContent: "center",
+  },
+  modalMeta: {
+    fontFamily: "Manrope_400Regular",
+    ...typography.xs,
+    marginBottom: 12,
   },
   modalBody: {
     maxHeight: "100%",
   },
-  modalMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    marginBottom: 14,
-  },
-  modalMetaText: {
-    fontFamily: "Inter_400Regular",
-    ...typography.xs,
+  modalMedia: {
+    marginBottom: 12,
   },
   modalContent: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.base,
     lineHeight: 24,
-  },
-  modalMediaBlock: {
-    marginTop: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
-  },
-  modalMediaLabel: {
-    fontFamily: "Inter_500Medium",
-    ...typography.xs,
-    marginBottom: 6,
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-  },
-  modalMediaText: {
-    fontFamily: "Inter_400Regular",
-    ...typography.sm,
-    lineHeight: 20,
   },
 });

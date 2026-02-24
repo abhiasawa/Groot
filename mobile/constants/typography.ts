@@ -1,53 +1,53 @@
 export const typography = {
   hero: {
-    fontSize: 32,
-    lineHeight: 38,
-    letterSpacing: -0.5,
+    fontSize: 36,
+    lineHeight: 42,
+    letterSpacing: -0.8,
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
+    lineHeight: 34,
+    letterSpacing: -0.5,
+  },
+  xl: {
+    fontSize: 22,
     lineHeight: 30,
     letterSpacing: -0.3,
   },
-  xl: {
-    fontSize: 20,
-    lineHeight: 28,
-    letterSpacing: -0.2,
-  },
   lg: {
-    fontSize: 18,
-    lineHeight: 26,
-    letterSpacing: -0.1,
+    fontSize: 19,
+    lineHeight: 27,
+    letterSpacing: -0.2,
   },
   base: {
     fontSize: 16,
-    lineHeight: 24,
+    lineHeight: 23,
     letterSpacing: 0,
   },
   sm: {
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 21,
     letterSpacing: 0,
   },
   xs: {
     fontSize: 12,
-    lineHeight: 16,
+    lineHeight: 17,
     letterSpacing: 0.1,
   },
   "2xl": {
-    fontSize: 24,
-    lineHeight: 32,
-    letterSpacing: -0.3,
+    fontSize: 26,
+    lineHeight: 34,
+    letterSpacing: -0.45,
   },
   "3xl": {
-    fontSize: 30,
-    lineHeight: 36,
-    letterSpacing: -0.5,
+    fontSize: 32,
+    lineHeight: 39,
+    letterSpacing: -0.65,
   },
   caption: {
     fontSize: 11,
     lineHeight: 14,
-    letterSpacing: 0.5,
+    letterSpacing: 0.45,
   },
 } as const;
 

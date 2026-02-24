@@ -264,12 +264,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   pageTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Sora_700Bold",
     ...typography.hero,
     marginBottom: 4,
   },
   pageSubtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.sm,
   },
   personCardSpacing: {
@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
     marginRight: 14,
   },
   avatarText: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Sora_700Bold",
     ...typography.sm,
     color: "#FFFFFF",
   },
@@ -296,11 +296,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   personName: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Sora_600SemiBold",
     ...typography.base,
   },
   personRelationship: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.xs,
     marginTop: 1,
   },
@@ -316,11 +316,11 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   metaText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.xs,
   },
   metaSep: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.xs,
   },
   emptyContainer: {
@@ -338,13 +338,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   emptyTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Sora_700Bold",
     ...typography.title,
     textAlign: "center",
     marginBottom: 12,
   },
   emptySubtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.base,
     textAlign: "center",
     lineHeight: 24,

@@ -22,7 +22,7 @@ export function PillBadge({ label, color, textColor, small, style }: PillBadgePr
         styles.pill,
         small && styles.pillSmall,
         {
-          backgroundColor: color ?? colors.glassSurface,
+          backgroundColor: color ?? colors.secondary,
           borderColor: colors.glassBorder,
         },
         style,
@@ -45,7 +45,7 @@ export function PillBadge({ label, color, textColor, small, style }: PillBadgePr
 const styles = StyleSheet.create({
   pill: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: 100,
     borderWidth: 1,
   },
@@ -54,9 +54,9 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   text: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 13,
-    letterSpacing: 0.1,
+    fontFamily: "Manrope_600SemiBold",
+    fontSize: 12,
+    letterSpacing: 0.05,
   },
   textSmall: {
     fontSize: 11,

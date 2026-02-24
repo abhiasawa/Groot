@@ -339,13 +339,13 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       marginBottom: 20,
     },
     pageTitle: {
-      fontFamily: "Inter_700Bold",
+      fontFamily: "Sora_700Bold",
       ...typography.title,
       color: c.foreground,
       letterSpacing: -0.3,
     },
     pageSubtitle: {
-      fontFamily: "Inter_400Regular",
+      fontFamily: "Manrope_400Regular",
       ...typography.sm,
       color: c.mutedForeground,
       marginTop: 4,
@@ -358,7 +358,7 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
 
     // ── Hero (current mood) ──
     heroLabel: {
-      fontFamily: "Inter_400Regular",
+      fontFamily: "Manrope_400Regular",
       ...typography.sm,
       color: c.mutedForeground,
       marginBottom: 8,
@@ -374,7 +374,7 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       borderRadius: 7,
     },
     heroMoodName: {
-      fontFamily: "Inter_700Bold",
+      fontFamily: "Sora_700Bold",
       ...typography.xl,
       textTransform: "capitalize",
     },
@@ -395,7 +395,7 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       paddingVertical: 24,
     },
     emptySubtitle: {
-      fontFamily: "Inter_400Regular",
+      fontFamily: "Manrope_400Regular",
       ...typography.sm,
       color: c.mutedForeground,
       textAlign: "center",
@@ -414,14 +414,14 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       borderRadius: 4,
     },
     legendLabel: {
-      fontFamily: "Inter_400Regular",
+      fontFamily: "Manrope_400Regular",
       ...typography.xs,
       color: c.mutedForeground,
     },
 
     // ── Weekly Trend ──
     trendText: {
-      fontFamily: "Inter_400Regular",
+      fontFamily: "Manrope_400Regular",
       ...typography.sm,
       color: c.foreground,
       lineHeight: 22,
@@ -443,12 +443,12 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       marginBottom: 4,
     },
     trendWeekScore: {
-      fontFamily: "Inter_600SemiBold",
+      fontFamily: "Sora_600SemiBold",
       ...typography.xs,
       color: c.foreground,
     },
     trendWeekLabel: {
-      fontFamily: "Inter_400Regular",
+      fontFamily: "Manrope_400Regular",
       fontSize: 10,
       lineHeight: 14,
       color: c.mutedForeground,
@@ -476,7 +476,7 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       borderRadius: 4,
     },
     distLabel: {
-      fontFamily: "Inter_500Medium",
+      fontFamily: "Manrope_500Medium",
       ...typography.xs,
       color: c.foreground,
     },
@@ -492,7 +492,7 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       borderRadius: 6,
     },
     distPct: {
-      fontFamily: "Inter_500Medium",
+      fontFamily: "Manrope_500Medium",
       ...typography.xs,
       color: c.mutedForeground,
       width: 34,

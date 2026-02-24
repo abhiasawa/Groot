@@ -35,7 +35,7 @@ export function AnimatedStat({ value, label, icon }: AnimatedStatProps) {
         {value}
       </Text>
       <Text style={[styles.label, { color: colors.mutedForeground }]}>
-        {label.toUpperCase()}
+        {label}
       </Text>
     </Animated.View>
   );
@@ -43,20 +43,22 @@ export function AnimatedStat({ value, label, icon }: AnimatedStatProps) {
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 4,
   },
   iconWrap: {
     marginBottom: 2,
   },
   value: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 28,
-    letterSpacing: -0.5,
+    fontFamily: "Sora_700Bold",
+    fontSize: 30,
+    lineHeight: 34,
+    letterSpacing: -0.7,
   },
   label: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 10,
-    letterSpacing: 1.2,
+    fontFamily: "Manrope_500Medium",
+    fontSize: 13,
+    lineHeight: 16,
+    letterSpacing: 0.1,
   },
 });

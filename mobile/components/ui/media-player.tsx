@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   durationText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.xs,
   },
 
@@ -390,7 +390,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   imagePlaceholderText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.xs,
   },
 });

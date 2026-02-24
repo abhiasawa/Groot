@@ -349,19 +349,19 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Sora_700Bold",
     ...typography.hero,
     marginBottom: 4,
   },
   subtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.base,
   },
   form: {
     gap: 16,
   },
   inputLabel: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Manrope_500Medium",
     ...typography.sm,
   },
   input: {
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     paddingHorizontal: 16,
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.base,
   },
   otpHeader: {
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   otpTitle: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Sora_600SemiBold",
     ...typography.lg,
   },
   otpDescRow: {
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   otpBody: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.sm,
     lineHeight: 20,
     flex: 1,
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     paddingHorizontal: 16,
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Sora_700Bold",
     fontSize: 28,
     letterSpacing: 10,
     textAlign: "center",
@@ -409,21 +409,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   buttonText: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Sora_600SemiBold",
     ...typography.base,
   },
   errorText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.xs,
     textAlign: "center",
   },
   resendLink: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Manrope_500Medium",
     ...typography.sm,
     textAlign: "center",
   },
   footer: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.xs,
     textAlign: "center",
     marginTop: 24,

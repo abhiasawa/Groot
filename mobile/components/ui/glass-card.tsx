@@ -49,6 +49,10 @@ export function GlassCard({
             { backgroundColor: colors.glassSurface, padding },
           ]}
         >
+          <View
+            pointerEvents="none"
+            style={[styles.highlightStrip, { backgroundColor: colors.glassHighlight }]}
+          />
           {children}
         </View>
       ) : (
@@ -57,6 +61,10 @@ export function GlassCard({
           tint={resolvedMode === "dark" ? "dark" : "light"}
           style={[styles.blur, { padding }]}
         >
+          <View
+            pointerEvents="none"
+            style={[styles.highlightStrip, { backgroundColor: colors.glassHighlight }]}
+          />
           {children}
         </BlurView>
       )}
@@ -66,19 +74,33 @@ export function GlassCard({
 
 const styles = StyleSheet.create({
   outer: {
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
     overflow: "hidden",
     // Shadow
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 16,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.8,
+    shadowRadius: 24,
+    elevation: 10,
   },
   blur: {
     overflow: "hidden",
+    position: "relative",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.26)",
   },
   androidFallback: {
     overflow: "hidden",
+    position: "relative",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.18)",
+  },
+  highlightStrip: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    height: 1,
+    opacity: 0.45,
   },
 });

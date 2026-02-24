@@ -37,8 +37,8 @@ export function SearchInput({
       style={[
         styles.container,
         {
-          backgroundColor: colors.secondary,
-          borderColor: colors.border,
+          backgroundColor: colors.glassSurface,
+          borderColor: colors.glassBorder,
         },
         style,
       ]}
@@ -86,18 +86,18 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 10,
+    borderRadius: 14,
     borderWidth: 1,
-    paddingHorizontal: 12,
-    height: 44,
+    paddingHorizontal: 14,
+    height: 48,
   },
   icon: {
     marginRight: 8,
   },
   input: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
-    fontSize: 15,
+    fontFamily: "Manrope_400Regular",
+    fontSize: 14,
     lineHeight: 20,
     paddingVertical: 0,
   },

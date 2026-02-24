@@ -10,15 +10,18 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import { LinearGradient } from "expo-linear-gradient";
 import {
+  Bell,
   Brain,
   CheckSquare,
-  Bell,
+  ChevronRight,
   Flame,
   Sparkles,
   BookOpen,
-  ChevronRight,
-  Leaf,
+  Users,
+  HeartPulse,
+  Compass,
 } from "lucide-react-native";
 
 import { useTheme } from "../../lib/theme/provider";
@@ -33,23 +36,20 @@ import { PillBadge } from "../../components/ui/pill-badge";
 import { AnimatedStat } from "../../components/ui/animated-stat";
 import type { HomeData } from "../../../shared/types/api";
 
-// ── Helpers ──────────────────────────────────
-
-function getGreeting(): string {
+function greetingByHour() {
   const hour = new Date().getHours();
   if (hour < 12) return "Good morning";
   if (hour < 17) return "Good afternoon";
   return "Good evening";
 }
 
-function getSubGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Let's make today count.";
-  if (hour < 17) return "How's your day going?";
-  return "Time to wind down.";
+function formatDateLabel() {
+  return new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
 }
-
-// ── Component ────────────────────────────────
 
 export default function HomeScreen() {
   const { colors } = useTheme();
@@ -60,13 +60,11 @@ export default function HomeScreen() {
     refetch();
   }, [refetch]);
 
-  // ── Loading state ──────────────────────────
-
   if (isLoading) {
     return (
       <SafeAreaView style={styles.flex}>
         <GradientBackground>
-          <View style={styles.loadingContainer}>
+          <View style={styles.center}>
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
         </GradientBackground>
@@ -75,52 +73,67 @@ export default function HomeScreen() {
   }
 
   const home = data as HomeData | undefined;
-
-  // ── Empty state (no data at all) ───────────
-
   if (!home) {
     return (
       <SafeAreaView style={styles.flex}>
         <GradientBackground>
-          <View style={styles.emptyContainer}>
-            <Animated.View
-              entering={FadeIn.delay(100).duration(600)}
-              style={styles.emptyIconWrap}
-            >
-              <Leaf size={48} color={colors.primary} strokeWidth={1.2} />
-            </Animated.View>
-            <Animated.Text
-              entering={FadeIn.delay(250).duration(600)}
-              style={[styles.emptyTitle, { color: colors.foreground }]}
-            >
-              Your garden awaits
-            </Animated.Text>
-            <Animated.Text
-              entering={FadeIn.delay(400).duration(600)}
-              style={[styles.emptySubtitle, { color: colors.mutedForeground }]}
-            >
-              Send your first message to Groot on WhatsApp or Telegram to begin
-              building your second brain.
-            </Animated.Text>
+          <View style={styles.center}>
+            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+              Welcome to your Garden
+            </Text>
+            <Text style={[styles.emptyCopy, { color: colors.mutedForeground }]}>
+              Send your first message to Groot and your dashboard will begin to grow.
+            </Text>
           </View>
         </GradientBackground>
       </SafeAreaView>
     );
   }
 
-  // ── Mood data ──────────────────────────────
-
   const moodColor = home.recentMood
     ? getMoodColorFromName(home.recentMood, colors)
     : undefined;
 
-  // ── Main render ────────────────────────────
+  const statCards = [
+    {
+      label: "Memories",
+      value: home.memoriesCount ?? 0,
+      icon: <Brain size={20} color={colors.chart1} strokeWidth={1.7} />,
+      route: "/(tabs)/journal",
+    },
+    {
+      label: "Tasks",
+      value: home.pendingTasks ?? 0,
+      icon: <CheckSquare size={20} color={colors.chart2} strokeWidth={1.7} />,
+      route: "/(tabs)/tasks",
+    },
+    {
+      label: "Habits",
+      value: home.habitsCount ?? 0,
+      icon: <Flame size={20} color={colors.chart3} strokeWidth={1.7} />,
+      route: "/habits",
+    },
+    {
+      label: "People",
+      value: home.peopleCount ?? 0,
+      icon: <Users size={20} color={colors.chart5} strokeWidth={1.7} />,
+      route: "/people",
+    },
+  ] as const;
+
+  const quickActions = [
+    { label: "Journal", icon: BookOpen, route: "/(tabs)/journal" },
+    { label: "Tasks", icon: CheckSquare, route: "/(tabs)/tasks" },
+    { label: "Mood", icon: HeartPulse, route: "/(tabs)/mood" },
+    { label: "Explore", icon: Compass, route: "/(tabs)/more" },
+  ] as const;
 
   return (
     <SafeAreaView style={styles.flex}>
       <GradientBackground>
         <ScrollView
           contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
@@ -128,307 +141,239 @@ export default function HomeScreen() {
               tintColor={colors.primary}
             />
           }
-          showsVerticalScrollIndicator={false}
         >
-          {/* ── Hero Greeting ───────────────── */}
-          <Animated.View
-            entering={FadeIn.duration(700)}
-            style={styles.heroSection}
-          >
-            <Text style={[styles.greeting, { color: colors.foreground }]}>
-              {getGreeting()},
-            </Text>
-            <Text style={[styles.heroName, { color: colors.foreground }]}>
-              {home.displayName ?? "there"}
-            </Text>
-            <Text
-              style={[styles.subGreeting, { color: colors.mutedForeground }]}
-            >
-              {getSubGreeting()}
-            </Text>
+          <Animated.View entering={FadeIn.duration(520)} style={styles.headerRow}>
+            <View style={styles.headerMeta}>
+              <PillBadge
+                label={formatDateLabel()}
+                color={colors.glassSurface}
+                textColor={colors.mutedForeground}
+              />
+              <PillBadge
+                label="Daily Edit"
+                color={colors.secondary}
+                textColor={colors.secondaryForeground}
+              />
+            </View>
           </Animated.View>
 
-          {/* ── Mood Pill ──────────────────── */}
-          {home.recentMood && moodColor && (
-            <Animated.View
-              entering={FadeInDown.delay(100).duration(420)}
-              style={styles.moodSection}
+          <Animated.View entering={FadeInDown.delay(60).duration(500)}>
+            <GlassCard padding={22} accentColor={colors.primary}>
+              <Text style={[styles.greeting, { color: colors.mutedForeground }]}>
+                {greetingByHour()}
+              </Text>
+              <Text style={[styles.name, { color: colors.foreground }]}>
+                {home.displayName || "there"}
+              </Text>
+              {home.recentMood && moodColor ? (
+                <View style={styles.moodRow}>
+                  <View style={[styles.moodDot, { backgroundColor: moodColor }]} />
+                  <Text style={[styles.moodText, { color: colors.foreground }]}>
+                    Feeling {home.recentMood.toLowerCase()} lately
+                  </Text>
+                </View>
+              ) : null}
+            </GlassCard>
+          </Animated.View>
+
+          <View style={styles.section}>
+            <SectionHeader title="Quick Actions" />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.storyRail}
             >
-              <View style={styles.moodPillRow}>
-                <View
-                  style={[styles.moodDot, { backgroundColor: moodColor }]}
-                />
-                <PillBadge
-                  label={`Feeling ${home.recentMood.toLowerCase()}`}
-                  style={styles.moodPill}
-                />
-              </View>
-            </Animated.View>
-          )}
+              {quickActions.map((action, index) => {
+                const Icon = action.icon;
+                return (
+                  <PressScale
+                    key={action.label}
+                    onPress={() => router.push(action.route as never)}
+                    style={styles.storyItem}
+                  >
+                    <Animated.View entering={FadeInDown.delay(100 + index * 50).duration(340)}>
+                      <LinearGradient
+                        colors={[colors.accent, colors.primary, colors.chart4]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.storyRing}
+                      >
+                        <View style={[styles.storyInner, { backgroundColor: colors.glassSurface }]}>
+                          <Icon size={18} color={colors.foreground} strokeWidth={1.8} />
+                        </View>
+                      </LinearGradient>
+                      <Text style={[styles.storyLabel, { color: colors.foreground }]}>
+                        {action.label}
+                      </Text>
+                    </Animated.View>
+                  </PressScale>
+                );
+              })}
+            </ScrollView>
+          </View>
 
-          {/* ── Stats Grid ─────────────────── */}
-          <View style={styles.sectionSpacing}>
-            <SectionHeader title="Overview" />
-            <View style={styles.statsGrid}>
-              <PressScale
-                style={styles.statCardHalf}
-                onPress={() => router.push("/(tabs)/journal")}
-              >
-                <GlassCard delay={0} padding={16}>
-                  <AnimatedStat
-                    value={home.memoriesCount ?? 0}
-                    label="Memories"
-                    icon={
-                      <Brain
-                        size={20}
-                        color={colors.chart1}
-                        strokeWidth={1.5}
-                      />
-                    }
-                  />
-                </GlassCard>
-              </PressScale>
-
-              <PressScale
-                style={styles.statCardHalf}
-                onPress={() => router.push("/tasks" as never)}
-              >
-                <GlassCard delay={50} padding={16}>
-                  <AnimatedStat
-                    value={home.pendingTasks ?? 0}
-                    label="Tasks"
-                    icon={
-                      <CheckSquare
-                        size={20}
-                        color={colors.chart2}
-                        strokeWidth={1.5}
-                      />
-                    }
-                  />
-                </GlassCard>
-              </PressScale>
-
-              <PressScale
-                style={styles.statCardHalf}
-                onPress={() => router.push("/tasks" as never)}
-              >
-                <GlassCard delay={100} padding={16}>
-                  <AnimatedStat
-                    value={home.upcomingReminders ?? 0}
-                    label="Reminders"
-                    icon={
-                      <Bell
-                        size={20}
-                        color={colors.chart3}
-                        strokeWidth={1.5}
-                      />
-                    }
-                  />
-                </GlassCard>
-              </PressScale>
-
-              <PressScale
-                style={styles.statCardHalf}
+          <View style={styles.section}>
+            <SectionHeader title="Today Focus" />
+            <GlassCard padding={18} delay={90}>
+              <FocusRow
+                label={`${home.pendingTasks} pending tasks`}
+                icon={<CheckSquare size={16} color={colors.chart2} strokeWidth={1.8} />}
+                onPress={() => router.push("/(tabs)/tasks" as never)}
+              />
+              <FocusRow
+                label={`${home.upcomingReminders} upcoming reminders`}
+                icon={<Bell size={16} color={colors.chart3} strokeWidth={1.8} />}
+                onPress={() => router.push("/(tabs)/tasks" as never)}
+              />
+              <FocusRow
+                label={`${home.habitsCount} active habits`}
+                icon={<Flame size={16} color={colors.chart4} strokeWidth={1.8} />}
                 onPress={() => router.push("/habits" as never)}
-              >
-                <GlassCard delay={150} padding={16}>
-                  <AnimatedStat
-                    value={home.habitsCount ?? 0}
-                    label="Habits"
-                    icon={
-                      <Flame
-                        size={20}
-                        color={colors.chart4}
-                        strokeWidth={1.5}
-                      />
-                    }
-                  />
-                </GlassCard>
-              </PressScale>
+                isLast
+              />
+            </GlassCard>
+          </View>
+
+          <View style={styles.section}>
+            <SectionHeader title="Dashboard" />
+            <View style={styles.statsGrid}>
+              {statCards.map((stat, index) => (
+                <PressScale
+                  key={stat.label}
+                  style={styles.statHalf}
+                  onPress={() => router.push(stat.route as never)}
+                >
+                  <GlassCard padding={16} delay={120 + index * 40}>
+                    <AnimatedStat value={stat.value} label={stat.label} icon={stat.icon} />
+                  </GlassCard>
+                </PressScale>
+              ))}
             </View>
           </View>
 
-          {/* ── Flashback ──────────────────── */}
-          {home.flashback && (
-            <View style={styles.sectionSpacing}>
+          {home.flashback ? (
+            <View style={styles.section}>
               <SectionHeader title="Flashback" />
-              <GlassCard
-                accentColor={colors.accent}
-                delay={200}
-                padding={18}
-              >
-                <View style={styles.flashbackHeader}>
-                  <Sparkles
-                    size={16}
-                    color={colors.accent}
-                    strokeWidth={1.5}
-                  />
-                  <Text
-                    style={[
-                      styles.flashbackLabel,
-                      { color: colors.accent },
-                    ]}
-                  >
-                    From your memory
+              <GlassCard padding={18} accentColor={colors.accent} delay={180}>
+                <View style={styles.flashbackHead}>
+                  <Sparkles size={15} color={colors.accent} strokeWidth={1.8} />
+                  <Text style={[styles.flashbackLabel, { color: colors.accent }]}>
+                    From your archive
                   </Text>
                 </View>
                 <Text
-                  style={[
-                    styles.flashbackContent,
-                    { color: colors.foreground },
-                  ]}
-                  numberOfLines={4}
+                  style={[styles.flashbackContent, { color: colors.foreground }]}
+                  numberOfLines={5}
                 >
                   {home.flashback.content}
                 </Text>
-                <Text
-                  style={[
-                    styles.flashbackDate,
-                    { color: colors.mutedForeground },
-                  ]}
-                >
-                  {new Date(home.flashback.created_at).toLocaleDateString(
-                    "en-US",
-                    { month: "long", day: "numeric", year: "numeric" },
-                  )}
-                </Text>
               </GlassCard>
             </View>
-          )}
+          ) : null}
 
-          {/* ── Journal Link ───────────────── */}
-          <View style={styles.sectionSpacing}>
-            <SectionHeader title="Journal" />
-            <PressScale onPress={() => router.push("/(tabs)/journal")}>
-              <GlassCard delay={250} padding={20}>
-                <View style={styles.journalRow}>
-                  <View style={styles.journalLeft}>
-                    <View
-                      style={[
-                        styles.journalIconWrap,
-                        { backgroundColor: colors.primary + "18" },
-                      ]}
-                    >
-                      <BookOpen
-                        size={20}
-                        color={colors.primary}
-                        strokeWidth={1.5}
-                      />
-                    </View>
-                    <View>
-                      <Text
-                        style={[
-                          styles.journalTitle,
-                          { color: colors.foreground },
-                        ]}
-                      >
-                        Open Journal
-                      </Text>
-                      <Text
-                        style={[
-                          styles.journalSubtitle,
-                          { color: colors.mutedForeground },
-                        ]}
-                      >
-                        {home.memoriesCount ?? 0}{" "}
-                        {home.memoriesCount === 1 ? "memory" : "memories"}{" "}
-                        stored
-                      </Text>
-                    </View>
-                  </View>
-                  <ChevronRight
-                    size={20}
-                    color={colors.mutedForeground}
-                    strokeWidth={1.5}
-                  />
+          <View style={styles.section}>
+            <SectionHeader
+              title="Recent Journal"
+              action="Open"
+              onAction={() => router.push("/(tabs)/journal")}
+            />
+            <GlassCard padding={16} delay={220}>
+              {home.recentMemories?.slice(0, 3).map((memory, index) => (
+                <View
+                  key={memory.id}
+                  style={[
+                    styles.memoryRow,
+                    index < Math.min((home.recentMemories?.length ?? 0), 3) - 1 && {
+                      borderBottomWidth: StyleSheet.hairlineWidth,
+                      borderBottomColor: colors.glassBorder,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.memoryText, { color: colors.foreground }]} numberOfLines={2}>
+                    {memory.content}
+                  </Text>
                 </View>
-              </GlassCard>
-            </PressScale>
+              ))}
+              {!home.recentMemories?.length ? (
+                <Text style={[styles.memoryText, { color: colors.mutedForeground }]}>
+                  Your recent entries will appear here once you journal more.
+                </Text>
+              ) : null}
+            </GlassCard>
           </View>
 
-          {/* bottom spacer */}
-          <View style={styles.bottomSpacer} />
+          <View style={styles.bottomGap} />
         </ScrollView>
       </GradientBackground>
     </SafeAreaView>
   );
 }
 
-// ── Styles ───────────────────────────────────
+function FocusRow({
+  label,
+  icon,
+  onPress,
+  isLast,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  onPress: () => void;
+  isLast?: boolean;
+}) {
+  const { colors } = useTheme();
+
+  return (
+    <PressScale onPress={onPress} haptic={false}>
+      <View
+        style={[
+          styles.focusRow,
+          !isLast && {
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            borderBottomColor: colors.glassBorder,
+          },
+        ]}
+      >
+        <View style={styles.focusLeft}>
+          {icon}
+          <Text style={[styles.focusLabel, { color: colors.foreground }]}>{label}</Text>
+        </View>
+        <ChevronRight size={16} color={colors.mutedForeground} strokeWidth={1.8} />
+      </View>
+    </PressScale>
+  );
+}
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-
-  // Loading
-  loadingContainer: {
+  flex: { flex: 1 },
+  center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: 28,
   },
-
-  // Empty state
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 40,
+  scroll: {
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    paddingBottom: 48,
   },
-  emptyIconWrap: {
-    marginBottom: 24,
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  emptyTitle: {
-    fontFamily: "Inter_700Bold",
-    ...typography.title,
-    textAlign: "center",
+  headerRow: {
     marginBottom: 12,
   },
-  emptySubtitle: {
-    fontFamily: "Inter_400Regular",
-    ...typography.base,
-    textAlign: "center",
-    lineHeight: 24,
-  },
-
-  // Scroll
-  scroll: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 40,
-  },
-
-  // Hero greeting
-  heroSection: {
-    marginBottom: 8,
+  headerMeta: {
+    flexDirection: "row",
+    gap: 8,
   },
   greeting: {
-    fontFamily: "Inter_400Regular",
-    ...typography.xl,
-    marginBottom: 2,
-  },
-  heroName: {
-    fontFamily: "Inter_700Bold",
-    ...typography.hero,
-    marginBottom: 6,
-  },
-  subGreeting: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_500Medium",
     ...typography.sm,
+    marginBottom: 4,
   },
-
-  // Mood
-  moodSection: {
-    marginBottom: 8,
-    marginTop: 4,
+  name: {
+    fontFamily: "Sora_700Bold",
+    ...typography.hero,
+    marginBottom: 10,
   },
-  moodPillRow: {
+  moodRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
@@ -436,83 +381,102 @@ const styles = StyleSheet.create({
   moodDot: {
     width: 10,
     height: 10,
-    borderRadius: 5,
+    borderRadius: 10,
   },
-  moodPill: {
-    borderWidth: 0,
+  moodText: {
+    fontFamily: "Manrope_500Medium",
+    ...typography.sm,
   },
-
-  // Section spacing
-  sectionSpacing: {
+  section: {
     marginTop: 24,
   },
-
-  // Stats grid
-  statsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
+  storyRail: {
+    gap: 14,
+    paddingHorizontal: 2,
   },
-  statCardHalf: {
-    width: "47%",
-    flexGrow: 1,
-  },
-
-  // Flashback
-  flashbackHeader: {
-    flexDirection: "row",
+  storyItem: {
     alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
   },
-  flashbackLabel: {
-    fontFamily: "Inter_600SemiBold",
+  storyRing: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  storyInner: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.75)",
+  },
+  storyLabel: {
+    fontFamily: "Manrope_600SemiBold",
     ...typography.xs,
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
   },
-  flashbackContent: {
-    fontFamily: "Inter_400Regular",
-    ...typography.sm,
-    fontStyle: "italic",
-    lineHeight: 22,
-  },
-  flashbackDate: {
-    fontFamily: "Inter_400Regular",
-    ...typography.xs,
-    marginTop: 12,
-  },
-
-  // Journal link
-  journalRow: {
+  focusRow: {
+    paddingVertical: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  journalLeft: {
+  focusLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
+    gap: 10,
   },
-  journalIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    justifyContent: "center",
+  focusLabel: {
+    fontFamily: "Manrope_500Medium",
+    ...typography.sm,
+  },
+  statsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  statHalf: {
+    width: "48.4%",
+  },
+  flashbackHead: {
+    flexDirection: "row",
     alignItems: "center",
+    gap: 8,
+    marginBottom: 10,
   },
-  journalTitle: {
-    fontFamily: "Inter_600SemiBold",
+  flashbackLabel: {
+    fontFamily: "Manrope_700Bold",
+    ...typography.caption,
+  },
+  flashbackContent: {
+    fontFamily: "Manrope_400Regular",
+    ...typography.sm,
+    lineHeight: 23,
+  },
+  memoryRow: {
+    paddingVertical: 10,
+  },
+  memoryText: {
+    fontFamily: "Manrope_400Regular",
+    ...typography.sm,
+    lineHeight: 22,
+  },
+  emptyTitle: {
+    fontFamily: "Sora_700Bold",
+    ...typography["2xl"],
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  emptyCopy: {
+    fontFamily: "Manrope_400Regular",
     ...typography.base,
-    marginBottom: 2,
+    lineHeight: 24,
+    textAlign: "center",
   },
-  journalSubtitle: {
-    fontFamily: "Inter_400Regular",
-    ...typography.xs,
-  },
-
-  // Bottom
-  bottomSpacer: {
-    height: 20,
+  bottomGap: {
+    height: 86,
   },
 });

@@ -1,10 +1,11 @@
 import {
+  Manrope_400Regular,
+  Manrope_500Medium,
+  Manrope_600SemiBold,
+  Manrope_700Bold,
   useFonts,
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from "@expo-google-fonts/inter";
+} from "@expo-google-fonts/manrope";
+import { Sora_600SemiBold, Sora_700Bold } from "@expo-google-fonts/sora";
 import { QueryClient, useQueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
@@ -124,10 +125,12 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
+    Manrope_400Regular,
+    Manrope_500Medium,
+    Manrope_600SemiBold,
+    Manrope_700Bold,
+    Sora_600SemiBold,
+    Sora_700Bold,
   });
 
   useEffect(() => {
@@ -188,7 +191,7 @@ const fallbackStyles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#0A0A0A",
+    backgroundColor: "#071126",
   },
   text: {
     color: "#888",

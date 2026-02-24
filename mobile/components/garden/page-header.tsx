@@ -44,12 +44,12 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   title: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Sora_700Bold",
     fontSize: typography["2xl"].fontSize,
     lineHeight: typography["2xl"].lineHeight,
   },
   subtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     fontSize: typography.sm.fontSize,
     lineHeight: typography.sm.lineHeight,
     marginTop: 4,

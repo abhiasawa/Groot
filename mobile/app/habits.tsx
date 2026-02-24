@@ -271,12 +271,12 @@ const s = StyleSheet.create({
     flex: 1,
   },
   pageTitle: {
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Sora_700Bold",
     ...typography.title,
     letterSpacing: -0.3,
   },
   pageSubtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.sm,
     marginTop: 2,
   },
@@ -306,7 +306,7 @@ const s = StyleSheet.create({
     marginRight: 10,
   },
   habitName: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Sora_600SemiBold",
     ...typography.base,
   },
   streakPill: {
@@ -314,7 +314,7 @@ const s = StyleSheet.create({
     alignItems: "center",
   },
   habitTarget: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.xs,
     marginBottom: 14,
   },
@@ -335,7 +335,7 @@ const s = StyleSheet.create({
     borderRadius: 8,
   },
   heatmapLabel: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     fontSize: 10,
     lineHeight: 14,
   },
@@ -348,7 +348,7 @@ const s = StyleSheet.create({
     marginTop: 4,
   },
   longestStreak: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.xs,
   },
 
@@ -370,14 +370,14 @@ const s = StyleSheet.create({
     alignItems: "center",
   },
   emptyTitle: {
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Sora_600SemiBold",
     ...typography.lg,
     marginTop: 18,
     marginBottom: 8,
     textAlign: "center",
   },
   emptySubtitle: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Manrope_400Regular",
     ...typography.sm,
     textAlign: "center",
     lineHeight: 22,
