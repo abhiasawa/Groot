@@ -16,41 +16,41 @@ export default function TabLayout() {
         tabBarInactiveTintColor: colors.mutedForeground,
         tabBarHideOnKeyboard: true,
         tabBarStyle: {
-          position: "absolute",
-          marginHorizontal: 16,
-          marginBottom: 14,
-          height: 70,
-          borderRadius: 22,
-          borderTopWidth: 0,
+          height: Platform.OS === "ios" ? 86 : 72,
+          paddingTop: 8,
+          paddingBottom: Platform.OS === "ios" ? 20 : 10,
+          paddingHorizontal: 10,
+          borderTopWidth: 1,
           borderWidth: 1,
           borderColor: colors.glassBorder,
-          backgroundColor: colors.glassSurface,
-          elevation: 0,
+          backgroundColor: colors.background,
+          elevation: 8,
           shadowColor: colors.elevatedShadowColor,
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.3,
-          shadowRadius: 18,
-          paddingTop: 8,
-          paddingBottom: Platform.OS === "ios" ? 8 : 10,
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.08,
+          shadowRadius: 10,
         },
         tabBarItemStyle: {
           borderRadius: 14,
-          marginHorizontal: 4,
-          marginTop: 6,
-          marginBottom: 4,
+          marginHorizontal: 2,
+          marginVertical: 2,
+          paddingVertical: 4,
         },
         tabBarLabelStyle: {
           fontFamily: "Manrope_600SemiBold",
-          fontSize: 10,
-          letterSpacing: 0.25,
-          marginTop: 2,
+          fontSize: 11,
+          letterSpacing: 0.1,
+          marginTop: 3,
         },
         tabBarActiveBackgroundColor: colors.secondary,
+        tabBarIconStyle: {
+          marginTop: 1,
+        },
         tabBarBackground: () => (
           <BlurView
-            intensity={resolvedMode === "dark" ? 24 : 44}
+            intensity={resolvedMode === "dark" ? 18 : 28}
             tint={resolvedMode === "dark" ? "dark" : "light"}
-            style={{ flex: 1, borderRadius: 22 }}
+            style={{ flex: 1 }}
           />
         ),
       }}
