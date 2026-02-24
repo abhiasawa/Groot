@@ -1,6 +1,5 @@
 import React from "react";
-import { View, StyleSheet, type ViewStyle, Platform } from "react-native";
-import { BlurView } from "expo-blur";
+import { View, StyleSheet, type ViewStyle } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useTheme } from "../../lib/theme/provider";
 
@@ -41,33 +40,19 @@ export function GlassCard({
         style,
       ]}
     >
-      {Platform.OS === "android" ? (
-        // Android: use semi-transparent background (BlurView has limited support)
-        <View
-          style={[
-            styles.androidFallback,
-            { backgroundColor: colors.glassSurface, padding },
-          ]}
-        >
-          <View
-            pointerEvents="none"
-            style={[styles.highlightStrip, { backgroundColor: colors.glassHighlight }]}
-          />
-          {children}
-        </View>
-      ) : (
-        <BlurView
-          intensity={intensity}
-          tint={resolvedMode === "dark" ? "dark" : "light"}
-          style={[styles.blur, { padding }]}
-        >
-          <View
-            pointerEvents="none"
-            style={[styles.highlightStrip, { backgroundColor: colors.glassHighlight }]}
-          />
-          {children}
-        </BlurView>
-      )}
+      <View
+        style={[
+          styles.card,
+          {
+            backgroundColor: colors.glassSurface,
+            borderTopColor:
+              resolvedMode === "dark" ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.55)",
+            padding,
+          },
+        ]}
+      >
+        {children}
+      </View>
     </Animated.View>
   );
 }
@@ -78,29 +63,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: "hidden",
     // Shadow
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.8,
-    shadowRadius: 24,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 3,
   },
-  blur: {
+  card: {
     overflow: "hidden",
     position: "relative",
     borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.26)",
-  },
-  androidFallback: {
-    overflow: "hidden",
-    position: "relative",
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.18)",
-  },
-  highlightStrip: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    height: 1,
-    opacity: 0.45,
   },
 });

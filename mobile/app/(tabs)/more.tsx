@@ -2,7 +2,6 @@ import React, { useMemo, useState } from "react";
 import { View, Text, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import {
   Flame,
   CheckSquare,
@@ -15,7 +14,7 @@ import {
   Sparkles,
   HeartPulse,
   ArrowUpRight,
-  Clock3,
+  CalendarCheck2,
 } from "lucide-react-native";
 
 import { useTheme } from "../../lib/theme/provider";
@@ -27,7 +26,7 @@ import { SectionHeader } from "../../components/ui/section-header";
 import { SearchInput } from "../../components/ui/search-input";
 import { PillBadge } from "../../components/ui/pill-badge";
 
-type GroupKey = "workflow" | "insight" | "account";
+type GroupKey = "plan" | "insight" | "account";
 interface MenuItem {
   key: string;
   label: string;
@@ -39,38 +38,47 @@ interface MenuItem {
 
 function useMenuItems(): MenuItem[] {
   const { colors } = useTheme();
+
   return [
-    {
-      key: "habits",
-      label: "Habits",
-      description: "Track routines and streaks",
-      route: "/habits",
-      group: "workflow",
-      icon: <Flame size={18} color={colors.chart3} strokeWidth={1.6} />,
-    },
     {
       key: "tasks",
       label: "Tasks",
       description: "Plan and close loops",
       route: "/(tabs)/tasks",
-      group: "workflow",
-      icon: <CheckSquare size={18} color={colors.chart2} strokeWidth={1.6} />,
+      group: "plan",
+      icon: <CheckSquare size={18} color={colors.primary} strokeWidth={1.7} />,
+    },
+    {
+      key: "journal",
+      label: "Journal",
+      description: "Memory timeline and entries",
+      route: "/(tabs)/journal",
+      group: "plan",
+      icon: <BookOpen size={18} color={colors.primary} strokeWidth={1.7} />,
+    },
+    {
+      key: "habits",
+      label: "Habits",
+      description: "Track routines and streaks",
+      route: "/(tabs)/habits",
+      group: "plan",
+      icon: <Flame size={18} color={colors.primary} strokeWidth={1.7} />,
     },
     {
       key: "people",
       label: "People",
       description: "Relationship memory graph",
-      route: "/people",
-      group: "workflow",
-      icon: <Users size={18} color={colors.chart5} strokeWidth={1.6} />,
+      route: "/(tabs)/people",
+      group: "plan",
+      icon: <Users size={18} color={colors.primary} strokeWidth={1.7} />,
     },
     {
       key: "insights",
       label: "Insights",
       description: "Weekly synthesis reports",
-      route: "/insights",
+      route: "/(tabs)/insights",
       group: "insight",
-      icon: <BarChart3 size={18} color={colors.chart1} strokeWidth={1.6} />,
+      icon: <BarChart3 size={18} color={colors.primary} strokeWidth={1.7} />,
     },
     {
       key: "stories",
@@ -78,39 +86,39 @@ function useMenuItems(): MenuItem[] {
       description: "Storyworthy moments",
       route: "/(tabs)/stories",
       group: "insight",
-      icon: <Sparkles size={18} color={colors.chart4} strokeWidth={1.6} />,
+      icon: <Sparkles size={18} color={colors.primary} strokeWidth={1.7} />,
     },
     {
       key: "mood",
       label: "Mood",
-      description: "Emotional patterns and trends",
+      description: "Emotion patterns and trends",
       route: "/(tabs)/mood",
       group: "insight",
-      icon: <HeartPulse size={18} color={colors.chart5} strokeWidth={1.6} />,
+      icon: <HeartPulse size={18} color={colors.primary} strokeWidth={1.7} />,
     },
     {
       key: "topics",
       label: "Topics",
       description: "Conversation themes and tags",
-      route: "/topics",
+      route: "/(tabs)/topics",
       group: "insight",
-      icon: <Hash size={18} color={colors.primary} strokeWidth={1.6} />,
+      icon: <Hash size={18} color={colors.primary} strokeWidth={1.7} />,
     },
     {
       key: "profile",
       label: "Profile",
       description: "Knowledge graph about you",
-      route: "/profile",
+      route: "/(tabs)/profile",
       group: "account",
-      icon: <User size={18} color={colors.accent} strokeWidth={1.6} />,
+      icon: <User size={18} color={colors.primary} strokeWidth={1.7} />,
     },
     {
       key: "settings",
       label: "Settings",
       description: "Theme, notifications, account",
-      route: "/settings",
+      route: "/(tabs)/settings",
       group: "account",
-      icon: <Settings size={18} color={colors.mutedForeground} strokeWidth={1.6} />,
+      icon: <Settings size={18} color={colors.primary} strokeWidth={1.7} />,
     },
   ];
 }
@@ -124,14 +132,12 @@ export default function MoreScreen() {
   const filtered = useMemo(() => {
     if (!query.trim()) return items;
     const term = query.trim().toLowerCase();
-    return items.filter((item) =>
-      `${item.label} ${item.description}`.toLowerCase().includes(term),
-    );
+    return items.filter((item) => `${item.label} ${item.description}`.toLowerCase().includes(term));
   }, [items, query]);
 
   const byGroup = useMemo(() => {
     const groupMap: Record<GroupKey, MenuItem[]> = {
-      workflow: [],
+      plan: [],
       insight: [],
       account: [],
     };
@@ -139,68 +145,44 @@ export default function MoreScreen() {
     return groupMap;
   }, [filtered]);
 
-  const pinned = filtered.filter((item) =>
-    ["tasks", "habits", "insights", "settings"].includes(item.key),
-  );
-
   return (
     <SafeAreaView style={styles.safe}>
       <GradientBackground>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
-            <Text style={[styles.title, { color: colors.foreground }]}>Studio</Text>
-            <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-              Build your day, review your patterns, and manage your space.
-            </Text>
+            <Text style={[styles.title, { color: colors.foreground }]}>Planner</Text>
+            <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Everything you use daily, organized for quick execution.</Text>
           </View>
 
-          <SearchInput
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Search sections..."
-          />
+          <SearchInput value={query} onChangeText={setQuery} placeholder="Search tools..." />
 
-          <View style={styles.featuredRow}>
-            <FeaturedShortcut
-              label="Start Review"
-              subtitle="Jump into tasks"
-              route="/(tabs)/tasks"
-              icon={<Clock3 size={16} color="#FFFFFF" strokeWidth={1.8} />}
-            />
-            <FeaturedShortcut
-              label="Reflect"
-              subtitle="Open journal"
-              route="/(tabs)/journal"
-              icon={<BookOpen size={16} color="#FFFFFF" strokeWidth={1.8} />}
-            />
-          </View>
-
-          <View style={styles.section}>
-            <SectionHeader title="Pinned" />
-            {pinned.length === 0 ? (
-              <GlassCard padding={16}>
-                <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                  No matching actions. Try a broader search term.
-                </Text>
+          <View style={styles.topActionsRow}>
+            <PressScale style={styles.topActionCell} onPress={() => router.push("/(tabs)/tasks" as never)}>
+              <GlassCard padding={14} accentColor={colors.primary}>
+                <View style={styles.topActionHead}>
+                  <CalendarCheck2 size={16} color={colors.accent} strokeWidth={1.8} />
+                  <PillBadge label="Today" small />
+                </View>
+                <Text style={[styles.topActionTitle, { color: colors.foreground }]}>Start Work Block</Text>
+                <Text style={[styles.topActionBody, { color: colors.mutedForeground }]}>Open task queue</Text>
               </GlassCard>
-            ) : (
-              pinned.map((item, index) => (
-                <PressScale
-                  key={item.key}
-                  onPress={() => router.push(item.route as never)}
-                  style={index < pinned.length - 1 ? styles.rowGap : undefined}
-                >
-                  <GlassCard padding={14}>
-                    <MenuRow item={item} />
-                  </GlassCard>
-                </PressScale>
-              ))
-            )}
+            </PressScale>
+
+            <PressScale style={styles.topActionCell} onPress={() => router.push("/(tabs)/journal" as never)}>
+              <GlassCard padding={14}>
+                <View style={styles.topActionHead}>
+                  <BookOpen size={16} color={colors.accent} strokeWidth={1.8} />
+                  <PillBadge label="Reflect" small />
+                </View>
+                <Text style={[styles.topActionTitle, { color: colors.foreground }]}>Write Journal</Text>
+                <Text style={[styles.topActionBody, { color: colors.mutedForeground }]}>Capture daily notes</Text>
+              </GlassCard>
+            </PressScale>
           </View>
 
-          <MenuGroup title="Workflows" items={byGroup.workflow} />
+          <MenuGroup title="Planning" items={byGroup.plan} />
           <MenuGroup title="Insights" items={byGroup.insight} />
-          <MenuGroup title="Profile & App" items={byGroup.account} />
+          <MenuGroup title="Account" items={byGroup.account} />
 
           <View style={styles.bottomGap} />
         </ScrollView>
@@ -224,59 +206,17 @@ function MenuGroup({ title, items }: { title: string; items: MenuItem[] }) {
           style={index < items.length - 1 ? styles.rowGap : undefined}
         >
           <GlassCard padding={14}>
-            <MenuRow item={item} />
-            {item.group === "insight" ? (
-              <View style={styles.tagRow}>
-                <PillBadge label="Analysis" small />
+            <View style={styles.row}>
+              <View style={[styles.iconWrap, { backgroundColor: colors.secondary }]}>{item.icon}</View>
+              <View style={styles.copyWrap}>
+                <Text style={[styles.rowTitle, { color: colors.foreground }]}>{item.label}</Text>
+                <Text style={[styles.rowBody, { color: colors.mutedForeground }]}>{item.description}</Text>
               </View>
-            ) : null}
+              <ArrowUpRight size={16} color={colors.mutedForeground} strokeWidth={1.8} />
+            </View>
           </GlassCard>
         </PressScale>
       ))}
-    </View>
-  );
-}
-
-function FeaturedShortcut({
-  label,
-  subtitle,
-  route,
-  icon,
-}: {
-  label: string;
-  subtitle: string;
-  route: string;
-  icon: React.ReactNode;
-}) {
-  const { colors } = useTheme();
-  const router = useRouter();
-
-  return (
-    <PressScale style={styles.featuredCard} onPress={() => router.push(route as never)}>
-      <LinearGradient
-        colors={[colors.primary, colors.accent]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.featuredGradient}
-      >
-        <View style={styles.featuredIconWrap}>{icon}</View>
-        <Text style={styles.featuredLabel}>{label}</Text>
-        <Text style={styles.featuredSubtitle}>{subtitle}</Text>
-      </LinearGradient>
-    </PressScale>
-  );
-}
-
-function MenuRow({ item }: { item: MenuItem }) {
-  const { colors } = useTheme();
-  return (
-    <View style={styles.row}>
-      <View style={[styles.iconWrap, { backgroundColor: colors.secondary }]}>{item.icon}</View>
-      <View style={styles.copyWrap}>
-        <Text style={[styles.rowTitle, { color: colors.foreground }]}>{item.label}</Text>
-        <Text style={[styles.rowBody, { color: colors.mutedForeground }]}>{item.description}</Text>
-      </View>
-      <ArrowUpRight size={16} color={colors.mutedForeground} strokeWidth={1.8} />
     </View>
   );
 }
@@ -296,45 +236,35 @@ const styles = StyleSheet.create({
     ...typography.title,
   },
   subtitle: {
+    marginTop: 2,
     fontFamily: "Manrope_400Regular",
     ...typography.sm,
-    marginTop: 2,
   },
-  section: {
-    marginTop: 24,
-  },
-  featuredRow: {
-    marginTop: 14,
+  topActionsRow: {
+    marginTop: 12,
     flexDirection: "row",
     gap: 10,
   },
-  featuredCard: {
+  topActionCell: {
     flex: 1,
   },
-  featuredGradient: {
-    borderRadius: 18,
-    padding: 14,
-    minHeight: 92,
-  },
-  featuredIconWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.2)",
+  topActionHead: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 9,
+    justifyContent: "space-between",
+    marginBottom: 10,
   },
-  featuredLabel: {
+  topActionTitle: {
     fontFamily: "Sora_600SemiBold",
-    ...typography.sm,
-    color: "#FFFFFF",
+    ...typography.base,
   },
-  featuredSubtitle: {
-    marginTop: 3,
-    fontFamily: "Manrope_500Medium",
+  topActionBody: {
+    marginTop: 2,
+    fontFamily: "Manrope_400Regular",
     ...typography.xs,
-    color: "rgba(255,255,255,0.86)",
+  },
+  section: {
+    marginTop: 24,
   },
   rowGap: {
     marginBottom: 10,
@@ -346,7 +276,7 @@ const styles = StyleSheet.create({
   iconWrap: {
     width: 38,
     height: 38,
-    borderRadius: 12,
+    borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -361,14 +291,6 @@ const styles = StyleSheet.create({
   },
   rowBody: {
     fontFamily: "Manrope_400Regular",
-    ...typography.sm,
-  },
-  tagRow: {
-    marginTop: 10,
-    flexDirection: "row",
-  },
-  emptyText: {
-    fontFamily: "Manrope_500Medium",
     ...typography.sm,
   },
   bottomGap: {

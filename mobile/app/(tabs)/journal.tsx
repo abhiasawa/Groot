@@ -73,6 +73,7 @@ export default function JournalScreen() {
   const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
+  const [isPullRefreshing, setIsPullRefreshing] = useState(false);
 
   const params: MemoriesParams = useMemo(
     () => ({
@@ -84,11 +85,12 @@ export default function JournalScreen() {
     [query, activeFilter, selectedDate],
   );
 
-  const { data, isLoading, isRefetching, refetch } = useMemories(params);
+  const { data, isLoading, refetch } = useMemories(params);
   const { data: dotData } = useCalendarDots(monthKey(calendarMonth));
 
   const onRefresh = useCallback(() => {
-    refetch();
+    setIsPullRefreshing(true);
+    refetch().finally(() => setIsPullRefreshing(false));
   }, [refetch]);
 
   const memories = data?.memories ?? [];
@@ -111,7 +113,7 @@ export default function JournalScreen() {
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
-              refreshing={isRefetching}
+              refreshing={isPullRefreshing}
               onRefresh={onRefresh}
               tintColor={colors.primary}
             />
@@ -120,10 +122,10 @@ export default function JournalScreen() {
           <View style={styles.header}>
             <Text style={[styles.pageTitle, { color: colors.foreground }]}>Journal</Text>
             <Text style={[styles.pageSubtitle, { color: colors.mutedForeground }]}>
-              Private timeline • {memories.length} entries
+              Daily notes and reflections • {memories.length} entries
             </Text>
             <View style={styles.headerMetaRow}>
-              <PillBadge label="Feed View" small />
+              <PillBadge label={viewMode === "timeline" ? "Timeline View" : "Calendar View"} small />
               {selectedDate ? <PillBadge label="Date Filtered" small /> : null}
             </View>
           </View>

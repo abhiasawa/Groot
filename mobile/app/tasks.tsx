@@ -70,14 +70,16 @@ export default function TasksScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const segments = useSegments();
-  const { data, isLoading, isRefetching, refetch } = useTasks();
+  const { data, isLoading, refetch } = useTasks();
   const toggleTask = useToggleTask();
   const [filter, setFilter] = useState<TaskFilter>("all");
+  const [isPullRefreshing, setIsPullRefreshing] = useState(false);
 
   const isTabRoute = segments[0] === "(tabs)";
 
   const onRefresh = useCallback(() => {
-    refetch();
+    setIsPullRefreshing(true);
+    refetch().finally(() => setIsPullRefreshing(false));
   }, [refetch]);
 
   const tasks = data?.tasks ?? [];
@@ -139,7 +141,7 @@ export default function TasksScreen() {
           contentContainerStyle={styles.scroll}
           refreshControl={
             <RefreshControl
-              refreshing={isRefetching}
+              refreshing={isPullRefreshing}
               onRefresh={onRefresh}
               tintColor={colors.primary}
             />
@@ -149,11 +151,7 @@ export default function TasksScreen() {
           {isTabRoute ? (
             <View style={styles.tabHeader}>
               <Text style={[styles.tabTitle, { color: colors.foreground }]}>Tasks</Text>
-              <Text style={[styles.tabSubtitle, { color: colors.mutedForeground }]}>Execution queue for your day.</Text>
-              <View style={styles.tabHeaderTags}>
-                <PillBadge label="Action Board" small />
-                <PillBadge label="Mobile First" small />
-              </View>
+              <Text style={[styles.tabSubtitle, { color: colors.mutedForeground }]}>Your daily execution board.</Text>
             </View>
           ) : (
             <DeepScreenHeader
@@ -375,11 +373,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontFamily: "Manrope_400Regular",
     ...typography.sm,
-  },
-  tabHeaderTags: {
-    marginTop: 9,
-    flexDirection: "row",
-    gap: 8,
   },
   summaryCard: {
     marginBottom: 18,

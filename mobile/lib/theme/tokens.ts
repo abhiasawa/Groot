@@ -60,110 +60,110 @@ export interface ThemeColors {
 
 export const lightTheme: ThemeColors = {
   // Core
-  background: "#F6F3EE",
-  foreground: "#1F1A1A",
+  background: "#F3EFE6",
+  foreground: "#241F1B",
   // Card
-  card: "#FFFFFF",
-  cardForeground: "#1F1A1A",
+  card: "#FCFAF5",
+  cardForeground: "#241F1B",
   // Primary
-  primary: "#E74F4F",
+  primary: "#3F5E52",
   primaryForeground: "#FFFFFF",
   // Secondary
-  secondary: "#EFE6DE",
-  secondaryForeground: "#8B3A3A",
+  secondary: "#E6DFD1",
+  secondaryForeground: "#4D443B",
   // Muted
-  muted: "#EDE6DF",
-  mutedForeground: "#7A6864",
+  muted: "#E9E1D4",
+  mutedForeground: "#74665B",
   // Accent
-  accent: "#F29D38",
+  accent: "#C47A4A",
   accentForeground: "#FFFFFF",
   // Destructive
-  destructive: "#D64545",
+  destructive: "#B84C45",
   // Borders & inputs
-  border: "rgba(88, 58, 46, 0.16)",
-  input: "rgba(88, 58, 46, 0.16)",
-  ring: "#E74F4F",
+  border: "rgba(82, 67, 54, 0.16)",
+  input: "rgba(82, 67, 54, 0.16)",
+  ring: "#3F5E52",
   // Mood colors
   moodGreat: "#00A675",
   moodGood: "#2EBA8B",
   moodOkay: "#EEB03B",
   moodLow: "#F98836",
-  moodBad: "#D64545",
+  moodBad: "#B84C45",
   moodNone: "#DFD4CA",
   // Chart colors
-  chart1: "#E74F4F",
-  chart2: "#F29D38",
+  chart1: "#3F5E52",
+  chart2: "#C47A4A",
   chart3: "#00A675",
-  chart4: "#7A69E7",
-  chart5: "#3F86E8",
+  chart4: "#7D6E63",
+  chart5: "#4A7899",
   // Glassmorphic
-  glassSurface: "rgba(255, 255, 255, 0.86)",
-  glassBorder: "rgba(128, 102, 90, 0.16)",
-  glassHighlight: "rgba(255, 255, 255, 0.90)",
+  glassSurface: "rgba(252, 250, 245, 0.95)",
+  glassBorder: "rgba(120, 102, 87, 0.18)",
+  glassHighlight: "rgba(255, 255, 255, 0.80)",
   // Gradients
-  gradientStart: "#F6F1EA",
-  gradientMid: "#F3ECE5",
-  gradientEnd: "#EFE7DF",
+  gradientStart: "#F4EFE6",
+  gradientMid: "#F1EBE1",
+  gradientEnd: "#EEE6DA",
   // Elevated shadows
-  shadowColor: "rgba(40, 22, 17, 0.08)",
-  elevatedShadowColor: "rgba(40, 22, 17, 0.18)",
+  shadowColor: "rgba(34, 24, 19, 0.08)",
+  elevatedShadowColor: "rgba(34, 24, 19, 0.16)",
   // Ambient accent overlays
-  auraPrimary: "rgba(231, 79, 79, 0.10)",
-  auraSecondary: "rgba(242, 157, 56, 0.08)",
-  auraTertiary: "rgba(122, 105, 231, 0.06)",
+  auraPrimary: "rgba(63, 94, 82, 0.08)",
+  auraSecondary: "rgba(196, 122, 74, 0.06)",
+  auraTertiary: "rgba(125, 110, 99, 0.05)",
 };
 
 export const darkTheme: ThemeColors = {
   // Core
-  background: "#14110F",
-  foreground: "#F5F0EA",
+  background: "#171412",
+  foreground: "#F1ECE4",
   // Card
-  card: "#201A17",
-  cardForeground: "#F5F0EA",
+  card: "#211B17",
+  cardForeground: "#F1ECE4",
   // Primary
-  primary: "#FF6B5E",
+  primary: "#8AB29E",
   primaryForeground: "#FFFFFF",
   // Secondary
-  secondary: "#352824",
-  secondaryForeground: "#F6C9C3",
+  secondary: "#352D28",
+  secondaryForeground: "#E2D6C8",
   // Muted
-  muted: "#2A211E",
-  mutedForeground: "#B7A39A",
+  muted: "#2A231F",
+  mutedForeground: "#B7A89D",
   // Accent
-  accent: "#FFB347",
-  accentForeground: "#2E1F11",
+  accent: "#D69A67",
+  accentForeground: "#2B1E14",
   // Destructive
-  destructive: "#FF746A",
+  destructive: "#D46C63",
   // Borders & inputs
-  border: "rgba(255, 196, 180, 0.22)",
-  input: "rgba(255, 196, 180, 0.22)",
-  ring: "#FF6B5E",
+  border: "rgba(197, 173, 152, 0.24)",
+  input: "rgba(197, 173, 152, 0.24)",
+  ring: "#8AB29E",
   // Mood colors
   moodGreat: "#31D6A2",
   moodGood: "#5EE2BC",
   moodOkay: "#F8C469",
   moodLow: "#FFAD5C",
-  moodBad: "#FF746A",
+  moodBad: "#D46C63",
   moodNone: "#4A3A34",
   // Chart colors
-  chart1: "#FF6B5E",
-  chart2: "#FFB347",
+  chart1: "#8AB29E",
+  chart2: "#D69A67",
   chart3: "#31D6A2",
-  chart4: "#9A85FF",
-  chart5: "#5D9EFF",
+  chart4: "#B89D8C",
+  chart5: "#7EA5C2",
   // Glassmorphic
-  glassSurface: "rgba(43, 31, 27, 0.82)",
-  glassBorder: "rgba(233, 199, 186, 0.20)",
+  glassSurface: "rgba(40, 32, 27, 0.86)",
+  glassBorder: "rgba(205, 186, 169, 0.18)",
   glassHighlight: "rgba(255, 255, 255, 0.08)",
   // Gradients
-  gradientStart: "#171310",
-  gradientMid: "#211815",
-  gradientEnd: "#2A201C",
+  gradientStart: "#181411",
+  gradientMid: "#201916",
+  gradientEnd: "#291F1A",
   // Elevated shadows
   shadowColor: "rgba(0, 0, 0, 0.30)",
   elevatedShadowColor: "rgba(0, 0, 0, 0.48)",
   // Ambient accent overlays
-  auraPrimary: "rgba(255, 107, 94, 0.18)",
-  auraSecondary: "rgba(255, 179, 71, 0.12)",
-  auraTertiary: "rgba(154, 133, 255, 0.08)",
+  auraPrimary: "rgba(138, 178, 158, 0.15)",
+  auraSecondary: "rgba(214, 154, 103, 0.10)",
+  auraTertiary: "rgba(184, 157, 140, 0.08)",
 };

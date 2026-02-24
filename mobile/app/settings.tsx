@@ -268,7 +268,7 @@ export default function SettingsScreen() {
                 <PillBadge label="Connected" small />
               </View>
 
-              <PressScale onPress={() => router.push("/profile" as never)}>
+              <PressScale onPress={() => router.push("/(tabs)/profile" as never)}>
                 <View
                   style={[
                     styles.prefRow,

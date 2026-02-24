@@ -38,6 +38,7 @@ export function GradientBackground({ children, colors: overrideColors }: Gradien
         pointerEvents="none"
         style={[styles.aura, styles.auraTertiary, { backgroundColor: colors.auraTertiary }]}
       />
+      <View pointerEvents="none" style={styles.paperWash} />
       {children}
     </LinearGradient>
   );
@@ -50,24 +51,32 @@ const styles = StyleSheet.create({
   aura: {
     position: "absolute",
     borderRadius: 999,
-    opacity: 0.34,
+    opacity: 0.2,
   },
   auraPrimary: {
-    width: 240,
-    height: 240,
-    top: -142,
-    left: -120,
+    width: 180,
+    height: 180,
+    top: -120,
+    right: -80,
   },
   auraSecondary: {
-    width: 200,
-    height: 200,
-    top: "39%",
-    right: -130,
+    width: 160,
+    height: 160,
+    top: "46%",
+    left: -90,
   },
   auraTertiary: {
-    width: 220,
-    height: 220,
-    bottom: -160,
-    left: "55%",
+    width: 180,
+    height: 180,
+    bottom: -120,
+    right: "10%",
+  },
+  paperWash: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(255,255,255,0.04)",
   },
 });

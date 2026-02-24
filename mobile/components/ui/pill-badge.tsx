@@ -44,19 +44,20 @@ export function PillBadge({ label, color, textColor, small, style }: PillBadgePr
 
 const styles = StyleSheet.create({
   pill: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 100,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
     borderWidth: 1,
   },
   pillSmall: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 7,
     paddingVertical: 3,
+    borderRadius: 9,
   },
   text: {
     fontFamily: "Manrope_600SemiBold",
     fontSize: 12,
-    letterSpacing: 0.05,
+    letterSpacing: 0.15,
   },
   textSmall: {
     fontSize: 11,

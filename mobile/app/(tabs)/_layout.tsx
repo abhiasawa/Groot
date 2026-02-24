@@ -16,25 +16,27 @@ export default function TabLayout() {
         tabBarInactiveTintColor: colors.mutedForeground,
         tabBarHideOnKeyboard: true,
         tabBarStyle: {
-          height: Platform.OS === "ios" ? 86 : 72,
+          height: Platform.OS === "ios" ? 90 : 80,
           paddingTop: 8,
-          paddingBottom: Platform.OS === "ios" ? 20 : 10,
+          paddingBottom: Platform.OS === "ios" ? 22 : 14,
           paddingHorizontal: 10,
           borderTopWidth: 1,
           borderWidth: 1,
           borderColor: colors.glassBorder,
           backgroundColor: colors.background,
-          elevation: 8,
+          elevation: 6,
           shadowColor: colors.elevatedShadowColor,
           shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.08,
-          shadowRadius: 10,
+          shadowOpacity: 0.06,
+          shadowRadius: 8,
         },
         tabBarItemStyle: {
           borderRadius: 14,
           marginHorizontal: 2,
-          marginVertical: 2,
-          paddingVertical: 4,
+          marginVertical: 3,
+          paddingTop: 3,
+          paddingBottom: 4,
+          overflow: "hidden",
         },
         tabBarLabelStyle: {
           fontFamily: "Manrope_600SemiBold",
@@ -90,6 +92,42 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="mood"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="habits"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="insights"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="topics"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="people"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
         options={{
           href: null,
         }}
