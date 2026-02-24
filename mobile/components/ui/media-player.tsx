@@ -212,7 +212,7 @@ function AudioPlayer({ mediaUrl }: AudioPlayerProps) {
           <Text style={[styles.durationText, { color: colors.mutedForeground }]}>
             {duration > 0
               ? `${formatDuration(position)} / ${formatDuration(duration)}`
-              : "0:00"}
+              : "Tap to play"}
           </Text>
         </View>
       </View>

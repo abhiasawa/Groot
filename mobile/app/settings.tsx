@@ -78,13 +78,13 @@ export default function SettingsScreen() {
   const { colors, mode, setMode } = useTheme();
   const { signOut } = useAuth();
   const router = useRouter();
-  const { data, isLoading, isRefetching, refetch } = useSettings();
+  const { data, isLoading, refetch } = useSettings();
   const {
     data: meData,
-    isRefetching: isMeRefetching,
     refetch: refetchMe,
   } = useCurrentUser();
   const updatePref = useUpdatePreference();
+  const [isPullRefreshing, setIsPullRefreshing] = React.useState(false);
 
   const notificationPrefs = useNotificationPrefs();
 
@@ -93,8 +93,10 @@ export default function SettingsScreen() {
   }, [data?.preferences, notificationPrefs]);
 
   const onRefresh = useCallback(() => {
-    refetch();
-    refetchMe();
+    setIsPullRefreshing(true);
+    Promise.all([refetch(), refetchMe()])
+      .catch(() => {})
+      .finally(() => setIsPullRefreshing(false));
   }, [refetch, refetchMe]);
 
   const handleTogglePref = useCallback(
@@ -129,7 +131,7 @@ export default function SettingsScreen() {
           contentContainerStyle={styles.scroll}
           refreshControl={
             <RefreshControl
-              refreshing={isRefetching || isMeRefetching}
+              refreshing={isPullRefreshing}
               onRefresh={onRefresh}
               tintColor={colors.primary}
             />

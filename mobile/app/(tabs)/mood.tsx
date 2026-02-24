@@ -106,10 +106,12 @@ export default function MoodScreen() {
   const { colors } = useTheme();
   const currentYear = new Date().getFullYear();
   const [year] = useState(currentYear);
-  const { data, isLoading, isRefetching, refetch } = useMood(year);
+  const { data, isLoading, refetch } = useMood(year);
+  const [isPullRefreshing, setIsPullRefreshing] = useState(false);
 
   const onRefresh = useCallback(() => {
-    refetch();
+    setIsPullRefreshing(true);
+    refetch().finally(() => setIsPullRefreshing(false));
   }, [refetch]);
 
   const yearGrid = useMemo(
@@ -152,7 +154,7 @@ export default function MoodScreen() {
           contentContainerStyle={s.scroll}
           refreshControl={
             <RefreshControl
-              refreshing={isRefetching}
+              refreshing={isPullRefreshing}
               onRefresh={onRefresh}
               tintColor={colors.primary}
             />

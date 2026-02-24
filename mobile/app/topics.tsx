@@ -34,11 +34,13 @@ function formatDate(dateStr: string): string {
 export default function TopicsScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  const { data, isLoading, isRefetching, refetch } = useTopics();
+  const { data, isLoading, refetch } = useTopics();
   const [expandedTopic, setExpandedTopic] = useState<string | null>(null);
+  const [isPullRefreshing, setIsPullRefreshing] = useState(false);
 
   const onRefresh = useCallback(() => {
-    refetch();
+    setIsPullRefreshing(true);
+    refetch().finally(() => setIsPullRefreshing(false));
   }, [refetch]);
 
   const topTopic = data?.topics?.[0];
@@ -50,7 +52,7 @@ export default function TopicsScreen() {
           contentContainerStyle={styles.scroll}
           refreshControl={
             <RefreshControl
-              refreshing={isRefetching}
+              refreshing={isPullRefreshing}
               onRefresh={onRefresh}
               tintColor={colors.primary}
             />

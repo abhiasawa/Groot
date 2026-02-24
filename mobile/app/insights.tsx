@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -35,14 +35,18 @@ export default function InsightsScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const segments = useSegments();
-  const { data, isLoading, isRefetching, refetch } = useReports();
+  const { data, isLoading, refetch } = useReports();
   const { data: memoriesData, refetch: refetchMemories } = useMemories({ limit: 200 });
   const { data: tasksData, refetch: refetchTasks } = useTasks();
   const { data: topicsData, refetch: refetchTopics } = useTopics();
   const isTabRoute = segments[0] === "(tabs)";
+  const [isPullRefreshing, setIsPullRefreshing] = useState(false);
 
   const onRefresh = useCallback(() => {
-    Promise.all([refetch(), refetchMemories(), refetchTasks(), refetchTopics()]).catch(() => {});
+    setIsPullRefreshing(true);
+    Promise.all([refetch(), refetchMemories(), refetchTasks(), refetchTopics()])
+      .catch(() => {})
+      .finally(() => setIsPullRefreshing(false));
   }, [refetch, refetchMemories, refetchTasks, refetchTopics]);
 
   const reports = data?.reports ?? [];
@@ -123,7 +127,7 @@ export default function InsightsScreen() {
           contentContainerStyle={styles.scroll}
           refreshControl={
             <RefreshControl
-              refreshing={isRefetching}
+              refreshing={isPullRefreshing}
               onRefresh={onRefresh}
               tintColor={colors.primary}
             />

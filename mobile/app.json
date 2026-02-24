@@ -11,7 +11,7 @@
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#EFE9DD"
+      "backgroundColor": "#F2F6F4"
     },
     "ios": {
       "supportsTablet": true,
@@ -20,9 +20,9 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#EFE9DD"
+        "backgroundColor": "#F2F6F4"
       },
-      "edgeToEdgeEnabled": false,
+      "edgeToEdgeEnabled": true,
       "package": "com.groot.thegarden"
     },
     "web": {

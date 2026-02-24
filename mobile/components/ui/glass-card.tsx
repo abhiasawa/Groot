@@ -1,6 +1,5 @@
 import React from "react";
 import { View, StyleSheet, type ViewStyle } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { useTheme } from "../../lib/theme/provider";
 
 interface GlassCardProps {
@@ -25,16 +24,17 @@ export function GlassCard({
   intensity = 40,
 }: GlassCardProps) {
   const { colors, resolvedMode } = useTheme();
+  void delay;
+  void intensity;
 
   return (
-    <Animated.View
-      entering={FadeInDown.delay(delay).duration(360)}
+    <View
       style={[
         styles.outer,
         {
           borderColor: colors.glassBorder,
           shadowColor: colors.elevatedShadowColor,
-          borderLeftWidth: accentColor ? 3 : 1,
+          borderLeftWidth: accentColor ? 2 : 1,
           borderLeftColor: accentColor ?? colors.glassBorder,
         },
         style,
@@ -46,27 +46,27 @@ export function GlassCard({
           {
             backgroundColor: colors.glassSurface,
             borderTopColor:
-              resolvedMode === "dark" ? "rgba(255,255,255,0.09)" : "rgba(255,255,255,0.55)",
+              resolvedMode === "dark" ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.75)",
             padding,
           },
         ]}
       >
         {children}
       </View>
-    </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   outer: {
-    borderRadius: 20,
+    borderRadius: 18,
     borderWidth: 1,
     overflow: "hidden",
     // Shadow
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
+    elevation: 2,
   },
   card: {
     overflow: "hidden",

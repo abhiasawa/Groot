@@ -15,7 +15,7 @@ function getTabLabel(name: string, title?: string) {
 export function BottomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const bottomInset = Math.max(insets.bottom, Platform.OS === "ios" ? 10 : 8);
+  const bottomInset = Math.max(insets.bottom, Platform.OS === "ios" ? 8 : 6);
 
   const visibleRoutes = state.routes.filter((route) => PRIMARY_TABS.has(route.name));
 
@@ -60,6 +60,12 @@ export function BottomTabBar({ state, descriptors, navigation }: BottomTabBarPro
             <Pressable
               key={route.key}
               onPress={onPress}
+              onLongPress={() => {
+                navigation.emit({
+                  type: "tabLongPress",
+                  target: route.key,
+                });
+              }}
               style={[
                 styles.item,
                 focused && {
@@ -69,7 +75,16 @@ export function BottomTabBar({ state, descriptors, navigation }: BottomTabBarPro
                 },
               ]}
             >
-              <View style={styles.iconWrap}>{icon}</View>
+              <View
+                style={[
+                  styles.iconWrap,
+                  {
+                    backgroundColor: focused ? `${colors.primary}12` : "transparent",
+                  },
+                ]}
+              >
+                {icon}
+              </View>
               <Text
                 style={[
                   styles.label,
@@ -92,33 +107,36 @@ export function BottomTabBar({ state, descriptors, navigation }: BottomTabBarPro
 
 const styles = StyleSheet.create({
   shell: {
-    borderTopWidth: 1,
     paddingTop: 8,
     paddingHorizontal: 10,
+    borderTopWidth: 1,
   },
   row: {
     flexDirection: "row",
-    gap: 8,
+    alignItems: "center",
+    gap: 6,
   },
   item: {
     flex: 1,
-    minHeight: 56,
-    borderRadius: 12,
+    minHeight: 58,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 8,
+    paddingVertical: 7,
     borderWidth: 1,
     borderColor: "transparent",
   },
   iconWrap: {
-    height: 24,
+    width: 29,
+    height: 29,
+    borderRadius: 14.5,
     justifyContent: "center",
     alignItems: "center",
   },
   label: {
-    marginTop: 4,
-    fontSize: 13,
-    lineHeight: 16,
+    marginTop: 3,
+    fontSize: 12,
+    lineHeight: 15,
     includeFontPadding: false,
   },
 });

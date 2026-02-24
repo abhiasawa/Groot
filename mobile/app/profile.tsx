@@ -88,12 +88,14 @@ function confidenceColor(
 export default function ProfileScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  const { data, isLoading, isRefetching, refetch } = useProfile();
+  const { data, isLoading, refetch } = useProfile();
   const deleteFact = useDeleteProfileFact();
   const categories = useCategoryConfigs();
+  const [isPullRefreshing, setIsPullRefreshing] = React.useState(false);
 
   const onRefresh = useCallback(() => {
-    refetch();
+    setIsPullRefreshing(true);
+    refetch().finally(() => setIsPullRefreshing(false));
   }, [refetch]);
 
   const sections = useMemo(() => {
@@ -146,7 +148,7 @@ export default function ProfileScreen() {
           contentContainerStyle={styles.scroll}
           refreshControl={
             <RefreshControl
-              refreshing={isRefetching}
+              refreshing={isPullRefreshing}
               onRefresh={onRefresh}
               tintColor={colors.primary}
             />

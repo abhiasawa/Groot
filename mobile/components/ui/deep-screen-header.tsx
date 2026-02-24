@@ -5,7 +5,6 @@ import { ArrowLeft } from "lucide-react-native";
 import { useTheme } from "../../lib/theme/provider";
 import { typography } from "../../constants/typography";
 import { PressScale } from "./press-scale";
-import { PillBadge } from "./pill-badge";
 
 interface DeepScreenHeaderProps {
   title: string;
@@ -21,6 +20,7 @@ export function DeepScreenHeader({
   tags,
 }: DeepScreenHeaderProps) {
   const { colors } = useTheme();
+  void tags;
 
   return (
     <View style={styles.wrap}>
@@ -35,13 +35,6 @@ export function DeepScreenHeader({
           </Text>
         </View>
       </View>
-      {tags && tags.length > 0 ? (
-        <View style={styles.tagsRow}>
-          {tags.map((tag) => (
-            <PillBadge key={tag} label={tag} small />
-          ))}
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -73,11 +66,5 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontFamily: "Manrope_400Regular",
     ...typography.sm,
-  },
-  tagsRow: {
-    marginTop: 9,
-    flexDirection: "row",
-    gap: 8,
-    flexWrap: "wrap",
   },
 });

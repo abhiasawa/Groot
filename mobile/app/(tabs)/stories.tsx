@@ -100,10 +100,10 @@ function getStoryText(story: Story): string {
 export default function StoriesScreen() {
   const { colors } = useTheme();
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
+  const [isPullRefreshing, setIsPullRefreshing] = useState(false);
   const {
     data: storiesData,
     isLoading: storiesLoading,
-    isRefetching: storiesRefetching,
     refetch: refetchStories,
   } = useStories();
   const {
@@ -117,12 +117,13 @@ export default function StoriesScreen() {
   }, []);
 
   const onRefresh = useCallback(() => {
-    refetchStories();
-    refetchStats();
+    setIsPullRefreshing(true);
+    Promise.all([refetchStories(), refetchStats()])
+      .catch(() => {})
+      .finally(() => setIsPullRefreshing(false));
   }, [refetchStories, refetchStats]);
 
   const isLoading = storiesLoading || statsLoading;
-  const isRefetching = storiesRefetching;
 
   const grouped = useMemo(
     () => groupByWeek(storiesData?.stories ?? []),
@@ -165,7 +166,7 @@ export default function StoriesScreen() {
           contentContainerStyle={s.scroll}
           refreshControl={
             <RefreshControl
-              refreshing={isRefetching}
+              refreshing={isPullRefreshing}
               onRefresh={onRefresh}
               tintColor={colors.primary}
             />

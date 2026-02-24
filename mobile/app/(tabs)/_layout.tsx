@@ -23,8 +23,8 @@ export default function TabLayout() {
         name="journal"
         options={{
           title: "Journal",
-          tabBarIcon: ({ color, size }) => (
-            <BookOpen size={size} color={color} strokeWidth={1.6} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <BookOpen size={size} color={color} strokeWidth={focused ? 2 : 1.7} />
           ),
         }}
       />
@@ -32,8 +32,8 @@ export default function TabLayout() {
         name="tasks"
         options={{
           title: "Tasks",
-          tabBarIcon: ({ color, size }) => (
-            <CheckSquare size={size} color={color} strokeWidth={1.6} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <CheckSquare size={size} color={color} strokeWidth={focused ? 2 : 1.7} />
           ),
         }}
       />
@@ -53,8 +53,8 @@ export default function TabLayout() {
         name="insights"
         options={{
           title: "Insights",
-          tabBarIcon: ({ color, size }) => (
-            <BarChart3 size={size} color={color} strokeWidth={1.6} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <BarChart3 size={size} color={color} strokeWidth={focused ? 2 : 1.7} />
           ),
         }}
       />
@@ -80,8 +80,8 @@ export default function TabLayout() {
         name="more"
         options={{
           title: "More",
-          tabBarIcon: ({ color, size }) => (
-            <Menu size={size} color={color} strokeWidth={1.6} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Menu size={size} color={color} strokeWidth={focused ? 2 : 1.7} />
           ),
         }}
       />
