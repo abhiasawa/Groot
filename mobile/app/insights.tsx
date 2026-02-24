@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -10,13 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import {
-  ArrowLeft,
-  BarChart3,
-  Calendar,
-  TrendingUp,
-  Hash,
-} from "lucide-react-native";
+import { BarChart3, Calendar, Hash, TrendingUp } from "lucide-react-native";
 
 import { useTheme } from "../lib/theme/provider";
 import { useReports } from "../lib/api/queries";
@@ -24,12 +18,10 @@ import { getMoodColorFromName } from "../constants/mood";
 import { typography } from "../constants/typography";
 import { GradientBackground } from "../components/ui/gradient-background";
 import { GlassCard } from "../components/ui/glass-card";
-import { PressScale } from "../components/ui/press-scale";
 import { SectionHeader } from "../components/ui/section-header";
 import { PillBadge } from "../components/ui/pill-badge";
+import { DeepScreenHeader } from "../components/ui/deep-screen-header";
 import type { Report } from "../../shared/types/api";
-
-// ── Helpers ──────────────────────────────────
 
 function formatWeekRange(start: string, end: string): string {
   const s = new Date(start);
@@ -37,8 +29,6 @@ function formatWeekRange(start: string, end: string): string {
   const opts: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
   return `${s.toLocaleDateString("en-US", opts)} - ${e.toLocaleDateString("en-US", opts)}`;
 }
-
-// ── Component ────────────────────────────────
 
 export default function InsightsScreen() {
   const { colors } = useTheme();
@@ -49,250 +39,212 @@ export default function InsightsScreen() {
     refetch();
   }, [refetch]);
 
-  return (
-    <GradientBackground>
-      <SafeAreaView style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <PressScale onPress={() => router.back()}>
-            <ArrowLeft size={24} color={colors.foreground} strokeWidth={1.5} />
-          </PressScale>
-          <View>
-            <Text style={[styles.headerTitle, { color: colors.foreground }]}>
-              Insights
-            </Text>
-            <Text
-              style={[styles.headerSubtitle, { color: colors.mutedForeground }]}
-            >
-              Your weekly reflections
-            </Text>
-          </View>
-          <View style={styles.headerSpacer} />
-        </View>
+  const reports = data?.reports ?? [];
+  const latest = reports[0];
+  const archive = reports.slice(1);
 
-        {isLoading ? (
+  const summary = useMemo(() => {
+    const topics = new Set<string>();
+    reports.forEach((r) => (r.key_topics ?? []).forEach((t) => topics.add(t)));
+    return {
+      totalReports: reports.length,
+      uniqueTopics: topics.size,
+    };
+  }, [reports]);
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <GradientBackground>
           <View style={styles.center}>
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
-        ) : !data?.reports?.length ? (
-          <ScrollView
-            contentContainerStyle={styles.center}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefetching}
-                onRefresh={onRefresh}
-                tintColor={colors.primary}
-              />
-            }
-          >
-            <Animated.View
-              entering={FadeInDown.duration(420)}
-              style={[
-                styles.emptyIconContainer,
-                { backgroundColor: colors.glassSurface },
-              ]}
-            >
-              <BarChart3
-                size={32}
-                color={colors.mutedForeground}
-                strokeWidth={1}
-              />
-            </Animated.View>
-            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-              No reports yet
-            </Text>
-            <Text
-              style={[styles.emptySubtitle, { color: colors.mutedForeground }]}
-            >
-              Weekly insights are generated automatically as you journal with
-              Groot. Check back after your first full week.
-            </Text>
-          </ScrollView>
-        ) : (
-          <ScrollView
-            contentContainerStyle={styles.scroll}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefetching}
-                onRefresh={onRefresh}
-                tintColor={colors.primary}
-              />
-            }
-            showsVerticalScrollIndicator={false}
-          >
-            <SectionHeader title="Weekly Reports" />
+        </GradientBackground>
+      </SafeAreaView>
+    );
+  }
 
-            {data.reports.map((report: Report, index: number) => {
-              const moodColor = report.mood_trend
-                ? getMoodColorFromName(report.mood_trend, colors)
-                : null;
+  return (
+    <GradientBackground>
+      <SafeAreaView style={styles.container}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+            />
+          }
+          showsVerticalScrollIndicator={false}
+        >
+          <DeepScreenHeader
+            title="Insights"
+            subtitle="Weekly synthesis from your memory stream."
+            onBack={() => router.back()}
+            tags={["Weekly Reports", "Trends"]}
+          />
 
-              return (
-                <GlassCard
-                  key={report.id}
-                  accentColor={moodColor ?? undefined}
-                  delay={index * 100}
-                  style={styles.reportCard}
-                >
-                  {/* Week range header */}
-                  <View style={styles.reportHeader}>
-                    <View style={styles.reportDateRow}>
-                      <Calendar
-                        size={14}
-                        color={colors.mutedForeground}
-                        strokeWidth={1.5}
-                      />
-                      <Text
-                        style={[
-                          styles.reportDate,
-                          { color: colors.foreground },
-                        ]}
-                      >
-                        {formatWeekRange(report.week_start, report.week_end)}
-                      </Text>
-                    </View>
-                    {report.mood_trend && moodColor && (
-                      <PillBadge
-                        label={report.mood_trend}
-                        color={moodColor}
-                        textColor="#FFFFFF"
-                        small
-                      />
-                    )}
-                  </View>
-
-                  {/* Summary */}
-                  <Text
+          {!reports.length ? (
+            <Animated.View entering={FadeInDown.duration(420)}>
+              <GlassCard padding={26}>
+                <View style={styles.emptyState}>
+                  <View
                     style={[
-                      styles.reportSummary,
-                      { color: colors.foreground },
+                      styles.emptyIconContainer,
+                      { backgroundColor: colors.glassSurface },
                     ]}
-                    numberOfLines={4}
                   >
-                    {report.summary}
+                    <BarChart3 size={32} color={colors.mutedForeground} strokeWidth={1.1} />
+                  </View>
+                  <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+                    No reports yet
                   </Text>
+                  <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>
+                    Weekly insights appear automatically as you keep journaling.
+                    Check back after your first full week.
+                  </Text>
+                </View>
+              </GlassCard>
+            </Animated.View>
+          ) : (
+            <>
+              <GlassCard padding={18} accentColor={colors.primary} style={styles.summaryCard}>
+                <View style={styles.summaryRow}>
+                  <Stat label="Reports" value={summary.totalReports} />
+                  <Stat label="Topics" value={summary.uniqueTopics} />
+                </View>
+              </GlassCard>
 
-                  {/* Topics */}
-                  {report.key_topics && report.key_topics.length > 0 && (
-                    <View style={styles.topicsRow}>
-                      <Hash
-                        size={12}
-                        color={colors.mutedForeground}
-                        strokeWidth={1.5}
-                      />
-                      {report.key_topics.slice(0, 4).map((topic) => (
-                        <PillBadge key={topic} label={topic} small />
-                      ))}
+              {latest ? (
+                <>
+                  <SectionHeader title="Latest Brief" />
+                  <GlassCard
+                    accentColor={
+                      latest.mood_trend ? getMoodColorFromName(latest.mood_trend, colors) : colors.primary
+                    }
+                    padding={18}
+                    style={styles.reportCard}
+                  >
+                    <View style={styles.reportHeader}>
+                      <View style={styles.reportDateRow}>
+                        <Calendar size={14} color={colors.mutedForeground} strokeWidth={1.6} />
+                        <Text style={[styles.reportDate, { color: colors.foreground }]}>
+                          {formatWeekRange(latest.week_start, latest.week_end)}
+                        </Text>
+                      </View>
+                      {latest.mood_trend ? (
+                        <PillBadge
+                          label={latest.mood_trend}
+                          color={getMoodColorFromName(latest.mood_trend, colors)}
+                          textColor="#FFFFFF"
+                          small
+                        />
+                      ) : null}
                     </View>
-                  )}
 
-                  {/* Insights */}
-                  {report.insights && (
-                    <View style={styles.insightsRow}>
-                      <TrendingUp
-                        size={12}
-                        color={colors.chart2}
-                        strokeWidth={1.5}
-                      />
-                      <Text
-                        style={[
-                          styles.insightsText,
-                          { color: colors.mutedForeground },
-                        ]}
-                        numberOfLines={2}
+                    <Text style={[styles.reportSummary, { color: colors.foreground }]}>
+                      {latest.summary}
+                    </Text>
+
+                    {(latest.key_topics?.length ?? 0) > 0 ? (
+                      <View style={styles.topicsRow}>
+                        <Hash size={12} color={colors.mutedForeground} strokeWidth={1.5} />
+                        {latest.key_topics?.slice(0, 4).map((topic) => (
+                          <PillBadge key={topic} label={topic} small />
+                        ))}
+                      </View>
+                    ) : null}
+
+                    {latest.insights ? (
+                      <View style={styles.insightsRow}>
+                        <TrendingUp size={12} color={colors.chart2} strokeWidth={1.6} />
+                        <Text style={[styles.insightsText, { color: colors.mutedForeground }]}>
+                          {latest.insights}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </GlassCard>
+                </>
+              ) : null}
+
+              {archive.length > 0 ? (
+                <>
+                  <SectionHeader title="Archive" />
+                  {archive.map((report: Report, index: number) => {
+                    const moodColor = report.mood_trend
+                      ? getMoodColorFromName(report.mood_trend, colors)
+                      : null;
+
+                    return (
+                      <GlassCard
+                        key={report.id}
+                        accentColor={moodColor ?? undefined}
+                        delay={index * 60}
+                        padding={16}
+                        style={styles.reportCard}
                       >
-                        {report.insights}
-                      </Text>
-                    </View>
-                  )}
-                </GlassCard>
-              );
-            })}
-          </ScrollView>
-        )}
+                        <View style={styles.reportHeader}>
+                          <View style={styles.reportDateRow}>
+                            <Calendar size={13} color={colors.mutedForeground} strokeWidth={1.5} />
+                            <Text style={[styles.reportDate, { color: colors.foreground }]}>
+                              {formatWeekRange(report.week_start, report.week_end)}
+                            </Text>
+                          </View>
+                          {report.mood_trend && moodColor ? (
+                            <PillBadge
+                              label={report.mood_trend}
+                              color={moodColor}
+                              textColor="#FFFFFF"
+                              small
+                            />
+                          ) : null}
+                        </View>
+                        <Text
+                          style={[styles.reportSummary, { color: colors.foreground }]}
+                          numberOfLines={4}
+                        >
+                          {report.summary}
+                        </Text>
+                      </GlassCard>
+                    );
+                  })}
+                </>
+              ) : null}
+            </>
+          )}
+          <View style={styles.bottomSpacer} />
+        </ScrollView>
       </SafeAreaView>
     </GradientBackground>
   );
 }
 
-// ── Styles ───────────────────────────────────
+function Stat({ label, value }: { label: string; value: number }) {
+  const { colors } = useTheme();
+  return (
+    <View style={styles.stat}>
+      <Text style={[styles.statValue, { color: colors.foreground }]}>{value}</Text>
+      <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{label}</Text>
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 40,
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-  },
-  headerTitle: {
-    fontFamily: "Sora_600SemiBold",
-    ...typography.lg,
-  },
-  headerSubtitle: {
-    fontFamily: "Manrope_400Regular",
-    ...typography.xs,
-    marginTop: 2,
-  },
-  headerSpacer: {
-    width: 24,
-  },
   scroll: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 10,
     paddingBottom: 40,
   },
-  reportCard: {
-    marginBottom: 12,
-  },
-  reportHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  emptyState: {
     alignItems: "center",
-    marginBottom: 12,
-  },
-  reportDateRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  reportDate: {
-    fontFamily: "Sora_600SemiBold",
-    ...typography.sm,
-  },
-  reportSummary: {
-    fontFamily: "Manrope_400Regular",
-    ...typography.sm,
-    lineHeight: 22,
-    marginBottom: 12,
-  },
-  topicsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 6,
-    marginBottom: 8,
-  },
-  insightsRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 6,
-    marginTop: 4,
-  },
-  insightsText: {
-    flex: 1,
-    fontFamily: "Manrope_400Regular",
-    ...typography.xs,
-    fontStyle: "italic",
-    lineHeight: 18,
   },
   emptyIconContainer: {
     width: 72,
@@ -312,5 +264,73 @@ const styles = StyleSheet.create({
     ...typography.sm,
     textAlign: "center",
     lineHeight: 22,
+  },
+  summaryCard: {
+    marginBottom: 20,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    gap: 16,
+  },
+  stat: {
+    flex: 1,
+  },
+  statValue: {
+    fontFamily: "Sora_700Bold",
+    ...typography.xl,
+  },
+  statLabel: {
+    fontFamily: "Manrope_500Medium",
+    ...typography.xs,
+    marginTop: 2,
+  },
+  reportCard: {
+    marginBottom: 12,
+  },
+  reportHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+    gap: 8,
+  },
+  reportDateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flex: 1,
+  },
+  reportDate: {
+    fontFamily: "Sora_600SemiBold",
+    ...typography.sm,
+  },
+  reportSummary: {
+    fontFamily: "Manrope_400Regular",
+    ...typography.sm,
+    lineHeight: 22,
+    marginBottom: 10,
+  },
+  topicsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 8,
+  },
+  insightsRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+    marginTop: 2,
+  },
+  insightsText: {
+    flex: 1,
+    fontFamily: "Manrope_400Regular",
+    ...typography.xs,
+    fontStyle: "italic",
+    lineHeight: 18,
+  },
+  bottomSpacer: {
+    height: 20,
   },
 });

@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -9,22 +9,19 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { ArrowLeft, Flame, Target } from "lucide-react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { Flame, Target, Sparkles } from "lucide-react-native";
 
 import { useTheme } from "../lib/theme/provider";
 import { useHabits } from "../lib/api/queries";
 import { typography } from "../constants/typography";
 import { GlassCard } from "../components/ui/glass-card";
 import { GradientBackground } from "../components/ui/gradient-background";
-import { PressScale } from "../components/ui/press-scale";
 import { SectionHeader } from "../components/ui/section-header";
 import { PillBadge } from "../components/ui/pill-badge";
+import { DeepScreenHeader } from "../components/ui/deep-screen-header";
 import type { Habit } from "../../shared/types/api";
 
-// ── Helpers ──────────────────────────────────
-
-/** Build last 7 days array for the mini heatmap */
 function getLast7Days(): string[] {
   const days: string[] = [];
   const today = new Date();
@@ -49,8 +46,6 @@ function formatHabitTarget(habit: Habit): string {
   return "No daily target set yet";
 }
 
-// ── Component ────────────────────────────────
-
 export default function HabitsScreen() {
   const { colors } = useTheme();
   const router = useRouter();
@@ -60,13 +55,25 @@ export default function HabitsScreen() {
     refetch();
   }, [refetch]);
 
+  const habits = data?.habits ?? [];
   const last7Days = getLast7Days();
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  const summary = useMemo(() => {
+    const bestStreak = habits.reduce((max, h) => Math.max(max, h.longest_streak), 0);
+    const checkedToday = habits.filter((h) => h.recentCheckins?.includes(todayStr)).length;
+    return {
+      total: habits.length,
+      bestStreak,
+      checkedToday,
+    };
+  }, [habits, todayStr]);
 
   if (isLoading) {
     return (
-      <SafeAreaView style={[s.safeArea, { backgroundColor: colors.gradientStart }]}>
+      <SafeAreaView style={styles.safeArea}>
         <GradientBackground>
-          <View style={s.center}>
+          <View style={styles.center}>
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
         </GradientBackground>
@@ -75,219 +82,200 @@ export default function HabitsScreen() {
   }
 
   return (
-    <SafeAreaView style={[s.safeArea, { backgroundColor: colors.gradientStart }]}>
+    <SafeAreaView style={styles.safeArea}>
       <GradientBackground>
-        {/* Header */}
-        <View style={s.header}>
-          <PressScale onPress={() => router.back()} style={s.backButton}>
-            <ArrowLeft size={24} color={colors.foreground} strokeWidth={1.5} />
-          </PressScale>
-          <View style={s.headerTitleGroup}>
-            <Text style={[s.pageTitle, { color: colors.foreground }]}>
-              Habits
-            </Text>
-            <Text style={[s.pageSubtitle, { color: colors.mutedForeground }]}>
-              Build better routines
-            </Text>
-          </View>
-        </View>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+            />
+          }
+          showsVerticalScrollIndicator={false}
+        >
+          <DeepScreenHeader
+            title="Habits"
+            subtitle="Build consistency through small daily actions."
+            onBack={() => router.back()}
+            tags={["Routine", "Streaks"]}
+          />
 
-        {!data?.habits?.length ? (
-          <ScrollView
-            contentContainerStyle={s.emptyContainer}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefetching}
-                onRefresh={onRefresh}
-                tintColor={colors.primary}
-              />
-            }
-          >
-            <Animated.View
-              entering={FadeInDown.delay(100).duration(420)}
-              style={s.emptyInner}
-            >
-              <View
-                style={[
-                  s.emptyIconCircle,
-                  { backgroundColor: colors.glassSurface },
-                ]}
-              >
-                <Target
-                  size={36}
-                  color={colors.mutedForeground}
-                  strokeWidth={1}
-                />
-              </View>
-              <Text style={[s.emptyTitle, { color: colors.foreground }]}>
-                No habits tracked yet
-              </Text>
-              <Text style={[s.emptySubtitle, { color: colors.mutedForeground }]}>
-                Tell Groot about habits you want to build, and they will appear
-                here with streak tracking.
-              </Text>
-            </Animated.View>
-          </ScrollView>
-        ) : (
-          <ScrollView
-            contentContainerStyle={s.scroll}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefetching}
-                onRefresh={onRefresh}
-                tintColor={colors.primary}
-              />
-            }
-            showsVerticalScrollIndicator={false}
-          >
-            <SectionHeader title="Your Habits" />
-
-            {data.habits.map((habit: Habit, index: number) => {
-              const checkinSet = new Set(habit.recentCheckins ?? []);
-              const hasStreak = habit.current_streak > 0;
-              const staggerDelay = index * 80;
-
-              return (
-                <GlassCard
-                  key={habit.id}
-                  delay={staggerDelay}
-                  accentColor={hasStreak ? colors.moodGood : undefined}
-                  style={s.habitCard}
-                >
-                  {/* Name + badges row */}
-                  <View style={s.habitHeader}>
-                    <View style={s.habitNameRow}>
-                      <Text
-                        style={[s.habitName, { color: colors.foreground }]}
-                        numberOfLines={1}
-                      >
-                        {habit.name}
-                      </Text>
-                      {habit.frequency && (
-                        <PillBadge label={habit.frequency} small />
-                      )}
-                      {habit.category ? (
-                        <PillBadge label={habit.category} small />
-                      ) : null}
-                    </View>
-                    <PillBadge
-                      label={`${habit.current_streak}`}
-                      color={hasStreak ? `${colors.accent}20` : undefined}
-                      textColor={hasStreak ? colors.accent : colors.mutedForeground}
-                      style={s.streakPill}
-                    />
+          {!habits.length ? (
+            <Animated.View entering={FadeInDown.delay(100).duration(420)}>
+              <GlassCard padding={26}>
+                <View style={styles.emptyInner}>
+                  <View
+                    style={[
+                      styles.emptyIconCircle,
+                      { backgroundColor: colors.glassSurface },
+                    ]}
+                  >
+                    <Target size={36} color={colors.mutedForeground} strokeWidth={1.1} />
                   </View>
-
-                  {/* Target info */}
-                  <Text style={[s.habitTarget, { color: colors.mutedForeground }]}>
-                    {formatHabitTarget(habit)}
+                  <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+                    No habits tracked yet
                   </Text>
+                  <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>
+                    Tell Groot about habits you want to build and this dashboard
+                    will turn into your streak tracker.
+                  </Text>
+                </View>
+              </GlassCard>
+            </Animated.View>
+          ) : (
+            <>
+              <GlassCard padding={18} accentColor={colors.primary} style={styles.summaryCard}>
+                <View style={styles.summaryHeader}>
+                  <Sparkles size={14} color={colors.accent} strokeWidth={1.8} />
+                  <Text style={[styles.summaryLabel, { color: colors.accent }]}>
+                    Habit Overview
+                  </Text>
+                </View>
+                <View style={styles.summaryStats}>
+                  <SummaryStat value={summary.total} label="Active" />
+                  <SummaryStat value={summary.checkedToday} label="Today" />
+                  <SummaryStat value={summary.bestStreak} label="Best Streak" />
+                </View>
+              </GlassCard>
 
-                  {/* 7-day mini heatmap */}
-                  <View style={s.heatmapRow}>
-                    {last7Days.map((day) => {
-                      const done = checkinSet.has(day);
-                      return (
-                        <View key={day} style={s.heatmapDay}>
-                          <View
-                            style={[
-                              s.heatmapDot,
-                              {
-                                backgroundColor: done
-                                  ? colors.moodGood
-                                  : colors.moodNone,
-                              },
-                            ]}
-                          />
-                          <Text
-                            style={[
-                              s.heatmapLabel,
-                              { color: colors.mutedForeground },
-                            ]}
-                          >
-                            {getDayLabel(day)}
-                          </Text>
-                        </View>
-                      );
-                    })}
-                  </View>
+              <SectionHeader title="Your Habit Stack" />
+              {habits.map((habit: Habit, index: number) => {
+                const checkinSet = new Set(habit.recentCheckins ?? []);
+                const hasStreak = habit.current_streak > 0;
+                const staggerDelay = index * 70;
 
-                  {/* Longest streak */}
-                  {habit.longest_streak > 0 && (
-                    <View style={s.longestRow}>
-                      <Flame
-                        size={12}
-                        color={colors.accent}
-                        strokeWidth={1.5}
+                return (
+                  <GlassCard
+                    key={habit.id}
+                    delay={staggerDelay}
+                    accentColor={hasStreak ? colors.moodGood : undefined}
+                    style={styles.habitCard}
+                  >
+                    <View style={styles.habitHeader}>
+                      <View style={styles.habitNameRow}>
+                        <Text
+                          style={[styles.habitName, { color: colors.foreground }]}
+                          numberOfLines={1}
+                        >
+                          {habit.name}
+                        </Text>
+                        {habit.frequency ? <PillBadge label={habit.frequency} small /> : null}
+                        {habit.category ? <PillBadge label={habit.category} small /> : null}
+                      </View>
+                      <PillBadge
+                        label={`${habit.current_streak} day streak`}
+                        color={hasStreak ? `${colors.accent}20` : undefined}
+                        textColor={hasStreak ? colors.accent : colors.mutedForeground}
+                        small
                       />
-                      <Text
-                        style={[
-                          s.longestStreak,
-                          { color: colors.mutedForeground },
-                        ]}
-                      >
-                        Longest streak: {habit.longest_streak} days
-                      </Text>
                     </View>
-                  )}
-                </GlassCard>
-              );
-            })}
-          </ScrollView>
-        )}
+
+                    <Text style={[styles.habitTarget, { color: colors.mutedForeground }]}>
+                      {formatHabitTarget(habit)}
+                    </Text>
+
+                    <View style={styles.heatmapRow}>
+                      {last7Days.map((day) => {
+                        const done = checkinSet.has(day);
+                        return (
+                          <View key={day} style={styles.heatmapDay}>
+                            <View
+                              style={[
+                                styles.heatmapDot,
+                                {
+                                  backgroundColor: done ? colors.moodGood : colors.moodNone,
+                                },
+                              ]}
+                            />
+                            <Text
+                              style={[
+                                styles.heatmapLabel,
+                                { color: colors.mutedForeground },
+                              ]}
+                            >
+                              {getDayLabel(day)}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+
+                    {habit.longest_streak > 0 ? (
+                      <View style={styles.longestRow}>
+                        <Flame size={12} color={colors.accent} strokeWidth={1.5} />
+                        <Text style={[styles.longestStreak, { color: colors.mutedForeground }]}>
+                          Longest streak: {habit.longest_streak} days
+                        </Text>
+                      </View>
+                    ) : null}
+                  </GlassCard>
+                );
+              })}
+            </>
+          )}
+          <View style={styles.bottomSpacer} />
+        </ScrollView>
       </GradientBackground>
     </SafeAreaView>
   );
 }
 
-// ── Styles ───────────────────────────────────
+function SummaryStat({ value, label }: { value: number; label: string }) {
+  const { colors } = useTheme();
+  return (
+    <View style={styles.summaryStat}>
+      <Text style={[styles.summaryValue, { color: colors.foreground }]}>{value}</Text>
+      <Text style={[styles.summaryCaption, { color: colors.mutedForeground }]}>{label}</Text>
+    </View>
+  );
+}
 
-const s = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
+const styles = StyleSheet.create({
+  safeArea: { flex: 1 },
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-
-  // ── Header ──
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 16,
-    gap: 14,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  headerTitleGroup: {
-    flex: 1,
-  },
-  pageTitle: {
-    fontFamily: "Sora_700Bold",
-    ...typography.title,
-    letterSpacing: -0.3,
-  },
-  pageSubtitle: {
-    fontFamily: "Manrope_400Regular",
-    ...typography.sm,
-    marginTop: 2,
-  },
-
-  // ── Content ──
   scroll: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 10,
     paddingBottom: 40,
   },
-
-  // ── Habit Card ──
+  summaryCard: {
+    marginBottom: 20,
+  },
+  summaryHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 12,
+  },
+  summaryLabel: {
+    fontFamily: "Manrope_600SemiBold",
+    ...typography.xs,
+    textTransform: "uppercase",
+    letterSpacing: 0.45,
+  },
+  summaryStats: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  summaryStat: {
+    flex: 1,
+  },
+  summaryValue: {
+    fontFamily: "Sora_700Bold",
+    ...typography.xl,
+  },
+  summaryCaption: {
+    marginTop: 2,
+    fontFamily: "Manrope_500Medium",
+    ...typography.xs,
+  },
   habitCard: {
     marginBottom: 12,
   },
@@ -296,6 +284,7 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: 6,
+    gap: 8,
   },
   habitNameRow: {
     flexDirection: "row",
@@ -303,23 +292,16 @@ const s = StyleSheet.create({
     flexWrap: "wrap",
     gap: 8,
     flex: 1,
-    marginRight: 10,
   },
   habitName: {
     fontFamily: "Sora_600SemiBold",
     ...typography.base,
-  },
-  streakPill: {
-    flexDirection: "row",
-    alignItems: "center",
   },
   habitTarget: {
     fontFamily: "Manrope_400Regular",
     ...typography.xs,
     marginBottom: 14,
   },
-
-  // ── Heatmap ──
   heatmapRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -339,8 +321,6 @@ const s = StyleSheet.create({
     fontSize: 10,
     lineHeight: 14,
   },
-
-  // ── Longest streak ──
   longestRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -350,14 +330,6 @@ const s = StyleSheet.create({
   longestStreak: {
     fontFamily: "Manrope_400Regular",
     ...typography.xs,
-  },
-
-  // ── Empty State ──
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 40,
   },
   emptyInner: {
     alignItems: "center",
@@ -381,5 +353,8 @@ const s = StyleSheet.create({
     ...typography.sm,
     textAlign: "center",
     lineHeight: 22,
+  },
+  bottomSpacer: {
+    height: 20,
   },
 });

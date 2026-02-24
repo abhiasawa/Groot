@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -10,16 +10,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import Animated, { FadeIn } from "react-native-reanimated";
-import {
-  ArrowLeft,
-  User,
-  Trash2,
-  Pin,
-  Zap,
-  Heart,
-  Target,
-} from "lucide-react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
+import { User, Trash2, Pin, Zap, Heart, Target, Sparkles } from "lucide-react-native";
 
 import { useTheme } from "../lib/theme/provider";
 import { useProfile } from "../lib/api/queries";
@@ -29,93 +21,117 @@ import { GlassCard } from "../components/ui/glass-card";
 import { GradientBackground } from "../components/ui/gradient-background";
 import { PressScale } from "../components/ui/press-scale";
 import { SectionHeader } from "../components/ui/section-header";
+import { PillBadge } from "../components/ui/pill-badge";
+import { DeepScreenHeader } from "../components/ui/deep-screen-header";
 import type { ProfileFact, ProfileData } from "../../shared/types/api";
-
-// ── Category config ──────────────────────────
 
 interface CategoryConfig {
   key: keyof ProfileData["facts"];
   label: string;
-  icon: React.ReactNode;
   description: string;
+  icon: React.ReactNode;
 }
 
 function useCategoryConfigs(): CategoryConfig[] {
   const { colors } = useTheme();
+
   return [
     {
       key: "static",
       label: "About You",
-      icon: <Pin size={16} color={colors.chart1} strokeWidth={1.5} />,
-      description: "Core facts that rarely change",
+      description: "Core facts that stay mostly stable.",
+      icon: <Pin size={15} color={colors.chart1} strokeWidth={1.8} />,
     },
     {
       key: "dynamic",
       label: "Current State",
-      icon: <Zap size={16} color={colors.chart3} strokeWidth={1.5} />,
-      description: "Things that evolve over time",
+      description: "Things that shift with your season.",
+      icon: <Zap size={15} color={colors.chart2} strokeWidth={1.8} />,
     },
     {
       key: "preference",
       label: "Preferences",
-      icon: <Heart size={16} color={colors.chart4} strokeWidth={1.5} />,
-      description: "Your likes, dislikes, and tastes",
+      description: "What you like, dislike, and lean toward.",
+      icon: <Heart size={15} color={colors.chart4} strokeWidth={1.8} />,
     },
     {
       key: "goal",
       label: "Goals",
-      icon: <Target size={16} color={colors.chart2} strokeWidth={1.5} />,
-      description: "What you are working toward",
+      description: "Outcomes you are aiming to achieve.",
+      icon: <Target size={15} color={colors.chart3} strokeWidth={1.8} />,
     },
   ];
 }
 
-// ── Component ────────────────────────────────
+function formatMentionDate(dateStr: string | null): string {
+  if (!dateStr) return "Not mentioned recently";
+
+  return `Last mentioned ${new Date(dateStr).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  })}`;
+}
+
+function confidenceColor(
+  confidence: number,
+  colors: ReturnType<typeof useTheme>["colors"],
+): { background: string; text: string } {
+  if (confidence >= 0.82) {
+    return { background: `${colors.moodGood}26`, text: colors.moodGood };
+  }
+  if (confidence >= 0.6) {
+    return { background: `${colors.chart2}26`, text: colors.chart2 };
+  }
+  return { background: `${colors.mutedForeground}22`, text: colors.mutedForeground };
+}
 
 export default function ProfileScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const { data, isLoading, isRefetching, refetch } = useProfile();
   const deleteFact = useDeleteProfileFact();
-
   const categories = useCategoryConfigs();
 
   const onRefresh = useCallback(() => {
     refetch();
   }, [refetch]);
 
+  const sections = useMemo(() => {
+    if (!data) return [];
+    return categories
+      .map((cat) => ({ ...cat, facts: data.facts[cat.key] ?? [] }))
+      .filter((cat) => cat.facts.length > 0);
+  }, [categories, data]);
+
+  const summary = useMemo(() => {
+    const allFacts = sections.flatMap((section) => section.facts);
+
+    return {
+      total: allFacts.length,
+      categories: sections.length,
+      strong: allFacts.filter((fact) => fact.confidence >= 0.75).length,
+    };
+  }, [sections]);
+
   const handleDelete = useCallback(
     (fact: ProfileFact) => {
-      Alert.alert(
-        "Delete fact",
-        `Remove "${fact.key}: ${fact.value}" from your profile?`,
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Delete",
-            style: "destructive",
-            onPress: () => deleteFact.mutate({ factId: fact.id }),
-          },
-        ],
-      );
+      Alert.alert("Delete fact", `Remove \"${fact.key}: ${fact.value}\" from your profile?`, [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => deleteFact.mutate({ factId: fact.id }),
+        },
+      ]);
     },
     [deleteFact],
   );
-
-  const totalFacts = data
-    ? data.facts.static.length +
-      data.facts.dynamic.length +
-      data.facts.preference.length +
-      data.facts.goal.length
-    : 0;
-
-  // ── Loading ──────────────────────────────
 
   if (isLoading) {
     return (
       <SafeAreaView style={styles.flex}>
         <GradientBackground>
-          <View style={styles.loadingContainer}>
+          <View style={styles.center}>
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
         </GradientBackground>
@@ -123,69 +139,9 @@ export default function ProfileScreen() {
     );
   }
 
-  // ── Empty ────────────────────────────────
-
-  if (totalFacts === 0) {
-    return (
-      <SafeAreaView style={styles.flex}>
-        <GradientBackground>
-          {/* Header */}
-          <View style={styles.header}>
-            <PressScale onPress={() => router.back()}>
-              <ArrowLeft size={24} color={colors.foreground} strokeWidth={1.5} />
-            </PressScale>
-            <View style={{ width: 24 }} />
-          </View>
-
-          <ScrollView
-            contentContainerStyle={styles.emptyContainer}
-            refreshControl={
-              <RefreshControl
-                refreshing={isRefetching}
-                onRefresh={onRefresh}
-                tintColor={colors.primary}
-              />
-            }
-          >
-            <Animated.View
-              entering={FadeIn.delay(100).duration(600)}
-              style={[styles.emptyIconWrap, { backgroundColor: colors.glassSurface }]}
-            >
-              <User size={40} color={colors.mutedForeground} strokeWidth={1.2} />
-            </Animated.View>
-            <Animated.Text
-              entering={FadeIn.delay(250).duration(600)}
-              style={[styles.emptyTitle, { color: colors.foreground }]}
-            >
-              Profile is empty
-            </Animated.Text>
-            <Animated.Text
-              entering={FadeIn.delay(400).duration(600)}
-              style={[styles.emptySubtitle, { color: colors.mutedForeground }]}
-            >
-              Groot builds your profile from conversations. Share about yourself
-              -- your interests, goals, and preferences -- and they will appear
-              here.
-            </Animated.Text>
-          </ScrollView>
-        </GradientBackground>
-      </SafeAreaView>
-    );
-  }
-
-  // ── Main render ──────────────────────────
-
   return (
     <SafeAreaView style={styles.flex}>
       <GradientBackground>
-        {/* Header */}
-        <View style={styles.header}>
-          <PressScale onPress={() => router.back()}>
-            <ArrowLeft size={24} color={colors.foreground} strokeWidth={1.5} />
-          </PressScale>
-          <View style={{ width: 24 }} />
-        </View>
-
         <ScrollView
           contentContainerStyle={styles.scroll}
           refreshControl={
@@ -197,95 +153,89 @@ export default function ProfileScreen() {
           }
           showsVerticalScrollIndicator={false}
         >
-          {/* Title */}
-          <Animated.View
-            entering={FadeIn.duration(700)}
-            style={styles.titleSection}
-          >
-            <Text style={[styles.pageTitle, { color: colors.foreground }]}>
-              Profile
-            </Text>
-            <Text style={[styles.pageSubtitle, { color: colors.mutedForeground }]}>
-              What Groot knows about you
-            </Text>
-          </Animated.View>
+          <DeepScreenHeader
+            title="Profile"
+            subtitle="The knowledge graph Groot is building about you."
+            onBack={() => router.back()}
+            tags={["Identity", "Memory Graph"]}
+          />
 
-          {/* Categories */}
-          {categories.map((cat, catIndex) => {
-            const facts = data?.facts[cat.key] ?? [];
-            if (facts.length === 0) return null;
-
-            return (
-              <View key={cat.key} style={styles.categorySection}>
-                {/* Category icon + label row */}
-                <View style={styles.categoryIconRow}>
-                  <View
-                    style={[
-                      styles.categoryIconWrap,
-                      { backgroundColor: colors.glassSurface },
-                    ]}
-                  >
-                    {cat.icon}
+          {summary.total === 0 ? (
+            <Animated.View entering={FadeInDown.duration(420)}>
+              <GlassCard padding={26}>
+                <View style={styles.emptyInner}>
+                  <View style={[styles.emptyIconWrap, { backgroundColor: colors.glassSurface }]}>
+                    <User size={38} color={colors.mutedForeground} strokeWidth={1.2} />
                   </View>
-                  <View>
-                    <Text style={[styles.categoryLabel, { color: colors.foreground }]}>
-                      {cat.label}
-                    </Text>
-                    <Text style={[styles.categoryDesc, { color: colors.mutedForeground }]}>
-                      {cat.description}
-                    </Text>
-                  </View>
+                  <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No profile facts yet</Text>
+                  <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>Share your goals, preferences, and routines. Groot will organize them here automatically.</Text>
                 </View>
+              </GlassCard>
+            </Animated.View>
+          ) : (
+            <>
+              <GlassCard padding={18} accentColor={colors.primary} style={styles.summaryCard}>
+                <View style={styles.summaryHeader}>
+                  <Sparkles size={13} color={colors.accent} strokeWidth={1.8} />
+                  <Text style={[styles.summaryLabel, { color: colors.accent }]}>Profile Coverage</Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <SummaryStat label="Facts" value={summary.total} />
+                  <SummaryStat label="Active Buckets" value={summary.categories} />
+                  <SummaryStat label="High Confidence" value={summary.strong} />
+                </View>
+              </GlassCard>
 
-                <SectionHeader title={cat.label} />
+              {sections.map((section, sectionIndex) => (
+                <View key={section.key} style={styles.sectionWrap}>
+                  <SectionHeader title={section.label} />
+                  <Text style={[styles.sectionDescription, { color: colors.mutedForeground }]}>
+                    {section.description}
+                  </Text>
 
-                {/* Fact cards */}
-                {facts.map((fact: ProfileFact, factIndex: number) => (
-                  <GlassCard
-                    key={fact.id}
-                    delay={catIndex * 100 + factIndex * 60}
-                    padding={14}
-                    style={styles.factCardSpacing}
-                  >
-                    <View style={styles.factRow}>
-                      <View style={styles.factContent}>
-                        <Text
-                          style={[
-                            styles.factKey,
-                            { color: colors.mutedForeground },
-                          ]}
-                        >
-                          {fact.key}
-                        </Text>
-                        <Text style={[styles.factValue, { color: colors.foreground }]}>
-                          {fact.value}
-                        </Text>
-                        {fact.lastMentioned && (
-                          <Text style={[styles.factMeta, { color: colors.mutedForeground }]}>
-                            Last mentioned{" "}
-                            {new Date(fact.lastMentioned).toLocaleDateString(
-                              "en-US",
-                              { month: "short", day: "numeric" },
-                            )}
-                          </Text>
-                        )}
-                      </View>
-                      <PressScale
-                        onPress={() => handleDelete(fact)}
-                        style={styles.deleteBtn}
+                  {section.facts.map((fact: ProfileFact, factIndex: number) => {
+                    const confidence = Math.round(fact.confidence * 100);
+                    const tone = confidenceColor(fact.confidence, colors);
+
+                    return (
+                      <GlassCard
+                        key={fact.id}
+                        padding={14}
+                        delay={sectionIndex * 80 + factIndex * 55}
+                        style={styles.factCard}
                       >
-                        <Trash2
-                          size={16}
-                          color={colors.destructive}
-                          strokeWidth={1.5}
-                        />
-                      </PressScale>
-                    </View>
-                  </GlassCard>
-                ))}
-              </View>
-            );
-          })}
+                        <View style={styles.factHeader}>
+                          <View style={styles.factHeaderLeft}>
+                            <View style={[styles.categoryIconBadge, { backgroundColor: colors.glassSurface }]}>
+                              {section.icon}
+                            </View>
+                            <Text style={[styles.factKey, { color: colors.mutedForeground }]}>{fact.key}</Text>
+                          </View>
+
+                          <View style={styles.factHeaderRight}>
+                            <PillBadge
+                              label={`${confidence}%`}
+                              color={tone.background}
+                              textColor={tone.text}
+                              small
+                            />
+                            <PressScale onPress={() => handleDelete(fact)} style={styles.deleteButton}>
+                              <Trash2 size={16} color={colors.destructive} strokeWidth={1.6} />
+                            </PressScale>
+                          </View>
+                        </View>
+
+                        <Text style={[styles.factValue, { color: colors.foreground }]}>{fact.value}</Text>
+                        <Text style={[styles.factMeta, { color: colors.mutedForeground }]}>
+                          {formatMentionDate(fact.lastMentioned)}
+                        </Text>
+                      </GlassCard>
+                    );
+                  })}
+                </View>
+              ))}
+            </>
+          )}
 
           <View style={styles.bottomSpacer} />
         </ScrollView>
@@ -294,120 +244,138 @@ export default function ProfileScreen() {
   );
 }
 
-// ── Styles ───────────────────────────────────
+function SummaryStat({ label, value }: { label: string; value: number }) {
+  const { colors } = useTheme();
+
+  return (
+    <View style={styles.stat}>
+      <Text style={[styles.statValue, { color: colors.foreground }]}>{value}</Text>
+      <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{label}</Text>
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-  loadingContainer: {
+  flex: { flex: 1 },
+  center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
   },
   scroll: {
     paddingHorizontal: 20,
+    paddingTop: 10,
     paddingBottom: 40,
   },
-  titleSection: {
-    marginBottom: 24,
+  summaryCard: {
+    marginBottom: 22,
   },
-  pageTitle: {
-    fontFamily: "Sora_700Bold",
-    ...typography.hero,
-    marginBottom: 4,
-  },
-  pageSubtitle: {
-    fontFamily: "Manrope_400Regular",
-    ...typography.sm,
-  },
-  categorySection: {
-    marginBottom: 28,
-  },
-  categoryIconRow: {
+  summaryHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    marginBottom: 14,
+    gap: 6,
+    marginBottom: 10,
   },
-  categoryIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
+  summaryLabel: {
+    fontFamily: "Manrope_600SemiBold",
+    ...typography.xs,
+    textTransform: "uppercase",
+    letterSpacing: 0.45,
   },
-  categoryLabel: {
-    fontFamily: "Sora_600SemiBold",
-    ...typography.base,
+  summaryRow: {
+    flexDirection: "row",
+    gap: 12,
   },
-  categoryDesc: {
+  stat: {
+    flex: 1,
+  },
+  statValue: {
+    fontFamily: "Sora_700Bold",
+    ...typography.xl,
+  },
+  statLabel: {
+    marginTop: 2,
+    fontFamily: "Manrope_500Medium",
+    ...typography.xs,
+  },
+  sectionWrap: {
+    marginBottom: 22,
+  },
+  sectionDescription: {
+    marginTop: -8,
+    marginBottom: 12,
     fontFamily: "Manrope_400Regular",
     ...typography.xs,
   },
-  factCardSpacing: {
-    marginBottom: 8,
+  factCard: {
+    marginBottom: 9,
   },
-  factRow: {
+  factHeader: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    marginBottom: 8,
   },
-  factContent: {
+  factHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     flex: 1,
   },
+  categoryIconBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  factHeaderRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  deleteButton: {
+    padding: 5,
+  },
   factKey: {
-    fontFamily: "Manrope_500Medium",
+    fontFamily: "Manrope_600SemiBold",
     ...typography.xs,
     textTransform: "uppercase",
     letterSpacing: 0.5,
-    marginBottom: 2,
   },
   factValue: {
-    fontFamily: "Manrope_400Regular",
-    ...typography.sm,
+    fontFamily: "Manrope_500Medium",
+    ...typography.base,
     lineHeight: 22,
   },
   factMeta: {
+    marginTop: 6,
     fontFamily: "Manrope_400Regular",
     ...typography.xs,
-    marginTop: 4,
   },
-  deleteBtn: {
-    padding: 8,
-    marginLeft: 8,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
+  emptyInner: {
     alignItems: "center",
-    paddingHorizontal: 40,
   },
   emptyIconWrap: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    justifyContent: "center",
     alignItems: "center",
-    marginBottom: 20,
+    justifyContent: "center",
   },
   emptyTitle: {
-    fontFamily: "Sora_700Bold",
-    ...typography.title,
+    marginTop: 16,
+    marginBottom: 8,
     textAlign: "center",
-    marginBottom: 12,
+    fontFamily: "Sora_700Bold",
+    ...typography.lg,
   },
   emptySubtitle: {
-    fontFamily: "Manrope_400Regular",
-    ...typography.base,
     textAlign: "center",
-    lineHeight: 24,
+    fontFamily: "Manrope_400Regular",
+    ...typography.sm,
+    lineHeight: 22,
   },
   bottomSpacer: {
     height: 20,
