@@ -14,6 +14,7 @@ import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useRef } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import { AuthProvider, useAuth } from "../lib/auth/provider";
 import { ThemeProvider } from "../lib/theme/provider";
@@ -164,17 +165,13 @@ export default function RootLayout() {
             persistOptions={{ persister: asyncStoragePersister }}
           >
             <AuthGate>
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="(auth)" />
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="habits" />
-                <Stack.Screen name="tasks" />
-                <Stack.Screen name="insights" />
-                <Stack.Screen name="topics" />
-                <Stack.Screen name="people" />
-                <Stack.Screen name="profile" />
-                <Stack.Screen name="settings" />
-              </Stack>
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="(auth)" />
+                  <Stack.Screen name="(tabs)" />
+                  <Stack.Screen name="settings" />
+                </Stack>
+              </GestureHandlerRootView>
             </AuthGate>
           </PersistQueryClientProvider>
         </AuthProvider>

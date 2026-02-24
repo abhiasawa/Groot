@@ -1,6 +1,5 @@
 import { Tabs } from "expo-router";
-import { Home, BookOpen, Menu } from "lucide-react-native";
-
+import { Sun, BookOpen, User } from "lucide-react-native";
 import { useTheme } from "../../lib/theme/provider";
 
 export default function TabLayout() {
@@ -13,58 +12,51 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.mutedForeground,
         tabBarStyle: {
-          backgroundColor: colors.glassSurface,
-          borderTopColor: colors.glassBorder,
+          backgroundColor: colors.card,
+          borderTopColor: colors.border,
           borderTopWidth: 1,
           elevation: 0,
-          height: 65,
-          paddingBottom: 8,
+          height: 56,
+          paddingBottom: 6,
         },
         tabBarLabelStyle: {
           fontFamily: "Inter_500Medium",
-          fontSize: 11,
+          fontSize: 10,
         },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
+          title: "Today",
           tabBarIcon: ({ color, size }) => (
-            <Home size={size} color={color} strokeWidth={1.5} />
+            <Sun size={size} color={color} strokeWidth={1.5} />
           ),
         }}
       />
       <Tabs.Screen
-        name="journal"
+        name="timeline"
         options={{
-          title: "Journal",
+          title: "Timeline",
           tabBarIcon: ({ color, size }) => (
             <BookOpen size={size} color={color} strokeWidth={1.5} />
           ),
         }}
       />
       <Tabs.Screen
-        name="stories"
+        name="you"
         options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="mood"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="more"
-        options={{
-          title: "More",
+          title: "You",
           tabBarIcon: ({ color, size }) => (
-            <Menu size={size} color={color} strokeWidth={1.5} />
+            <User size={size} color={color} strokeWidth={1.5} />
           ),
         }}
       />
+      {/* Hidden — old screens kept temporarily for file compatibility */}
+      <Tabs.Screen name="journal" options={{ href: null }} />
+      <Tabs.Screen name="stories" options={{ href: null }} />
+      <Tabs.Screen name="mood" options={{ href: null }} />
+      <Tabs.Screen name="more" options={{ href: null }} />
     </Tabs>
   );
 }
