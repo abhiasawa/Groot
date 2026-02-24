@@ -114,12 +114,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="people"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
         name="profile"
         options={{
           href: null,

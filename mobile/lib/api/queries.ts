@@ -11,7 +11,6 @@ import type {
   TasksResponse,
   ReportsResponse,
   TopicsData,
-  PeopleResponse,
   ProfileData,
   SettingsResponse,
   MeResponse,
@@ -29,7 +28,6 @@ export const qk = {
   tasks: ["tasks"] as const,
   reports: ["reports"] as const,
   topics: ["topics"] as const,
-  people: ["people"] as const,
   profile: ["profile"] as const,
   settings: ["settings"] as const,
   currentUser: ["currentUser"] as const,
@@ -136,15 +134,6 @@ export function useTopics() {
   return useQuery<TopicsData>({
     queryKey: qk.topics,
     queryFn: () => apiFetch<TopicsData>("/api/topics"),
-    staleTime: 60_000,
-  });
-}
-
-/** GET /api/people */
-export function usePeople() {
-  return useQuery<PeopleResponse>({
-    queryKey: qk.people,
-    queryFn: () => apiFetch<PeopleResponse>("/api/people"),
     staleTime: 60_000,
   });
 }

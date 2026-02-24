@@ -198,8 +198,6 @@ export function useDeleteProfileFact() {
 
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: qk.profile });
-      // People tab derives from profile facts
-      void queryClient.invalidateQueries({ queryKey: qk.people });
     },
   });
 }

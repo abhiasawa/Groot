@@ -173,7 +173,6 @@ export default function RootLayout() {
                 <Stack.Screen name="tasks" />
                 <Stack.Screen name="insights" />
                 <Stack.Screen name="topics" />
-                <Stack.Screen name="people" />
                 <Stack.Screen name="profile" />
                 <Stack.Screen name="settings" />
               </Stack>

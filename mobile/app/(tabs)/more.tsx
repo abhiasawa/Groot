@@ -7,7 +7,6 @@ import {
   BookOpen,
   BarChart3,
   Hash,
-  Users,
   User,
   Settings,
   Sparkles,
@@ -54,14 +53,6 @@ function useMenuItems(): MenuItem[] {
       route: "/(tabs)/journal",
       group: "plan",
       icon: <BookOpen size={18} color={colors.primary} strokeWidth={1.7} />,
-    },
-    {
-      key: "people",
-      label: "People",
-      description: "Relationship memory graph",
-      route: "/(tabs)/people",
-      group: "plan",
-      icon: <Users size={18} color={colors.primary} strokeWidth={1.7} />,
     },
     {
       key: "insights",
