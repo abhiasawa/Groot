@@ -11,13 +11,9 @@ const PREFETCH_ROUTES = [
   "/api/garden/home",
   "/api/settings",
   "/api/memories?limit=100",
-  "/api/mood",
   "/api/habits?include=checkins",
   "/api/tasks",
   "/api/people",
-  "/api/reports",
-  "/api/profile",
-  "/api/topics",
 ];
 
 export default function Prefetcher() {

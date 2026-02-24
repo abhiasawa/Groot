@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Home, BookOpen, Sparkles, Heart, Menu } from "lucide-react-native";
+import { Home, BookOpen, Menu } from "lucide-react-native";
 
 import { useTheme } from "../../lib/theme/provider";
 
@@ -47,19 +47,13 @@ export default function TabLayout() {
       <Tabs.Screen
         name="stories"
         options={{
-          title: "Stories",
-          tabBarIcon: ({ color, size }) => (
-            <Sparkles size={size} color={color} strokeWidth={1.5} />
-          ),
+          href: null,
         }}
       />
       <Tabs.Screen
         name="mood"
         options={{
-          title: "Mood",
-          tabBarIcon: ({ color, size }) => (
-            <Heart size={size} color={color} strokeWidth={1.5} />
-          ),
+          href: null,
         }}
       />
       <Tabs.Screen

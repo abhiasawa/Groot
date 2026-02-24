@@ -20,6 +20,7 @@ import {
   BookOpen,
   Calendar,
   Clock,
+  User,
   LogOut,
   Mail,
 } from "lucide-react-native";
@@ -286,6 +287,34 @@ export default function SettingsScreen() {
                   </Text>
                 </View>
               </View>
+              <PressScale onPress={() => router.push("/profile" as never)}>
+                <View
+                  style={[
+                    styles.notifRow,
+                    {
+                      borderBottomWidth: StyleSheet.hairlineWidth,
+                      borderBottomColor: colors.glassBorder,
+                    },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.notifIconWrap,
+                      { backgroundColor: colors.glassSurface },
+                    ]}
+                  >
+                    <User size={18} color={colors.accent} strokeWidth={1.5} />
+                  </View>
+                  <View style={styles.notifContent}>
+                    <Text style={[styles.notifLabel, { color: colors.foreground }]}>
+                      Personal Profile
+                    </Text>
+                    <Text style={[styles.notifDesc, { color: colors.mutedForeground }]}>
+                      Review what Groot has learned about you
+                    </Text>
+                  </View>
+                </View>
+              </PressScale>
               <PressScale onPress={signOut}>
                 <View style={styles.signOutRow}>
                   <View

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Search, Sprout, Heart, BarChart3, Lightbulb, Brain, CheckCircle2, Bell } from "lucide-react";
+import { Search, Sprout, Users, BarChart3, Settings, CheckSquare, CheckCircle2, Bell } from "lucide-react";
 import { cachedFetch } from "@/lib/garden/fetch-cache";
 import MarkdownContent from "@/components/garden/markdown-content";
 import { Card, CardContent } from "@/components/ui/card";
@@ -96,10 +96,10 @@ export default function GardenHome() {
   ] as const;
 
   const quickLinks = [
-    { href: "/garden/mood", icon: <Heart className="size-5 text-mood-good" />, label: "Mood Patterns", description: "Your emotional journey" },
-    { href: "/garden/habits", icon: <BarChart3 className="size-5 text-primary" />, label: "Habits", description: "Streaks and progress" },
-    { href: "/garden/insights", icon: <Lightbulb className="size-5 text-mood-okay" />, label: "Insights", description: "Weekly reflections" },
-    { href: "/garden/profile", icon: <Brain className="size-5 text-accent" />, label: "Profile", description: "What Groot knows" },
+    { href: "/garden/habits", icon: <BarChart3 className="size-5 text-primary" />, label: "Habits", description: "Routines and streaks" },
+    { href: "/garden/tasks", icon: <CheckSquare className="size-5 text-accent" />, label: "Tasks", description: "What needs attention today" },
+    { href: "/garden/people", icon: <Users className="size-5 text-mood-okay" />, label: "People", description: "Important relationships" },
+    { href: "/garden/settings", icon: <Settings className="size-5 text-muted-foreground" />, label: "Settings", description: "Notifications and profile" },
   ] as const;
 
   return (

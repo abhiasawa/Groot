@@ -2,13 +2,13 @@
 
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Home, BookOpen, Sparkles, Heart, Settings } from "lucide-react";
+import { Home, BookOpen, BarChart3, CheckSquare, Settings } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/garden", label: "Home", icon: Home },
   { href: "/garden/journal", label: "Journal", icon: BookOpen },
-  { href: "/garden/stories", label: "Stories", icon: Sparkles },
-  { href: "/garden/mood", label: "Mood", icon: Heart },
+  { href: "/garden/habits", label: "Habits", icon: BarChart3 },
+  { href: "/garden/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/garden/settings", label: "Settings", icon: Settings },
 ] as const;
 
