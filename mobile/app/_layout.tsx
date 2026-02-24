@@ -5,13 +5,13 @@ import {
   Inter_600SemiBold,
   Inter_700Bold,
 } from "@expo-google-fonts/inter";
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, useQueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -77,8 +77,25 @@ try {
  */
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { token, loading } = useAuth();
+  const queryClient = useQueryClient();
   const router = useRouter();
   const segments = useSegments();
+  const previousTokenRef = useRef<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (loading) return;
+
+    if (previousTokenRef.current === undefined) {
+      previousTokenRef.current = token;
+      return;
+    }
+
+    if (previousTokenRef.current !== token) {
+      // Prevent stale cross-account data from persisted query cache.
+      queryClient.clear();
+    }
+    previousTokenRef.current = token;
+  }, [token, loading, queryClient]);
 
   useEffect(() => {
     if (loading) return;

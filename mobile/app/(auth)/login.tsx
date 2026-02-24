@@ -18,7 +18,9 @@ import { GlassCard } from "../../components/ui/glass-card";
 import { GradientBackground } from "../../components/ui/gradient-background";
 import { PressScale } from "../../components/ui/press-scale";
 
-const API_BASE = "https://groot-three.vercel.app";
+const API_BASE = (
+  process.env.EXPO_PUBLIC_API_BASE_URL ?? "https://groot-three.vercel.app"
+).replace(/\/$/, "");
 
 export default function LoginScreen() {
   const { setToken } = useAuth();

@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { getAuthenticatedPortalUser, PortalAuthError } from "@/lib/auth/portal-user";
 
+function normalizeHabitName(name: string): string {
+  return name.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
 /**
  * GET /api/garden/home — Consolidated home page data.
  * Single request replaces 6 separate API calls.
@@ -88,10 +92,10 @@ export async function GET(request: NextRequest) {
       .select("name")
       .eq("owner_user_id", userId),
 
-    // 8. Habits count
+    // 8. Habits list (counted after deduping normalized names)
     supabase
       .from("habits")
-      .select("id", { count: "exact", head: true })
+      .select("id, name")
       .eq("user_id", userId)
       .eq("is_active", true),
   ]);
@@ -121,6 +125,18 @@ export async function GET(request: NextRequest) {
     if (name) seen.add(name);
   }
 
+  // Count unique active habits by normalized display name.
+  const habitNames = new Set<string>();
+  for (const habit of habitsRes.data ?? []) {
+    const name = typeof habit.name === "string" ? normalizeHabitName(habit.name) : "";
+    if (name) {
+      habitNames.add(name);
+      continue;
+    }
+    // Defensive fallback: unnamed habits should still count individually.
+    habitNames.add(`id:${habit.id}`);
+  }
+
   const response = NextResponse.json({
     displayName,
     createdAt,
@@ -132,7 +148,7 @@ export async function GET(request: NextRequest) {
       : null,
     recentMood,
     peopleCount: seen.size,
-    habitsCount: habitsRes.count ?? 0,
+    habitsCount: habitNames.size,
   });
 
   // Cache for 30 seconds, allow stale for 60 more
