@@ -5,17 +5,12 @@ import { addMemory } from "@/lib/memory/supermemory-client";
 import { processMediaFromBuffer } from "@/lib/media/media-handler";
 import { uploadMediaToStorage } from "@/lib/media/storage";
 import { generateGrootResponse, getErrorResponse } from "@/lib/ai/groot-engine";
-import {
-  handlePendingOutboundReply,
-  handleSendConfirmation,
-} from "@/lib/whatsapp/outbound";
 import { createReminder } from "@/lib/reminders/scheduler";
 import {
   markUserResponded,
   updateProactivePreference,
 } from "@/lib/proactive/scheduler";
 import { sendMessage, sendImage } from "./dispatcher";
-import { isLastImageRequest, extractStoredMediaId } from "./last-image";
 import { logger } from "@/lib/logger";
 import type { ParsedMessage } from "@/types/whatsapp";
 
@@ -86,6 +81,14 @@ export async function processMessage(
     "Processing message",
   );
 
+  // ── Skip reactions and stickers silently — they don't need a response ──
+  if (parsed.type === "reaction" || parsed.type === "sticker") {
+    logger.info({ userId: user.id, type: parsed.type }, "Skipping reaction/sticker — no response needed");
+    outcome = "skipped_reaction";
+    logSummary();
+    return;
+  }
+
   // Store inbound message immediately so context is available for batch detection
   await storeInboundMessage(user.id, parsed);
   const pStore = Date.now();
@@ -137,29 +140,7 @@ export async function processMessage(
     return;
   }
 
-  if (isLastImageRequest(text)) {
-    const tRecall = Date.now();
-    await handleLastImageRecall(user.id, parsed.platform, parsed.from);
-    metrics.lastImageRecallMs = Date.now() - tRecall;
-    outcome = "handled_last_image_recall";
-    logSummary();
-    return;
-  }
-
-  // Pending outbound follow-up — WhatsApp only
-  if (parsed.platform === "whatsapp") {
-    const tPending = Date.now();
-    const handledPending = await handlePendingOutboundReply(user.id, parsed.from, text);
-    metrics.pendingOutboundMs = Date.now() - tPending;
-    if (handledPending) {
-      logger.info({ userId: user.id }, "Message handled by pending outbound reply");
-      outcome = "handled_pending_outbound";
-      logSummary();
-      return;
-    }
-  }
-
-  // ─── All text messages go through Groot AI ───
+  // ─── All text messages go through Groot AI — no regex routing ───
   try {
     const tGroot = Date.now();
     const grootResponse = await generateGrootResponse(
@@ -194,12 +175,20 @@ export async function processMessage(
     const pSend = Date.now();
     metrics.sendMs = pSend - tSend;
 
+    // If AI detected a "send last image" request, handle it
+    if (grootResponse.lastImageRequest) {
+      handleLastImageRecall(user.id, parsed.platform, parsed.from).catch((err) => {
+        logger.warn({ err, userId: user.id }, "Last image recall failed");
+      });
+    }
+
     // Post-response actions driven by AI metadata
     const postOps: Promise<unknown>[] = [
       storeOutboundMessage(user.id, grootResponse.text, {
         mood: grootResponse.detectedMood,
       }),
       createRemindersFromDetectedDates(user.id, grootResponse.detectedDates),
+      createTasksFromDetectedTasks(user.id, grootResponse.detectedTasks),
       enrichInboundMessageMetadata(user.id, parsed.messageId, {
         memoryTags: grootResponse.memoryTags.length > 0 ? grootResponse.memoryTags : ["daily-life"],
         detectedMood: grootResponse.detectedMood ?? null,
@@ -226,6 +215,7 @@ export async function processMessage(
     logSummary({
       shouldStoreMemory: grootResponse.shouldStoreMemory,
       detectedDates: grootResponse.detectedDates.length,
+      detectedTasks: grootResponse.detectedTasks.length,
       responseLength: grootResponse.text.length,
     });
   } catch (error) {
@@ -265,11 +255,6 @@ async function handleInteractiveReply(
     return true;
   }
 
-  // Send-on-behalf confirmations — WhatsApp only
-  if (platform === "whatsapp") {
-    return handleSendConfirmation(userId, from, buttonId);
-  }
-
   return false;
 }
 
@@ -306,7 +291,8 @@ async function handleLastImageRecall(
     return;
   }
 
-  const mediaId = extractStoredMediaId(data?.media_url ?? null);
+  const rawUrl = data?.media_url ?? null;
+  const mediaId = rawUrl?.startsWith("media:") ? rawUrl.slice("media:".length).trim() || null : null;
   if (!mediaId) {
     const notFound = "_I couldn't find a previous image from you yet._";
     await sendMessage(platform, from, notFound);
@@ -397,6 +383,7 @@ async function handleMedia(
             source: "voice_note",
           }),
           createRemindersFromDetectedDates(userId, grootResponse.detectedDates),
+          createTasksFromDetectedTasks(userId, grootResponse.detectedTasks),
           enrichInboundMessageMetadata(userId, parsed.messageId, {
             memoryTags: grootResponse.memoryTags.length > 0 ? grootResponse.memoryTags : ["daily-life"],
             detectedMood: grootResponse.detectedMood ?? null,
@@ -433,6 +420,7 @@ async function handleMedia(
             mood: grootResponse.detectedMood,
             source: "image",
           }),
+          createTasksFromDetectedTasks(userId, grootResponse.detectedTasks),
           enrichInboundMessageMetadata(userId, parsed.messageId, {
             memoryTags: grootResponse.memoryTags.length > 0 ? grootResponse.memoryTags : ["daily-life"],
             detectedMood: grootResponse.detectedMood ?? null,
@@ -611,5 +599,60 @@ async function createRemindersFromDetectedDates(
         }),
       ),
     );
+  }
+}
+
+async function createTasksFromDetectedTasks(
+  userId: string,
+  detectedTasks: Array<{ content: string; category?: string; dueDate?: string }>,
+): Promise<void> {
+  if (detectedTasks.length === 0) return;
+
+  const supabase = getSupabaseAdmin();
+
+  // Limit to 5 tasks per message to prevent abuse
+  const tasks = detectedTasks.slice(0, 5);
+
+  for (const task of tasks) {
+    if (!task.content || task.content.trim().length === 0) continue;
+
+    const content = task.content.trim();
+
+    // Deduplicate: skip if an identical non-completed task already exists for this user
+    const { data: existing } = await supabase
+      .from("tasks")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("content", content)
+      .eq("is_completed", false)
+      .limit(1);
+
+    if (existing && existing.length > 0) {
+      logger.info({ userId, content }, "Skipping duplicate task");
+      continue;
+    }
+
+    // Parse due date if provided
+    let dueDate: string | null = null;
+    if (task.dueDate) {
+      const parsed = new Date(task.dueDate);
+      if (!Number.isNaN(parsed.getTime())) {
+        dueDate = parsed.toISOString();
+      }
+    }
+
+    const { error } = await supabase.from("tasks").insert({
+      user_id: userId,
+      content,
+      category: task.category ?? null,
+      due_date: dueDate,
+      is_completed: false,
+    });
+
+    if (error) {
+      logger.warn({ error, userId, content }, "Failed to create task from conversation");
+    } else {
+      logger.info({ userId, content, category: task.category, dueDate }, "Task created from conversation");
+    }
   }
 }

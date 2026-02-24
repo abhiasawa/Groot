@@ -99,8 +99,8 @@ export async function GET(request: NextRequest) {
 
   const { data, count } = await queryBuilder;
 
-  // Filter out truly empty messages (no content and no media_description)
-  const filtered = (data ?? []).filter(m => m.content || m.media_description);
+  // Filter out truly empty messages (no content, no media_description, and no media)
+  const filtered = (data ?? []).filter(m => m.content || m.media_description || m.media_url);
 
   // Attach conversation context: for each inbound message, find Groot's preceding question
   if (filtered.length > 0) {

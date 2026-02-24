@@ -9,13 +9,13 @@ import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Stack } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { AuthProvider } from "../lib/auth/provider";
+import { AuthProvider, useAuth } from "../lib/auth/provider";
 import { ThemeProvider } from "../lib/theme/provider";
 
 export { ErrorBoundary } from "expo-router";
@@ -57,6 +57,48 @@ try {
       removeItem: async () => {},
     },
   });
+}
+
+// ---------------------------------------------------------------------------
+// Auth-aware navigation
+// ---------------------------------------------------------------------------
+
+/**
+ * Redirects the user based on their auth state:
+ * - No session → login screen
+ * - Has session → main tabs
+ *
+ * Account linking (if needed) is handled automatically by the backend:
+ * when a user logs in with an email that matches a Groot user,
+ * the backend auto-links the accounts on the first API call.
+ *
+ * If the backend can't match (no email on record), the user will see
+ * an error when accessing data and can link manually via Settings.
+ */
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const { token, loading } = useAuth();
+  const router = useRouter();
+  const segments = useSegments();
+
+  useEffect(() => {
+    if (loading) return;
+
+    const inAuthGroup = segments[0] === "(auth)";
+
+    if (!token && !inAuthGroup) {
+      // Not signed in → go to login
+      router.replace("/(auth)/login");
+    } else if (token && inAuthGroup) {
+      // Signed in → go to main app
+      router.replace("/(tabs)");
+    }
+  }, [token, loading, segments, router]);
+
+  if (loading) {
+    return null; // Splash screen is still showing
+  }
+
+  return <>{children}</>;
 }
 
 // ---------------------------------------------------------------------------
@@ -104,16 +146,19 @@ export default function RootLayout() {
             client={queryClient}
             persistOptions={{ persister: asyncStoragePersister }}
           >
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="habits" />
-              <Stack.Screen name="tasks" />
-              <Stack.Screen name="insights" />
-              <Stack.Screen name="topics" />
-              <Stack.Screen name="people" />
-              <Stack.Screen name="profile" />
-              <Stack.Screen name="settings" />
-            </Stack>
+            <AuthGate>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="(auth)" />
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="habits" />
+                <Stack.Screen name="tasks" />
+                <Stack.Screen name="insights" />
+                <Stack.Screen name="topics" />
+                <Stack.Screen name="people" />
+                <Stack.Screen name="profile" />
+                <Stack.Screen name="settings" />
+              </Stack>
+            </AuthGate>
           </PersistQueryClientProvider>
         </AuthProvider>
       </ThemeProvider>

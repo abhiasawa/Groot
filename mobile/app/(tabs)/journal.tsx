@@ -25,6 +25,7 @@ import { GlassCard } from "../../components/ui/glass-card";
 import { GradientBackground } from "../../components/ui/gradient-background";
 import { PressScale } from "../../components/ui/press-scale";
 import { PillBadge } from "../../components/ui/pill-badge";
+import { MediaPlayer } from "../../components/ui/media-player";
 
 // ── Constants ────────────────────────────────
 
@@ -359,28 +360,48 @@ export default function JournalScreen() {
                           <PillBadge label={badge.label} small />
                         </View>
 
-                        {/* Content */}
-                        <Text
-                          style={[
-                            styles.entryContent,
-                            { color: colors.foreground },
-                          ]}
-                          numberOfLines={3}
-                        >
-                          {item.content}
-                        </Text>
+                        {/* Inline media (image thumbnail / audio indicator) */}
+                        {item.media_url && (item.media_url.startsWith("storage:") || item.media_url.startsWith("media:")) && (item.message_type === "image" || item.message_type === "audio") && (
+                          <MediaPlayer mediaUrl={item.media_url} messageType={item.message_type} />
+                        )}
 
-                        {/* Media description */}
-                        {item.media_description && (
+                        {/* Content — for voice messages, show transcription as main content */}
+                        {item.message_type === "audio" && !item.content && item.media_description ? (
                           <Text
                             style={[
-                              styles.mediaDesc,
-                              { color: colors.mutedForeground },
+                              styles.entryContent,
+                              { color: colors.foreground },
                             ]}
-                            numberOfLines={1}
+                            numberOfLines={3}
                           >
                             {item.media_description}
                           </Text>
+                        ) : (
+                          <>
+                            {(item.content ?? "").length > 0 && (
+                              <Text
+                                style={[
+                                  styles.entryContent,
+                                  { color: colors.foreground },
+                                ]}
+                                numberOfLines={3}
+                              >
+                                {item.content}
+                              </Text>
+                            )}
+                            {/* Media description (for image captions, etc.) */}
+                            {item.media_description && item.message_type !== "audio" && (
+                              <Text
+                                style={[
+                                  styles.mediaDesc,
+                                  { color: colors.mutedForeground },
+                                ]}
+                                numberOfLines={2}
+                              >
+                                {item.media_description}
+                              </Text>
+                            )}
+                          </>
                         )}
                       </GlassCard>
                     </PressScale>
@@ -457,38 +478,59 @@ export default function JournalScreen() {
                       </Text>
                     </View>
 
-                    <Text style={[styles.modalContent, { color: colors.foreground }]}>
-                      {selectedMemory.content}
-                    </Text>
-
-                    {selectedMemory.media_description ? (
-                      <View
-                        style={[
-                          styles.modalMediaBlock,
-                          {
-                            backgroundColor: colors.glassSurface,
-                            borderColor: colors.glassBorder,
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.modalMediaLabel,
-                            { color: colors.mutedForeground },
-                          ]}
-                        >
-                          Media Description
-                        </Text>
-                        <Text
-                          style={[
-                            styles.modalMediaText,
-                            { color: colors.foreground },
-                          ]}
-                        >
-                          {selectedMemory.media_description}
-                        </Text>
+                    {/* Media player — audio playback or image display */}
+                    {selectedMemory.media_url?.startsWith("storage:") && (
+                      <View style={{ marginBottom: 14 }}>
+                        <MediaPlayer
+                          mediaUrl={selectedMemory.media_url}
+                          messageType={selectedMemory.message_type}
+                        />
                       </View>
-                    ) : null}
+                    )}
+
+                    {/* For voice messages: show transcription as the main content */}
+                    {selectedMemory.message_type === "audio" && !selectedMemory.content && selectedMemory.media_description ? (
+                      <Text style={[styles.modalContent, { color: colors.foreground }]}>
+                        {selectedMemory.media_description}
+                      </Text>
+                    ) : (
+                      <>
+                        {(selectedMemory.content ?? "").length > 0 && (
+                          <Text style={[styles.modalContent, { color: colors.foreground }]}>
+                            {selectedMemory.content}
+                          </Text>
+                        )}
+
+                        {selectedMemory.media_description ? (
+                          <View
+                            style={[
+                              styles.modalMediaBlock,
+                              {
+                                backgroundColor: colors.glassSurface,
+                                borderColor: colors.glassBorder,
+                              },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.modalMediaLabel,
+                                { color: colors.mutedForeground },
+                              ]}
+                            >
+                              {selectedMemory.message_type === "image" ? "Description" : "Transcription"}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.modalMediaText,
+                                { color: colors.foreground },
+                              ]}
+                            >
+                              {selectedMemory.media_description}
+                            </Text>
+                          </View>
+                        ) : null}
+                      </>
+                    )}
                   </ScrollView>
                 ) : null}
               </GlassCard>

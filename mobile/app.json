@@ -11,7 +11,7 @@
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FFFFFF"
+      "backgroundColor": "#0B0F1A"
     },
     "ios": {
       "supportsTablet": true,
@@ -20,7 +20,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#FFFFFF"
+        "backgroundColor": "#0B0F1A"
       },
       "edgeToEdgeEnabled": false,
       "package": "com.groot.thegarden"
@@ -43,6 +43,7 @@
       "eas": {
         "projectId": "42c122e3-dfca-422b-b031-d126618981af"
       }
-    }
+    },
+    "owner": "asawa"
   }
 }

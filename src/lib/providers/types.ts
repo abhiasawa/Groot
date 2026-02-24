@@ -23,6 +23,20 @@ export interface LLMResponse {
       date: string;
       event: string;
     }>;
+    detectedPeople?: Array<{
+      name: string;
+      relationship?: string;
+      context?: string;
+    }>;
+    detectedTasks?: Array<{
+      content: string;
+      category?: string;
+      dueDate?: string;
+    }>;
+    /** Email address shared by the user — used to link messaging account to app login */
+    detectedEmail?: string;
+    /** True when the user is asking Groot to resend their last image/photo */
+    lastImageRequest?: boolean;
   };
   usage?: {
     inputTokens: number;

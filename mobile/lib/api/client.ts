@@ -1,4 +1,7 @@
+import * as SecureStore from "expo-secure-store";
+
 const API_BASE = "https://groot-three.vercel.app";
+const TOKEN_KEY = "groot-jwt";
 
 // ── Error class ──────────────────────────────
 
@@ -17,8 +20,7 @@ export class ApiError extends Error {
 /**
  * Fetch against the Groot API.
  *
- * Uses the single-user fallback on the server (no auth required).
- * Returns parsed JSON on 2xx; throws `ApiError` otherwise.
+ * Automatically attaches the JWT Bearer token from secure storage.
  */
 export async function apiFetch<T>(
   path: string,
@@ -28,6 +30,17 @@ export async function apiFetch<T>(
     "Content-Type": "application/json",
     ...(init?.headers as Record<string, string> | undefined),
   };
+
+  // Attach Bearer token from secure storage
+  try {
+    const token = await SecureStore.getItemAsync(TOKEN_KEY);
+    if (token) {
+      (headers as Record<string, string>)["Authorization"] =
+        `Bearer ${token}`;
+    }
+  } catch {
+    // SecureStore unavailable — proceed without token
+  }
 
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,

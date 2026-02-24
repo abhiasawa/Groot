@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
-import { Sprout } from "lucide-react-native";
+import { Sprout, ArrowLeft, MessageCircle } from "lucide-react-native";
 
 import { useAuth } from "../../lib/auth/provider";
 import { useTheme } from "../../lib/theme/provider";
@@ -18,24 +18,43 @@ import { GlassCard } from "../../components/ui/glass-card";
 import { GradientBackground } from "../../components/ui/gradient-background";
 import { PressScale } from "../../components/ui/press-scale";
 
+const API_BASE = "https://groot-three.vercel.app";
+
 export default function LoginScreen() {
-  const { signIn } = useAuth();
+  const { setToken } = useAuth();
   const { colors } = useTheme();
 
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [step, setStep] = useState<"phone" | "otp">("phone");
   const [error, setError] = useState<string | null>(null);
 
-  const handleSendLink = async () => {
-    if (!email.trim()) return;
+  const otpInputRef = useRef<TextInput>(null);
+
+  // ── Step 1: Request OTP via WhatsApp ────────────
+  const handleRequestOtp = async () => {
+    const cleaned = phone.trim();
+    if (!cleaned) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      await signIn(email.trim());
-      setSent(true);
+      const res = await fetch(`${API_BASE}/api/auth/request-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone_number: cleaned }),
+      });
+
+      const data = (await res.json()) as { success?: boolean; error?: string };
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error ?? "Failed to send code");
+      }
+
+      setStep("otp");
+      setTimeout(() => otpInputRef.current?.focus(), 300);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Something went wrong";
@@ -43,6 +62,53 @@ export default function LoginScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // ── Step 2: Verify OTP ─────────────────────────
+  const handleVerifyOtp = async () => {
+    if (!otp.trim() || otp.trim().length < 6) {
+      setError("Please enter the 6-digit code from WhatsApp");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/verify-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone_number: phone.trim(),
+          code: otp.trim(),
+        }),
+      });
+
+      const data = (await res.json()) as {
+        token?: string;
+        error?: string;
+      };
+
+      if (!res.ok || !data.token) {
+        throw new Error(data.error ?? "Invalid code");
+      }
+
+      // Store JWT — this triggers AuthGate redirect to main app
+      await setToken(data.token);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Invalid code. Please try again.";
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── Go back to phone step ──────────────────────
+  const handleBack = () => {
+    setStep("phone");
+    setOtp("");
+    setError(null);
   };
 
   return (
@@ -73,57 +139,60 @@ export default function LoginScreen() {
             </Text>
           </Animated.View>
 
-          {sent ? (
-            /* Success state */
+          {step === "otp" ? (
+            /* ── OTP Verification Step ── */
             <Animated.View entering={FadeIn.delay(100).duration(500)}>
               <GlassCard delay={0} padding={24}>
-                <View style={styles.successContent}>
-                  <Text style={[styles.successTitle, { color: colors.primary }]}>
-                    Check your email
-                  </Text>
-                  <Text
-                    style={[
-                      styles.successBody,
-                      { color: colors.mutedForeground },
-                    ]}
-                  >
-                    We sent a magic link to {email}. Tap it to sign in.
-                  </Text>
-                  <PressScale
-                    onPress={() => {
-                      setSent(false);
-                      setEmail("");
-                    }}
-                  >
-                    <Text style={[styles.retryLink, { color: colors.primary }]}>
-                      Use a different email
-                    </Text>
-                  </PressScale>
-                </View>
-              </GlassCard>
-            </Animated.View>
-          ) : (
-            /* Email input form */
-            <Animated.View entering={FadeIn.delay(200).duration(500)}>
-              <GlassCard delay={100} padding={24}>
                 <View style={styles.form}>
+                  <View style={styles.otpHeader}>
+                    <PressScale onPress={handleBack}>
+                      <ArrowLeft
+                        size={20}
+                        color={colors.mutedForeground}
+                        strokeWidth={1.5}
+                      />
+                    </PressScale>
+                    <Text
+                      style={[styles.otpTitle, { color: colors.foreground }]}
+                    >
+                      Check your WhatsApp
+                    </Text>
+                  </View>
+
+                  <View style={styles.otpDescRow}>
+                    <MessageCircle
+                      size={16}
+                      color={colors.primary}
+                      strokeWidth={1.5}
+                    />
+                    <Text
+                      style={[styles.otpBody, { color: colors.mutedForeground }]}
+                    >
+                      We sent a 6-digit code to {phone}
+                    </Text>
+                  </View>
+
                   <TextInput
+                    ref={otpInputRef}
                     style={[
-                      styles.input,
+                      styles.otpInput,
                       {
                         backgroundColor: colors.glassSurface,
                         color: colors.foreground,
                         borderColor: colors.glassBorder,
                       },
                     ]}
-                    placeholder="you@example.com"
+                    placeholder="000000"
                     placeholderTextColor={colors.mutedForeground}
-                    value={email}
-                    onChangeText={setEmail}
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    keyboardType="email-address"
-                    textContentType="emailAddress"
+                    value={otp}
+                    onChangeText={(text) => {
+                      const digits = text.replace(/\D/g, "").slice(0, 6);
+                      setOtp(digits);
+                    }}
+                    keyboardType="number-pad"
+                    textContentType="oneTimeCode"
+                    autoComplete="one-time-code"
+                    maxLength={6}
                     editable={!loading}
                   />
 
@@ -136,15 +205,15 @@ export default function LoginScreen() {
                   ) : null}
 
                   <PressScale
-                    onPress={handleSendLink}
-                    haptic={!loading && !!email.trim()}
+                    onPress={handleVerifyOtp}
+                    haptic={!loading && otp.length === 6}
                   >
                     <View
                       style={[
                         styles.button,
                         {
                           backgroundColor: colors.primary,
-                          opacity: loading || !email.trim() ? 0.6 : 1,
+                          opacity: loading || otp.length < 6 ? 0.6 : 1,
                         },
                       ]}
                     >
@@ -157,7 +226,84 @@ export default function LoginScreen() {
                             { color: colors.primaryForeground },
                           ]}
                         >
-                          Send Magic Link
+                          Verify & Sign In
+                        </Text>
+                      )}
+                    </View>
+                  </PressScale>
+
+                  <PressScale onPress={handleRequestOtp} haptic={!loading}>
+                    <Text
+                      style={[styles.resendLink, { color: colors.primary }]}
+                    >
+                      Resend code
+                    </Text>
+                  </PressScale>
+                </View>
+              </GlassCard>
+            </Animated.View>
+          ) : (
+            /* ── Phone Number Input Step ── */
+            <Animated.View entering={FadeIn.delay(200).duration(500)}>
+              <GlassCard delay={100} padding={24}>
+                <View style={styles.form}>
+                  <Text
+                    style={[styles.inputLabel, { color: colors.mutedForeground }]}
+                  >
+                    Enter your WhatsApp number
+                  </Text>
+
+                  <TextInput
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: colors.glassSurface,
+                        color: colors.foreground,
+                        borderColor: colors.glassBorder,
+                      },
+                    ]}
+                    placeholder="98765 43210"
+                    placeholderTextColor={colors.mutedForeground}
+                    value={phone}
+                    onChangeText={setPhone}
+                    autoCapitalize="none"
+                    autoComplete="tel"
+                    keyboardType="phone-pad"
+                    textContentType="telephoneNumber"
+                    editable={!loading}
+                  />
+
+                  {error ? (
+                    <Text
+                      style={[styles.errorText, { color: colors.destructive }]}
+                    >
+                      {error}
+                    </Text>
+                  ) : null}
+
+                  <PressScale
+                    onPress={handleRequestOtp}
+                    haptic={!loading && !!phone.trim()}
+                  >
+                    <View
+                      style={[
+                        styles.button,
+                        {
+                          backgroundColor: colors.primary,
+                          opacity: loading || !phone.trim() ? 0.6 : 1,
+                        },
+                      ]}
+                    >
+                      {loading ? (
+                        <ActivityIndicator color={colors.primaryForeground} />
+                      ) : (
+                        <Text
+                          style={[
+                            styles.buttonText,
+                            { color: colors.primaryForeground },
+                          ]}
+                        >
+                          Send Code via WhatsApp
                         </Text>
                       )}
                     </View>
@@ -166,6 +312,14 @@ export default function LoginScreen() {
               </GlassCard>
             </Animated.View>
           )}
+
+          <Animated.View entering={FadeIn.delay(400).duration(500)}>
+            <Text
+              style={[styles.footer, { color: colors.mutedForeground }]}
+            >
+              Message Groot on WhatsApp first to create your account
+            </Text>
+          </Animated.View>
         </View>
       </KeyboardAvoidingView>
     </GradientBackground>
@@ -204,6 +358,10 @@ const styles = StyleSheet.create({
   form: {
     gap: 16,
   },
+  inputLabel: {
+    fontFamily: "Inter_500Medium",
+    ...typography.sm,
+  },
   input: {
     height: 50,
     borderRadius: 12,
@@ -211,6 +369,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontFamily: "Inter_400Regular",
     ...typography.base,
+  },
+  otpHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  otpTitle: {
+    fontFamily: "Inter_600SemiBold",
+    ...typography.lg,
+  },
+  otpDescRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  otpBody: {
+    fontFamily: "Inter_400Regular",
+    ...typography.sm,
+    lineHeight: 20,
+    flex: 1,
+  },
+  otpInput: {
+    height: 58,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    fontFamily: "Inter_700Bold",
+    fontSize: 28,
+    letterSpacing: 10,
+    textAlign: "center",
   },
   button: {
     height: 50,
@@ -227,23 +415,15 @@ const styles = StyleSheet.create({
     ...typography.xs,
     textAlign: "center",
   },
-  successContent: {
-    alignItems: "center",
-    gap: 8,
-  },
-  successTitle: {
-    fontFamily: "Inter_600SemiBold",
-    ...typography.xl,
-  },
-  successBody: {
-    fontFamily: "Inter_400Regular",
-    ...typography.sm,
-    textAlign: "center",
-    lineHeight: 22,
-  },
-  retryLink: {
+  resendLink: {
     fontFamily: "Inter_500Medium",
     ...typography.sm,
-    marginTop: 8,
+    textAlign: "center",
+  },
+  footer: {
+    fontFamily: "Inter_400Regular",
+    ...typography.xs,
+    textAlign: "center",
+    marginTop: 24,
   },
 });

@@ -12,6 +12,8 @@ export interface GrootResponse {
   memoryTags: string[];
   profileUpdates: ProfileFact[];
   detectedDates: Array<{ date: string; event: string }>;
+  detectedTasks: Array<{ content: string; category?: string; dueDate?: string }>;
+  lastImageRequest: boolean;
   timings: {
     contextMs: number;
     llmMs: number;
@@ -78,7 +80,7 @@ export async function generateGrootResponse(
     "Groot response generated",
   );
 
-  // 4. Process metadata
+  // 4. Process metadata — LLM is the sole source of profile extraction
   const metadata = response.metadata;
   const profileUpdates: ProfileFact[] = (metadata?.profileUpdates ?? []).map((u) => ({
     category: normalizeProfileCategory(u.category),
@@ -88,23 +90,61 @@ export async function generateGrootResponse(
     source: "ai_extraction",
   }));
 
-  // Deduplicate profile updates (same category+key = keep last)
-  const deduped = new Map<string, ProfileFact>();
-  for (const fact of profileUpdates) {
-    deduped.set(`${fact.category}:${fact.key}`, fact);
-  }
-
-  // Apply profile updates (deduplicated)
-  const dedupedUpdates = [...deduped.values()];
-  if (dedupedUpdates.length > 0) {
+  // Upsert LLM-extracted profile facts
+  if (profileUpdates.length > 0) {
     logger.info(
-      { userId, updates: dedupedUpdates.map((u) => `${u.category}:${u.key}=${u.value}`) },
-      "Upserting profile updates from metadata",
+      { userId, updates: profileUpdates.map((u) => `${u.category}:${u.key}=${u.value}`) },
+      "Upserting LLM-extracted profile updates",
     );
     // Don't block the user-facing reply on profile persistence.
-    upsertProfileFacts(userId, dedupedUpdates).catch((error) => {
+    upsertProfileFacts(userId, profileUpdates).catch((error) => {
       logger.warn({ error, userId }, "Profile upsert failed");
     });
+  }
+
+  // Process detected people into user_profile with category "people"
+  const detectedPeople = metadata?.detectedPeople ?? [];
+  if (detectedPeople.length > 0) {
+    const peopleFacts: ProfileFact[] = detectedPeople.map((person) => ({
+      category: "people" as const,
+      key: person.name.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, ""),
+      value: JSON.stringify({
+        name: person.name,
+        relationship: person.relationship ?? null,
+        context: person.context ?? null,
+      }),
+      confidence: 0.8,
+      source: "ai_extraction",
+    }));
+
+    logger.info(
+      { userId, people: detectedPeople.map((p) => p.name) },
+      "Upserting detected people from metadata",
+    );
+    // Don't block the user-facing reply on people persistence.
+    upsertProfileFacts(userId, peopleFacts).catch((error) => {
+      logger.warn({ error, userId }, "People upsert failed");
+    });
+  }
+
+  // Store detected email on the user record as profile data.
+  // (Login is handled via WhatsApp OTP — email is optional profile info.)
+  const detectedEmail = metadata?.detectedEmail;
+  if (detectedEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(detectedEmail)) {
+    const normalizedEmail = detectedEmail.toLowerCase();
+    const supabase = (await import("@/lib/supabase/server")).getSupabaseAdmin();
+
+    const { error } = await supabase
+      .from("users")
+      .update({ email: normalizedEmail })
+      .eq("id", userId)
+      .is("email", null); // Only set if not already stored
+
+    if (error) {
+      logger.warn({ error, userId, detectedEmail }, "Failed to store detected email");
+    } else {
+      logger.info({ userId, detectedEmail }, "Stored user email from conversation");
+    }
   }
 
   const t3 = Date.now();
@@ -115,7 +155,10 @@ export async function generateGrootResponse(
       shouldStore: metadata?.shouldStoreMemory ?? false,
       tags: metadata?.memoryTags,
       dates: metadata?.detectedDates?.length ?? 0,
-      profileUpdates: dedupedUpdates.length,
+      tasks: metadata?.detectedTasks?.length ?? 0,
+      people: detectedPeople.length,
+      detectedEmail: detectedEmail ?? null,
+      profileUpdates: profileUpdates.length,
       responseLength: response.text.length,
       contextMs: t1 - t0,
       llmMs: t2 - t1,
@@ -130,8 +173,10 @@ export async function generateGrootResponse(
     detectedMood: metadata?.detectedMood,
     shouldStoreMemory: metadata?.shouldStoreMemory ?? false,
     memoryTags: metadata?.memoryTags ?? [],
-    profileUpdates: dedupedUpdates,
+    profileUpdates,
     detectedDates: metadata?.detectedDates ?? [],
+    detectedTasks: metadata?.detectedTasks ?? [],
+    lastImageRequest: metadata?.lastImageRequest ?? false,
     timings: {
       contextMs: t1 - t0,
       llmMs: t2 - t1,
@@ -158,10 +203,15 @@ const CATEGORY_MAP: Record<string, ProfileFact["category"]> = {
   habit: "dynamic",
   activity: "dynamic",
   fitness: "dynamic",
+  work: "static",
+  career: "static",
+  education: "static",
   relationships: "static",
   relationship: "static",
   personal: "static",
   hobby: "static",
+  food: "preference",
+  lifestyle: "preference",
 };
 
 function normalizeProfileCategory(raw: string): ProfileFact["category"] {

@@ -7,16 +7,14 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_SUPABASE_URL": "https://pdorqsbhliqzphuobfas.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_0VICUI8kdnTHZ6HwdNKovA_47VglTwd"
+        "EXPO_PUBLIC_API_URL": "https://groot-three.vercel.app"
       }
     },
     "preview": {
       "distribution": "internal",
       "credentialsSource": "local",
       "env": {
-        "EXPO_PUBLIC_SUPABASE_URL": "https://pdorqsbhliqzphuobfas.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_0VICUI8kdnTHZ6HwdNKovA_47VglTwd"
+        "EXPO_PUBLIC_API_URL": "https://groot-three.vercel.app"
       },
       "android": {
         "buildType": "apk"
@@ -24,8 +22,7 @@
     },
     "production": {
       "env": {
-        "EXPO_PUBLIC_SUPABASE_URL": "https://pdorqsbhliqzphuobfas.supabase.co",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_0VICUI8kdnTHZ6HwdNKovA_47VglTwd"
+        "EXPO_PUBLIC_API_URL": "https://groot-three.vercel.app"
       },
       "android": {
         "buildType": "app-bundle"

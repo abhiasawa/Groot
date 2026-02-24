@@ -2,6 +2,7 @@ import "server-only";
 
 import { NextRequest } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { verifyJWT } from "./jwt";
 import { logger } from "@/lib/logger";
 
 export interface PortalUser {
@@ -12,7 +13,6 @@ export interface PortalUser {
   onboarding_completed_at: string | null;
   created_at: string;
   timezone: string | null;
-  auth_user_id: string | null;
 }
 
 export class PortalAuthError extends Error {
@@ -29,27 +29,37 @@ let cachedPortalUser: PortalUser | null = null;
 let cacheExpiry = 0;
 const CACHE_TTL_MS = 60_000; // 60 seconds
 
-const USER_SELECT_FIELDS = "id, whatsapp_number, display_name, onboarding_step, onboarding_completed_at, created_at, timezone, auth_user_id" as const;
+const USER_SELECT_FIELDS =
+  "id, whatsapp_number, display_name, onboarding_step, onboarding_completed_at, created_at, timezone" as const;
 
 /**
- * Returns the portal user.
+ * Returns the authenticated portal user.
  *
- * When a `request` is provided with an `Authorization: Bearer <jwt>` header,
- * validates the JWT via Supabase Auth and looks up the app user by `auth_user_id`.
- * This path is used by the mobile app.
- *
- * When no bearer token is present (or no request is provided),
- * falls back to the single-user shortcut for the web portal.
+ * Auth resolution order:
+ * 1. Bearer token in Authorization header (mobile app — custom JWT)
+ * 2. groot-token cookie (web portal — custom JWT)
+ * 3. Single-user fallback (backward compat — will be removed)
  */
-export async function getAuthenticatedPortalUser(request?: NextRequest): Promise<PortalUser> {
-  // --- Bearer token path (mobile app) ---
+export async function getAuthenticatedPortalUser(
+  request?: NextRequest,
+): Promise<PortalUser> {
+  // ── Path 1: Bearer token (mobile app) ──
   const authHeader = request?.headers.get("authorization");
   if (authHeader && authHeader.startsWith("Bearer ")) {
     const token = authHeader.slice(7);
-    return authenticateWithToken(token);
+    return authenticateWithJWT(token);
   }
 
-  // --- Single-user fallback (web portal) ---
+  // ── Path 2: Cookie (web portal) ──
+  const cookieToken = request?.cookies.get("groot-token")?.value;
+  if (cookieToken) {
+    return authenticateWithJWT(cookieToken);
+  }
+
+  // ── Path 3: Single-user fallback ──
+  // DEPRECATION: This fallback will be removed once all clients use JWT.
+  logger.debug("Portal: using single-user fallback (no JWT found)");
+
   if (cachedPortalUser && Date.now() < cacheExpiry) {
     return cachedPortalUser;
   }
@@ -77,35 +87,30 @@ export async function getAuthenticatedPortalUser(request?: NextRequest): Promise
 }
 
 /**
- * Validate a Supabase JWT and resolve the corresponding app user.
+ * Validate a custom JWT and resolve the corresponding app user.
+ *
+ * The JWT payload contains { sub: userId } — direct DB lookup by user ID.
+ * Much simpler than the old Supabase Auth flow (no email matching, no auto-linking).
  */
-async function authenticateWithToken(token: string): Promise<PortalUser> {
-  const supabase = getSupabaseAdmin();
-
-  // Validate the JWT via Supabase Auth
-  const { data: authData, error: authError } = await supabase.auth.getUser(token);
-
-  if (authError || !authData.user) {
-    logger.warn({ error: authError }, "Bearer token validation failed");
+async function authenticateWithJWT(token: string): Promise<PortalUser> {
+  let payload: { sub: string };
+  try {
+    payload = await verifyJWT(token);
+  } catch {
     throw new PortalAuthError("Invalid or expired token", 401);
   }
 
-  const authUserId = authData.user.id;
+  const supabase = getSupabaseAdmin();
 
-  // Look up the app user by auth_user_id
-  const { data: user, error: dbError } = await supabase
+  const { data: user, error } = await supabase
     .from("users")
     .select(USER_SELECT_FIELDS)
-    .eq("auth_user_id", authUserId)
-    .limit(1)
+    .eq("id", payload.sub)
     .single();
 
-  if (dbError || !user) {
-    logger.warn({ authUserId, error: dbError }, "No app user linked to auth_user_id");
-    throw new PortalAuthError(
-      "No app user linked to this account. Send a message on WhatsApp first to create your account.",
-      404,
-    );
+  if (error || !user) {
+    logger.warn({ userId: payload.sub }, "JWT valid but user not found in DB");
+    throw new PortalAuthError("Account not found", 404);
   }
 
   return user as PortalUser;

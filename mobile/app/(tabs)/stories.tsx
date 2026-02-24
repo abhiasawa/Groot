@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
+  Modal,
+  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -15,6 +17,7 @@ import {
   TrendingUp,
   Tag,
   PenLine,
+  X,
 } from "lucide-react-native";
 
 import { useTheme } from "../../lib/theme/provider";
@@ -23,6 +26,7 @@ import { getMoodColorFromName } from "../../constants/mood";
 import { typography } from "../../constants/typography";
 import { GlassCard } from "../../components/ui/glass-card";
 import { GradientBackground } from "../../components/ui/gradient-background";
+import { PressScale } from "../../components/ui/press-scale";
 import { PillBadge } from "../../components/ui/pill-badge";
 import { SectionHeader } from "../../components/ui/section-header";
 import type { Story } from "../../../shared/types/api";
@@ -87,6 +91,7 @@ function getTagsFromMetadata(story: Story): string[] {
 
 export default function StoriesScreen() {
   const { colors } = useTheme();
+  const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const {
     data: storiesData,
     isLoading: storiesLoading,
@@ -98,6 +103,10 @@ export default function StoriesScreen() {
     isLoading: statsLoading,
     refetch: refetchStats,
   } = useStoryStats();
+
+  const closeStoryDetail = useCallback(() => {
+    setSelectedStory(null);
+  }, []);
 
   const onRefresh = useCallback(() => {
     refetchStories();
@@ -304,33 +313,99 @@ export default function StoriesScreen() {
                   const staggerDelay = 150 + storyIndex * 50;
 
                   return (
-                    <GlassCard
+                    <PressScale
                       key={story.id}
-                      delay={staggerDelay}
-                      padding={16}
-                      accentColor={moodColor}
-                      style={s.storyCardOuter}
+                      scale={0.985}
+                      onPress={() => setSelectedStory(story)}
                     >
-                      <Text style={s.storyDate}>
-                        {formatDate(story.created_at)}
-                      </Text>
-                      <Text style={s.storyContent} numberOfLines={4}>
-                        {story.content}
-                      </Text>
-                      {tags.length > 0 && (
-                        <View style={s.tagsRow}>
-                          {tags.slice(0, 3).map((tag) => (
-                            <PillBadge key={tag} label={tag} small />
-                          ))}
-                        </View>
-                      )}
-                    </GlassCard>
+                      <GlassCard
+                        delay={staggerDelay}
+                        padding={16}
+                        accentColor={moodColor}
+                        style={s.storyCardOuter}
+                      >
+                        <Text style={s.storyDate}>
+                          {formatDate(story.created_at)}
+                        </Text>
+                        <Text style={s.storyContent} numberOfLines={4}>
+                          {story.content}
+                        </Text>
+                        {tags.length > 0 && (
+                          <View style={s.tagsRow}>
+                            {tags.slice(0, 3).map((tag) => (
+                              <PillBadge key={tag} label={tag} small />
+                            ))}
+                          </View>
+                        )}
+                      </GlassCard>
+                    </PressScale>
                   );
                 })}
               </View>
             ))
           )}
         </ScrollView>
+
+        {/* ── Story Detail Modal ── */}
+        <Modal
+          visible={!!selectedStory}
+          transparent
+          animationType="fade"
+          onRequestClose={closeStoryDetail}
+        >
+          <View style={s.modalOverlay}>
+            <Pressable
+              style={s.modalBackdrop}
+              onPress={closeStoryDetail}
+            />
+            <View style={s.modalCardWrap}>
+              <GlassCard padding={18} style={s.modalCard}>
+                <View style={s.modalHeader}>
+                  <Text style={s.modalTitle}>Story</Text>
+                  <PressScale
+                    onPress={closeStoryDetail}
+                    scale={0.94}
+                    haptic={false}
+                  >
+                    <View style={s.modalCloseBtn}>
+                      <X size={18} color={colors.mutedForeground} strokeWidth={2} />
+                    </View>
+                  </PressScale>
+                </View>
+
+                {selectedStory ? (
+                  <ScrollView
+                    style={s.modalBody}
+                    showsVerticalScrollIndicator={false}
+                  >
+                    <View style={s.modalMetaRow}>
+                      <Text style={s.modalMetaDate}>
+                        {new Date(selectedStory.created_at).toLocaleDateString("en-US", {
+                          weekday: "long",
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </Text>
+                    </View>
+
+                    <Text style={s.modalContent}>
+                      {selectedStory.content}
+                    </Text>
+
+                    {getTagsFromMetadata(selectedStory).length > 0 && (
+                      <View style={s.modalTags}>
+                        {getTagsFromMetadata(selectedStory).map((tag) => (
+                          <PillBadge key={tag} label={tag} small />
+                        ))}
+                      </View>
+                    )}
+                  </ScrollView>
+                ) : null}
+              </GlassCard>
+            </View>
+          </View>
+        </Modal>
       </GradientBackground>
     </SafeAreaView>
   );
@@ -511,5 +586,63 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       color: c.mutedForeground,
       textAlign: "center",
       lineHeight: 22,
+    },
+
+    // ── Story Detail Modal ──
+    modalOverlay: {
+      flex: 1,
+      justifyContent: "center" as const,
+      paddingHorizontal: 20,
+    },
+    modalBackdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(8, 10, 16, 0.66)",
+    },
+    modalCardWrap: {
+      maxHeight: "76%",
+    },
+    modalCard: {
+      borderRadius: 18,
+    },
+    modalHeader: {
+      flexDirection: "row" as const,
+      justifyContent: "space-between" as const,
+      alignItems: "center" as const,
+      marginBottom: 12,
+    },
+    modalTitle: {
+      fontFamily: "Inter_700Bold",
+      ...typography.lg,
+      color: c.foreground,
+    },
+    modalCloseBtn: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      justifyContent: "center" as const,
+      alignItems: "center" as const,
+    },
+    modalBody: {
+      maxHeight: "100%",
+    },
+    modalMetaRow: {
+      marginBottom: 14,
+    },
+    modalMetaDate: {
+      fontFamily: "Inter_400Regular",
+      ...typography.xs,
+      color: c.mutedForeground,
+    },
+    modalContent: {
+      fontFamily: "Inter_400Regular",
+      ...typography.base,
+      color: c.foreground,
+      lineHeight: 24,
+    },
+    modalTags: {
+      flexDirection: "row" as const,
+      flexWrap: "wrap" as const,
+      gap: 6,
+      marginTop: 16,
     },
   });

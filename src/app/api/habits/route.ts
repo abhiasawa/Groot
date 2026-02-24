@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
       ? supabase
           .from("habit_checkins")
           .select("habit_id, checked_in_at")
+          .eq("user_id", userId)
           .in("habit_id", habitIds)
           .gte("checked_in_at", thirtyDaysAgo.toISOString())
           .order("checked_in_at", { ascending: true })

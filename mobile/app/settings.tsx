@@ -20,8 +20,11 @@ import {
   BookOpen,
   Calendar,
   Clock,
+  LogOut,
+  Mail,
 } from "lucide-react-native";
 
+import { useAuth } from "../lib/auth/provider";
 import { useTheme } from "../lib/theme/provider";
 import { useSettings } from "../lib/api/queries";
 import { useUpdatePreference } from "../lib/api/mutations";
@@ -74,6 +77,7 @@ function useNotificationPrefs(): NotificationPref[] {
 
 export default function SettingsScreen() {
   const { colors, mode, setMode } = useTheme();
+  const { signOut } = useAuth();
   const router = useRouter();
   const { data, isLoading, isRefetching, refetch } = useSettings();
   const updatePref = useUpdatePreference();
@@ -252,6 +256,54 @@ export default function SettingsScreen() {
             </GlassCard>
           </View>
 
+          {/* ── Account section ──────────── */}
+          <View style={styles.section}>
+            <SectionHeader title="Account" />
+            <GlassCard delay={300} padding={0}>
+              <View
+                style={[
+                  styles.notifRow,
+                  {
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: colors.glassBorder,
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.notifIconWrap,
+                    { backgroundColor: colors.glassSurface },
+                  ]}
+                >
+                  <Mail size={18} color={colors.primary} strokeWidth={1.5} />
+                </View>
+                <View style={styles.notifContent}>
+                  <Text style={[styles.notifLabel, { color: colors.foreground }]}>
+                    Account
+                  </Text>
+                  <Text style={[styles.notifDesc, { color: colors.mutedForeground }]}>
+                    Signed in via WhatsApp
+                  </Text>
+                </View>
+              </View>
+              <PressScale onPress={signOut}>
+                <View style={styles.signOutRow}>
+                  <View
+                    style={[
+                      styles.notifIconWrap,
+                      { backgroundColor: colors.destructive + "15" },
+                    ]}
+                  >
+                    <LogOut size={18} color={colors.destructive} strokeWidth={1.5} />
+                  </View>
+                  <Text style={[styles.signOutLabel, { color: colors.destructive }]}>
+                    Sign Out
+                  </Text>
+                </View>
+              </PressScale>
+            </GlassCard>
+          </View>
+
           {/* Version */}
           <Animated.Text
             entering={FadeIn.delay(400).duration(600)}
@@ -388,6 +440,15 @@ const styles = StyleSheet.create({
   notifDesc: {
     fontFamily: "Inter_400Regular",
     ...typography.xs,
+  },
+  signOutRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+  },
+  signOutLabel: {
+    fontFamily: "Inter_600SemiBold",
+    ...typography.sm,
   },
   versionText: {
     fontFamily: "Inter_400Regular",

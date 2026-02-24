@@ -11,7 +11,6 @@
  * - casual_chat: General conversation
  * - reflection: User is journaling/reflecting
  * - command: Explicit command (help, undo, settings, etc.)
- * - send_message: User wants to send a message to someone else
  * - link_share: User shared a URL
  */
 
@@ -22,7 +21,6 @@ export type MessageIntent =
   | "casual_chat"
   | "reflection"
   | "command"
-  | "send_message"
   | "link_share";
 
 export interface ClassifiedMessage {
@@ -31,8 +29,6 @@ export interface ClassifiedMessage {
   extractedData?: {
     command?: string;
     url?: string;
-    contactName?: string;
-    messageContent?: string;
   };
 }
 
@@ -68,13 +64,6 @@ const COMMAND_PATTERNS = [
   /^export$/i,
 ];
 
-const SEND_PATTERNS = [
-  /^(send|tell|message|text)\s+\w+/i,
-  /\blet .+ know\b/i,
-  /\bsend a message to\b/i,
-  /\btext .+ (saying|that)\b/i,
-];
-
 const HABIT_PATTERNS = [
   /^\d+(\.\d+)?\s*(kg|lbs?|km|mi|mins?|minutes?|hours?|steps?|cal|calories|cups?|glasses?|pages?|reps?|sets?)?\s*$/i,
   /\b(tracked|logged|done|completed|finished|checked)\b/i,
@@ -107,7 +96,7 @@ export function classifyIntent(text: string): ClassifiedMessage {
     };
   }
 
-  // 3. Check explicit commands
+  // 2. Check explicit commands
   for (const pattern of COMMAND_PATTERNS) {
     if (pattern.test(trimmed)) {
       return {
@@ -118,38 +107,28 @@ export function classifyIntent(text: string): ClassifiedMessage {
     }
   }
 
-  // 4. Check send-on-behalf patterns
-  for (const pattern of SEND_PATTERNS) {
-    if (pattern.test(trimmed)) {
-      return {
-        intent: "send_message",
-        confidence: 0.8,
-      };
-    }
-  }
-
-  // 5. Check query patterns
+  // 3. Check query patterns
   for (const pattern of QUERY_PATTERNS) {
     if (pattern.test(trimmed)) {
       return { intent: "query_memory", confidence: 0.85 };
     }
   }
 
-  // 6. Check store patterns
+  // 4. Check store patterns
   for (const pattern of STORE_PATTERNS) {
     if (pattern.test(trimmed)) {
       return { intent: "store_memory", confidence: 0.8 };
     }
   }
 
-  // 7. Check habit patterns
+  // 5. Check habit patterns
   for (const pattern of HABIT_PATTERNS) {
     if (pattern.test(trimmed)) {
       return { intent: "habit_checkin", confidence: 0.7 };
     }
   }
 
-  // 8. Check reflection patterns
+  // 6. Check reflection patterns
   for (const pattern of REFLECTION_PATTERNS) {
     if (pattern.test(trimmed)) {
       return { intent: "reflection", confidence: 0.6 };

@@ -32,7 +32,8 @@ export interface StreakInfo {
 const MILESTONE_DAYS = [3, 7, 14, 21, 30, 50, 100];
 
 /**
- * Create a new habit for a user.
+ * Create a new habit for a user (idempotent — safe to call multiple times).
+ * Uses upsert on (user_id, name) to prevent duplicates.
  */
 export async function createHabit(
   userId: string,
@@ -48,15 +49,18 @@ export async function createHabit(
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from("habits")
-    .insert({
-      user_id: userId,
-      name,
-      description: options?.description ?? null,
-      category: options?.category ?? null,
-      target_value: options?.targetValue ?? null,
-      target_unit: options?.targetUnit ?? null,
-      frequency: options?.frequency ?? "daily",
-    })
+    .upsert(
+      {
+        user_id: userId,
+        name,
+        description: options?.description ?? null,
+        category: options?.category ?? null,
+        target_value: options?.targetValue ?? null,
+        target_unit: options?.targetUnit ?? null,
+        frequency: options?.frequency ?? "daily",
+      },
+      { onConflict: "user_id,name", ignoreDuplicates: true },
+    )
     .select()
     .single();
 
@@ -65,13 +69,18 @@ export async function createHabit(
     throw new Error("Failed to create habit");
   }
 
-  // Initialize streak record
-  await supabase.from("habit_streaks").insert({
-    habit_id: data.id,
-    user_id: userId,
-    current_streak: 0,
-    longest_streak: 0,
-  });
+  // Initialize streak record (also idempotent via existing unique constraint)
+  await supabase
+    .from("habit_streaks")
+    .upsert(
+      {
+        habit_id: data.id,
+        user_id: userId,
+        current_streak: 0,
+        longest_streak: 0,
+      },
+      { onConflict: "habit_id,user_id", ignoreDuplicates: true },
+    );
 
   logger.info({ habitId: data.id, userId, name }, "Habit created");
   return data as Habit;

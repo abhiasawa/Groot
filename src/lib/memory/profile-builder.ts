@@ -2,152 +2,25 @@ import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 
 /**
- * Profile Builder — extracts and upserts facts about the user.
+ * Profile Builder — stores and retrieves user profile facts.
+ *
+ * All extraction is handled by the LLM via metadata.profileUpdates.
+ * This module only handles persistence and retrieval.
  *
  * Profile categories:
  * - static: name, age, location, occupation, family (rarely changes)
  * - dynamic: weight, mood, current project (changes often)
  * - preference: food, music, communication style
  * - goal: fitness targets, learning goals, career goals
- *
- * Phase 3: Manual extraction via patterns.
- * Phase 5: AI-powered extraction from Claude metadata.
+ * - people: detected people from conversations
  */
 
 export interface ProfileFact {
-  category: "static" | "dynamic" | "preference" | "goal";
+  category: "static" | "dynamic" | "preference" | "goal" | "people";
   key: string;
   value: string;
   confidence: number;
   source: string;
-}
-
-/**
- * Extract profile facts from a message using pattern matching.
- * Returns an array of facts to upsert (may be empty).
- */
-export function extractProfileFacts(text: string): ProfileFact[] {
-  const facts: ProfileFact[] = [];
-  const lower = text.toLowerCase();
-
-  // ─── Static facts ───
-
-  // "My name is X" / "I'm X" / "Call me X"
-  const nameMatch = text.match(
-    /(?:my name is|i'm|i am|call me|they call me)\s+([A-Z][a-z]+(?:\s[A-Z][a-z]+)?)/i,
-  );
-  if (nameMatch?.[1]) {
-    facts.push({
-      category: "static",
-      key: "name",
-      value: nameMatch[1],
-      confidence: 0.9,
-      source: "message_extraction",
-    });
-  }
-
-  // "I live in X" / "I'm from X" / "I'm based in X"
-  const locationMatch = text.match(
-    /(?:i live in|i'm from|i am from|i'm based in|i am based in|based out of)\s+(.+?)(?:\.|,|$)/i,
-  );
-  if (locationMatch?.[1]) {
-    facts.push({
-      category: "static",
-      key: "location",
-      value: locationMatch[1].trim(),
-      confidence: 0.8,
-      source: "message_extraction",
-    });
-  }
-
-  // "I'm a/an X" (occupation)
-  const occupationMatch = text.match(
-    /(?:i'm a|i am a|i'm an|i am an|i work as a|i work as an)\s+(.+?)(?:\.|,|$)/i,
-  );
-  if (occupationMatch?.[1] && !lower.includes("feeling") && !lower.includes("bit")) {
-    facts.push({
-      category: "static",
-      key: "occupation",
-      value: occupationMatch[1].trim(),
-      confidence: 0.7,
-      source: "message_extraction",
-    });
-  }
-
-  // "My X's name is Y" / "My X is Y" (family/relationships)
-  const relationMatch = text.match(
-    /my\s+(sister|brother|wife|husband|partner|mom|dad|mother|father|son|daughter|friend|boss|manager)(?:'s name is|\s+is)\s+(.+?)(?:\.|,|$)/i,
-  );
-  if (relationMatch?.[1] && relationMatch[2]) {
-    facts.push({
-      category: "static",
-      key: `${relationMatch[1].toLowerCase()}_name`,
-      value: relationMatch[2].trim(),
-      confidence: 0.9,
-      source: "message_extraction",
-    });
-  }
-
-  // Age: "I'm X years old" / "I am X"
-  const ageMatch = text.match(/(?:i'm|i am)\s+(\d{1,3})\s*(?:years?\s*old|yrs?\s*old)/i);
-  if (ageMatch?.[1]) {
-    facts.push({
-      category: "static",
-      key: "age",
-      value: ageMatch[1],
-      confidence: 0.9,
-      source: "message_extraction",
-    });
-  }
-
-  // ─── Dynamic facts ───
-
-  // Weight: "my weight is X" / "I weigh X" / "current weight X"
-  const weightMatch = text.match(
-    /(?:my weight is|i weigh|current weight|weight today|weight:?)\s*(\d{2,3}(?:\.\d+)?)\s*(kg|lbs?|pounds?|kilos?)?/i,
-  );
-  if (weightMatch?.[1]) {
-    const unit = weightMatch[2]?.toLowerCase().startsWith("l") ? "lbs" : "kg";
-    facts.push({
-      category: "dynamic",
-      key: "weight",
-      value: `${weightMatch[1]} ${unit}`,
-      confidence: 0.95,
-      source: "message_extraction",
-    });
-  }
-
-  // ─── Preferences ───
-
-  // "I love X" / "I prefer X" / "My favorite X is Y"
-  const prefMatch = text.match(
-    /my favorite\s+(.+?)\s+is\s+(.+?)(?:\.|,|$)/i,
-  );
-  if (prefMatch?.[1] && prefMatch[2]) {
-    facts.push({
-      category: "preference",
-      key: `favorite_${prefMatch[1].toLowerCase().trim()}`,
-      value: prefMatch[2].trim(),
-      confidence: 0.8,
-      source: "message_extraction",
-    });
-  }
-
-  // Allergies: "I'm allergic to X" / "I have a X allergy"
-  const allergyMatch = text.match(
-    /(?:i'm allergic to|i am allergic to|allergic to|allergy to)\s+(.+?)(?:\.|,|$)/i,
-  );
-  if (allergyMatch?.[1]) {
-    facts.push({
-      category: "preference",
-      key: "allergy",
-      value: allergyMatch[1].trim(),
-      confidence: 0.95,
-      source: "message_extraction",
-    });
-  }
-
-  return facts;
 }
 
 /**
@@ -163,7 +36,7 @@ export async function upsertProfileFacts(
   const supabase = getSupabaseAdmin();
   const now = new Date().toISOString();
 
-  const results = await Promise.allSettled(
+  await Promise.allSettled(
     facts.map((fact) =>
       supabase.from("user_profile").upsert(
         {

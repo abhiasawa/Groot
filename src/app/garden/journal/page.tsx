@@ -310,7 +310,7 @@ function JournalContent() {
                           )}
 
                           {/* Stored media: audio player or image */}
-                          {m.media_url?.startsWith("storage:") && (
+                          {m.media_url && (m.media_url.startsWith("storage:") || m.media_url.startsWith("media:")) && (
                             <MediaPlayer
                               mediaUrl={m.media_url}
                               messageType={m.message_type}
@@ -502,15 +502,50 @@ function CalendarGrid({
 }
 
 function MediaPlayer({ mediaUrl, messageType }: { mediaUrl: string; messageType: string }) {
-  // Convert storage:userId/type/file.ext → /api/media/userId/type/file.ext
-  const storagePath = mediaUrl.replace("storage:", "");
-  const src = `/api/media/${encodeURIComponent(storagePath)}`;
+  const [resolvedSrc, setResolvedSrc] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    if (mediaUrl.startsWith("storage:")) {
+      // Convert storage:userId/type/file.ext → /api/media/userId/type/file.ext
+      const storagePath = mediaUrl.replace("storage:", "");
+      setResolvedSrc(`/api/media/${encodeURIComponent(storagePath)}`);
+    } else if (mediaUrl.startsWith("media:")) {
+      // Proxy through WhatsApp — fetch returns JSON { url }
+      const mediaId = mediaUrl.replace("media:", "").trim();
+      fetch(`/api/media/proxy?mediaId=${encodeURIComponent(mediaId)}&messageType=${encodeURIComponent(messageType)}`, {
+        credentials: "include",
+      })
+        .then((res) => res.json())
+        .then((data: { url?: string }) => {
+          if (data.url) setResolvedSrc(data.url);
+          else setError(true);
+        })
+        .catch(() => setError(true));
+    }
+  }, [mediaUrl, messageType]);
+
+  if (error) {
+    return (
+      <div className="mb-3 text-xs text-muted-foreground italic">
+        Media unavailable
+      </div>
+    );
+  }
+
+  if (!resolvedSrc) {
+    return (
+      <div className="mb-3 text-xs text-muted-foreground italic animate-pulse">
+        Loading media...
+      </div>
+    );
+  }
 
   if (messageType === "audio") {
     return (
       <div className="mb-3">
         <audio controls preload="none" className="w-full h-10 rounded-lg">
-          <source src={src} />
+          <source src={resolvedSrc} />
           Your browser does not support audio playback.
         </audio>
       </div>
@@ -522,7 +557,7 @@ function MediaPlayer({ mediaUrl, messageType }: { mediaUrl: string; messageType:
       <div className="mb-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={src}
+          src={resolvedSrc}
           alt="Shared image"
           loading="lazy"
           className="rounded-lg max-h-72 w-auto object-contain"

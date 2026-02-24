@@ -8,6 +8,7 @@
 export interface Memory {
   id: string;
   content: string;
+  media_url?: string | null;
   media_description?: string | null;
   message_type: string;
   metadata?: Record<string, unknown> | null;
@@ -69,9 +70,10 @@ export interface TopicMemory {
 export interface Person {
   name: string;
   relationship: string | null;
+  context?: string | null;
   lastMentioned: string | null;
   mentionCount: number;
-  source: "profile" | "contacts";
+  source: "profile" | "contacts" | "ai_detected";
 }
 
 export interface ProfileFact {

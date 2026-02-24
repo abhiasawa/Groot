@@ -1,14 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { getAuthenticatedPortalUser, PortalAuthError } from "@/lib/auth/portal-user";
 
 /**
  * GET /api/export — Export all user data as JSON.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   let userId: string;
   try {
-    const user = await getAuthenticatedPortalUser();
+    const user = await getAuthenticatedPortalUser(request);
     userId = user.id;
   } catch (error) {
     if (error instanceof PortalAuthError) {
