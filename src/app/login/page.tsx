@@ -31,6 +31,7 @@ function LoginForm() {
     try {
       const res = await fetch("/api/auth/request-otp", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone_number: phone.trim() }),
       });
@@ -64,6 +65,7 @@ function LoginForm() {
     try {
       const res = await fetch("/api/auth/verify-otp", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           phone_number: phone.trim(),
