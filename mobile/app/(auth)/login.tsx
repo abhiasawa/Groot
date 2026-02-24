@@ -14,7 +14,8 @@ import { Sprout, ArrowLeft, MessageCircle } from "lucide-react-native";
 import { useAuth } from "../../lib/auth/provider";
 import { useTheme } from "../../lib/theme/provider";
 import { typography } from "../../constants/typography";
-import { Sheet } from "../../components/ui/sheet";
+import { GlassCard } from "../../components/ui/glass-card";
+import { GradientBackground } from "../../components/ui/gradient-background";
 import { PressScale } from "../../components/ui/press-scale";
 
 const API_BASE = (
@@ -113,7 +114,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={[styles.bg, { backgroundColor: colors.background }]}>
+    <GradientBackground>
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -127,7 +128,7 @@ export default function LoginScreen() {
             <View
               style={[
                 styles.iconWrapper,
-                { backgroundColor: colors.muted },
+                { backgroundColor: colors.glassSurface },
               ]}
             >
               <Sprout size={48} color={colors.primary} strokeWidth={1.5} />
@@ -143,7 +144,7 @@ export default function LoginScreen() {
           {step === "otp" ? (
             /* ── OTP Verification Step ── */
             <Animated.View entering={FadeIn.delay(100).duration(500)}>
-              <Sheet padding={24}>
+              <GlassCard delay={0} padding={24}>
                 <View style={styles.form}>
                   <View style={styles.otpHeader}>
                     <PressScale onPress={handleBack}>
@@ -178,9 +179,9 @@ export default function LoginScreen() {
                     style={[
                       styles.otpInput,
                       {
-                        backgroundColor: colors.muted,
+                        backgroundColor: colors.glassSurface,
                         color: colors.foreground,
-                        borderColor: colors.border,
+                        borderColor: colors.glassBorder,
                       },
                     ]}
                     placeholder="000000"
@@ -241,12 +242,12 @@ export default function LoginScreen() {
                     </Text>
                   </PressScale>
                 </View>
-              </Sheet>
+              </GlassCard>
             </Animated.View>
           ) : (
             /* ── Phone Number Input Step ── */
             <Animated.View entering={FadeIn.delay(200).duration(500)}>
-              <Sheet padding={24}>
+              <GlassCard delay={100} padding={24}>
                 <View style={styles.form}>
                   <Text
                     style={[styles.inputLabel, { color: colors.mutedForeground }]}
@@ -258,9 +259,9 @@ export default function LoginScreen() {
                     style={[
                       styles.input,
                       {
-                        backgroundColor: colors.muted,
+                        backgroundColor: colors.glassSurface,
                         color: colors.foreground,
-                        borderColor: colors.border,
+                        borderColor: colors.glassBorder,
                       },
                     ]}
                     placeholder="98765 43210"
@@ -310,7 +311,7 @@ export default function LoginScreen() {
                     </View>
                   </PressScale>
                 </View>
-              </Sheet>
+              </GlassCard>
             </Animated.View>
           )}
 
@@ -323,14 +324,11 @@ export default function LoginScreen() {
           </Animated.View>
         </View>
       </KeyboardAvoidingView>
-    </View>
+    </GradientBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  bg: {
-    flex: 1,
-  },
   container: {
     flex: 1,
     justifyContent: "center",
