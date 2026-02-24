@@ -57,6 +57,7 @@ export default function SettingsPage() {
 
       fetch("/api/settings", {
         method: "PATCH",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key, value }),
       }).catch(() => {
@@ -70,7 +71,7 @@ export default function SettingsPage() {
     if (!user) return;
     setExporting(true);
     try {
-      const res = await fetch("/api/export");
+      const res = await fetch("/api/export", { credentials: "include" });
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");

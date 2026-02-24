@@ -43,6 +43,7 @@ export default function TasksPage() {
     try {
       await fetch("/api/tasks", {
         method: "PATCH",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ taskId, is_completed: newStatus }),
       });

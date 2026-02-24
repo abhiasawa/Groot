@@ -52,6 +52,7 @@ export default function ProfilePage() {
     try {
       await fetch("/api/profile", {
         method: "DELETE",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ factId }),
       });

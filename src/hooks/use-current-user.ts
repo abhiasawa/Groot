@@ -19,7 +19,7 @@ function fetchUser(): Promise<CurrentUser | null> {
   if (cachedUser) return Promise.resolve(cachedUser);
   if (fetchPromise) return fetchPromise;
 
-  fetchPromise = fetch("/api/me")
+  fetchPromise = fetch("/api/me", { credentials: "include" })
     .then((r) => r.json())
     .then((d) => {
       cachedUser = d.user ?? null;

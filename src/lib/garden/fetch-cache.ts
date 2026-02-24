@@ -30,7 +30,7 @@ export async function cachedFetch<T>(url: string, maxAge = STALE_MS): Promise<T>
 }
 
 async function fetchAndCache<T>(url: string): Promise<T> {
-  const res = await fetch(url);
+  const res = await fetch(url, { credentials: "include" });
 
   if (!res.ok) {
     let message = `Request failed (${res.status})`;

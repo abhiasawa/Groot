@@ -76,7 +76,7 @@ export default function StoriesPage() {
   const fetchStories = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/stories?limit=100");
+      const res = await fetch("/api/stories?limit=100", { credentials: "include" });
       const data = await res.json();
       setStories(data.stories ?? []);
     } catch {
@@ -88,7 +88,7 @@ export default function StoriesPage() {
   const fetchStats = useCallback(async () => {
     setLoadingStats(true);
     try {
-      const res = await fetch("/api/stories?stats=true");
+      const res = await fetch("/api/stories?stats=true", { credentials: "include" });
       const data = await res.json();
       setStats(data);
     } catch {

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -12,7 +12,6 @@ import {
   Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import PagerView from "react-native-pager-view";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -148,25 +147,14 @@ function getMoodDistribution(
 
 export default function TimelineScreen() {
   const { colors } = useTheme();
-  const pagerRef = useRef<PagerView>(null);
   const [activeTab, setActiveTab] = useState(0);
   const [showSearch, setShowSearch] = useState(false);
   const indicatorLeft = useSharedValue(0);
 
-  const tabWidth = SCREEN_WIDTH / TABS.length;
-
-  const onPageSelected = useCallback(
-    (e: { nativeEvent: { position: number } }) => {
-      const pos = e.nativeEvent.position;
-      setActiveTab(pos);
-      indicatorLeft.value = withTiming(pos * tabWidth, { duration: 200 });
-    },
-    [tabWidth, indicatorLeft],
-  );
+  const tabWidth = (SCREEN_WIDTH - 40) / TABS.length;
 
   const selectTab = useCallback(
     (index: number) => {
-      pagerRef.current?.setPage(index);
       setActiveTab(index);
       indicatorLeft.value = withTiming(index * tabWidth, { duration: 200 });
     },
@@ -185,16 +173,18 @@ export default function TimelineScreen() {
         <Text style={[s.headerTitle, { color: colors.foreground }]}>
           Timeline
         </Text>
-        <Pressable onPress={() => setShowSearch((v) => !v)} hitSlop={8}>
-          {showSearch ? (
-            <X size={22} color={colors.mutedForeground} strokeWidth={1.5} />
-          ) : (
-            <Search size={22} color={colors.mutedForeground} strokeWidth={1.5} />
-          )}
-        </Pressable>
+        {activeTab === 0 && (
+          <Pressable onPress={() => setShowSearch((v) => !v)} hitSlop={8}>
+            {showSearch ? (
+              <X size={20} color={colors.mutedForeground} strokeWidth={1.5} />
+            ) : (
+              <Search size={20} color={colors.mutedForeground} strokeWidth={1.5} />
+            )}
+          </Pressable>
+        )}
       </View>
 
-      {/* ── Tab Indicator ───────────────── */}
+      {/* ── Tab Bar ───────────────────── */}
       <View style={[s.tabBar, { borderBottomColor: colors.border }]}>
         {TABS.map((tab, i) => (
           <Pressable key={tab} style={s.tabItem} onPress={() => selectTab(i)}>
@@ -222,31 +212,21 @@ export default function TimelineScreen() {
         />
       </View>
 
-      {/* ── PagerView ───────────────────── */}
-      <PagerView
-        ref={pagerRef}
-        style={s.pager}
-        initialPage={0}
-        onPageSelected={onPageSelected}
-      >
-        <View key="all" style={s.page}>
-          <AllFeed
-            colors={colors}
-            showSearch={showSearch}
-          />
-        </View>
-        <View key="stories" style={s.page}>
-          <StoriesFeed colors={colors} />
-        </View>
-        <View key="mood" style={s.page}>
-          <MoodView colors={colors} />
-        </View>
-      </PagerView>
+      {/* ── Tab Content ───────────────── */}
+      {activeTab === 0 && (
+        <AllFeed colors={colors} showSearch={showSearch} />
+      )}
+      {activeTab === 1 && (
+        <StoriesFeed colors={colors} />
+      )}
+      {activeTab === 2 && (
+        <MoodView colors={colors} />
+      )}
     </SafeAreaView>
   );
 }
 
-// ── All Feed (Page 0) ────────────────────────
+// ── All Feed (Tab 0) ────────────────────────
 
 function AllFeed({
   colors,
@@ -483,7 +463,7 @@ function MemoryCard({
   );
 }
 
-// ── Stories Feed (Page 1) ────────────────────
+// ── Stories Feed (Tab 1) ────────────────────
 
 function StoriesFeed({
   colors,
@@ -571,7 +551,7 @@ function StoryCard({
   );
 }
 
-// ── Mood View (Page 2) ───────────────────────
+// ── Mood View (Tab 2) ───────────────────────
 
 function MoodView({
   colors,
@@ -612,7 +592,7 @@ function MoodView({
           {recentMood ? `Feeling ${recentMood.toLowerCase()}` : "No mood data yet"}
         </Text>
         <View style={s.moodDotsRow}>
-          {last7.map((d, i) => (
+          {last7.map((d) => (
             <View
               key={d.date}
               style={[
@@ -711,8 +691,6 @@ const s = StyleSheet.create({
   safe: { flex: 1 },
   flex: { flex: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  pager: { flex: 1 },
-  page: { flex: 1 },
 
   // Header
   header: {
@@ -721,7 +699,7 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingTop: 8,
-    paddingBottom: 12,
+    paddingBottom: 4,
   },
   headerTitle: {
     fontFamily: "Inter_700Bold",
@@ -733,11 +711,12 @@ const s = StyleSheet.create({
     flexDirection: "row",
     borderBottomWidth: 1,
     position: "relative",
+    marginHorizontal: 20,
   },
   tabItem: {
     flex: 1,
     alignItems: "center",
-    paddingVertical: 10,
+    paddingVertical: 12,
   },
   tabLabel: {
     fontSize: 14,
@@ -746,20 +725,21 @@ const s = StyleSheet.create({
     position: "absolute",
     bottom: 0,
     height: 2,
+    borderRadius: 1,
   },
 
   // Search
   searchWrap: {
     paddingHorizontal: 20,
-    paddingVertical: 8,
+    paddingVertical: 10,
   },
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1,
     paddingHorizontal: 12,
-    height: 40,
+    height: 42,
     gap: 8,
   },
   searchInput: {
@@ -780,20 +760,20 @@ const s = StyleSheet.create({
   dateHeader: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 13,
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: 20,
+    marginBottom: 10,
     paddingHorizontal: 2,
   },
 
   // Memory card
   memoryCard: {
-    marginBottom: 10,
+    marginBottom: 12,
   },
   memoryHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   memoryDot: {
     width: 8,
@@ -805,19 +785,19 @@ const s = StyleSheet.create({
     fontSize: 12,
   },
   mediaWrap: {
-    marginBottom: 8,
+    marginBottom: 10,
     borderRadius: 10,
     overflow: "hidden",
   },
   memoryContent: {
     fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 15,
+    lineHeight: 23,
   },
   tagsRow: {
     flexDirection: "row",
     gap: 6,
-    marginTop: 10,
+    marginTop: 12,
   },
 
   // Story card
@@ -827,7 +807,7 @@ const s = StyleSheet.create({
   storyDay: {
     fontFamily: "Inter_500Medium",
     fontSize: 12,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   storyContent: {
     fontFamily: "Inter_400Regular",
@@ -856,25 +836,25 @@ const s = StyleSheet.create({
 
   // Mood hero
   moodHero: {
-    marginBottom: 24,
+    marginBottom: 28,
   },
   moodHeroText: {
     fontFamily: "Inter_700Bold",
     fontSize: 24,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   moodDotsRow: {
     flexDirection: "row",
-    gap: 6,
+    gap: 8,
   },
   moodDotSmall: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
 
   // Pixel grid
-  section: { marginTop: 20 },
+  section: { marginTop: 24 },
   pixelGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -889,7 +869,7 @@ const s = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 12,
-    marginTop: 12,
+    marginTop: 14,
   },
   legendItem: {
     flexDirection: "row",
@@ -910,28 +890,28 @@ const s = StyleSheet.create({
   distRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
-    gap: 8,
+    marginBottom: 12,
+    gap: 10,
   },
   distLabel: {
     fontFamily: "Inter_500Medium",
-    fontSize: 12,
-    width: 44,
+    fontSize: 13,
+    width: 46,
   },
   distBarBg: {
     flex: 1,
-    height: 8,
-    borderRadius: 4,
+    height: 10,
+    borderRadius: 5,
     overflow: "hidden",
   },
   distBarFill: {
     height: "100%",
-    borderRadius: 4,
+    borderRadius: 5,
   },
   distPct: {
     fontFamily: "Inter_500Medium",
-    fontSize: 11,
-    width: 34,
+    fontSize: 12,
+    width: 36,
     textAlign: "right",
   },
 });

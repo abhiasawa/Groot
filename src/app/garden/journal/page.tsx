@@ -92,7 +92,7 @@ function JournalContent() {
     if (selectedDate) params.set("date", selectedDate);
 
     try {
-      const res = await fetch(`/api/memories?${params}`);
+      const res = await fetch(`/api/memories?${params}`, { credentials: "include" });
       const data = await res.json();
       setMemories(data.memories ?? []);
       setTotal(data.total ?? 0);

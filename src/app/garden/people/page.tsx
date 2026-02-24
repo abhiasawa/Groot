@@ -59,7 +59,7 @@ export default function PeoplePage() {
     setExpandedPerson(name);
     setLoadingMemories(true);
     try {
-      const res = await fetch(`/api/memories?q=${encodeURIComponent(name)}&limit=5`);
+      const res = await fetch(`/api/memories?q=${encodeURIComponent(name)}&limit=5`, { credentials: "include" });
       const data = await res.json();
       setPersonMemories(data.memories ?? []);
     } catch {
