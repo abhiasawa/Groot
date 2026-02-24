@@ -1,7 +1,7 @@
 import { Tabs } from "expo-router";
 import { BlurView } from "expo-blur";
 import { Platform } from "react-native";
-import { Home, BookOpen, CheckSquare, Menu } from "lucide-react-native";
+import { BookOpen, CheckSquare, BarChart3, Menu } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme } from "../../lib/theme/provider";
@@ -9,11 +9,12 @@ import { useTheme } from "../../lib/theme/provider";
 export default function TabLayout() {
   const { colors, resolvedMode } = useTheme();
   const insets = useSafeAreaInsets();
-  const bottomInset = Math.max(insets.bottom, Platform.OS === "ios" ? 12 : 10);
-  const tabBarHeight = 58 + bottomInset;
+  const bottomInset = Math.max(insets.bottom, Platform.OS === "ios" ? 12 : 14);
+  const tabBarHeight = 66 + bottomInset;
 
   return (
     <Tabs
+      initialRouteName="journal"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
@@ -23,7 +24,7 @@ export default function TabLayout() {
           height: tabBarHeight,
           paddingTop: 6,
           paddingBottom: bottomInset,
-          paddingHorizontal: 10,
+          paddingHorizontal: 9,
           borderTopWidth: 1,
           borderWidth: 1,
           borderColor: colors.glassBorder,
@@ -35,23 +36,25 @@ export default function TabLayout() {
           shadowRadius: 8,
         },
         tabBarItemStyle: {
-          borderRadius: 14,
-          marginHorizontal: 2,
-          marginVertical: 1,
-          paddingTop: 2,
-          paddingBottom: 0,
+          borderRadius: 12,
+          marginHorizontal: 3,
+          marginTop: 3,
+          marginBottom: 4,
+          paddingTop: 4,
+          paddingBottom: 4,
+          minHeight: 48,
           overflow: "hidden",
         },
         tabBarLabelStyle: {
           fontFamily: "Manrope_600SemiBold",
-          fontSize: 10,
-          lineHeight: 12,
+          fontSize: 11,
+          lineHeight: 14,
           letterSpacing: 0.1,
           marginTop: 2,
         },
         tabBarActiveBackgroundColor: colors.secondary,
         tabBarIconStyle: {
-          marginTop: 1,
+          marginTop: 0,
         },
         tabBarBackground: () => (
           <BlurView
@@ -65,10 +68,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
-          tabBarIcon: ({ color, size }) => (
-            <Home size={size} color={color} strokeWidth={1.6} />
-          ),
+          href: null,
         }}
       />
       <Tabs.Screen
@@ -104,7 +104,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="insights"
         options={{
-          href: null,
+          title: "Insights",
+          tabBarIcon: ({ color, size }) => (
+            <BarChart3 size={size} color={color} strokeWidth={1.6} />
+          ),
         }}
       />
       <Tabs.Screen

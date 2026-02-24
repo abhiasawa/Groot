@@ -32,6 +32,7 @@ import { PressScale } from "../../components/ui/press-scale";
 import { PillBadge } from "../../components/ui/pill-badge";
 import { MediaPlayer } from "../../components/ui/media-player";
 import { SearchInput } from "../../components/ui/search-input";
+import { TabSwipeView } from "../../components/ui/tab-swipe-view";
 
 const FILTERS = [
   { key: "all", label: "All" },
@@ -107,8 +108,9 @@ export default function JournalScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <GradientBackground>
-        <ScrollView
+      <TabSwipeView currentTab="journal">
+        <GradientBackground>
+          <ScrollView
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
           refreshControl={
@@ -215,7 +217,9 @@ export default function JournalScreen() {
                         <Text style={[styles.entryTime, { color: colors.mutedForeground }]}>
                           {formatTime(memory.created_at)}
                         </Text>
-                        <PillBadge label={memory.message_type || "Entry"} small />
+                        {memory.message_type !== "audio" ? (
+                          <PillBadge label={memory.message_type || "Entry"} small />
+                        ) : null}
                       </View>
 
                       {memory.media_url &&
@@ -239,8 +243,9 @@ export default function JournalScreen() {
           <View style={styles.bottomGap} />
         </ScrollView>
 
-        <MemoryModal memory={selectedMemory} onClose={() => setSelectedMemory(null)} />
-      </GradientBackground>
+          <MemoryModal memory={selectedMemory} onClose={() => setSelectedMemory(null)} />
+        </GradientBackground>
+      </TabSwipeView>
     </SafeAreaView>
   );
 }

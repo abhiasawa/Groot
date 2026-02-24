@@ -21,6 +21,7 @@ import { PressScale } from "../components/ui/press-scale";
 import { SectionHeader } from "../components/ui/section-header";
 import { PillBadge } from "../components/ui/pill-badge";
 import { DeepScreenHeader } from "../components/ui/deep-screen-header";
+import { TabSwipeView } from "../components/ui/tab-swipe-view";
 import type { Task } from "../../shared/types/api";
 
 type TaskFilter = "all" | "pending" | "completed";
@@ -136,8 +137,9 @@ export default function TasksScreen() {
 
   return (
     <SafeAreaView style={styles.flex}>
-      <GradientBackground>
-        <ScrollView
+      <TabSwipeView currentTab="tasks" enabled={isTabRoute}>
+        <GradientBackground>
+          <ScrollView
           contentContainerStyle={styles.scroll}
           refreshControl={
             <RefreshControl
@@ -268,9 +270,10 @@ export default function TasksScreen() {
             </>
           )}
 
-          <View style={styles.bottomSpacer} />
-        </ScrollView>
-      </GradientBackground>
+            <View style={styles.bottomSpacer} />
+          </ScrollView>
+        </GradientBackground>
+      </TabSwipeView>
     </SafeAreaView>
   );
 }

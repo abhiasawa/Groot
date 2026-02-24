@@ -8,12 +8,12 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useSegments } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { BarChart3, Calendar, Hash, TrendingUp } from "lucide-react-native";
 
 import { useTheme } from "../lib/theme/provider";
-import { useReports } from "../lib/api/queries";
+import { useMemories, useReports, useTasks, useTopics } from "../lib/api/queries";
 import { getMoodColorFromName } from "../constants/mood";
 import { typography } from "../constants/typography";
 import { GradientBackground } from "../components/ui/gradient-background";
@@ -21,6 +21,7 @@ import { GlassCard } from "../components/ui/glass-card";
 import { SectionHeader } from "../components/ui/section-header";
 import { PillBadge } from "../components/ui/pill-badge";
 import { DeepScreenHeader } from "../components/ui/deep-screen-header";
+import { TabSwipeView } from "../components/ui/tab-swipe-view";
 import type { Report } from "../../shared/types/api";
 
 function formatWeekRange(start: string, end: string): string {
@@ -33,11 +34,16 @@ function formatWeekRange(start: string, end: string): string {
 export default function InsightsScreen() {
   const { colors } = useTheme();
   const router = useRouter();
+  const segments = useSegments();
   const { data, isLoading, isRefetching, refetch } = useReports();
+  const { data: memoriesData, refetch: refetchMemories } = useMemories({ limit: 200 });
+  const { data: tasksData, refetch: refetchTasks } = useTasks();
+  const { data: topicsData, refetch: refetchTopics } = useTopics();
+  const isTabRoute = segments[0] === "(tabs)";
 
   const onRefresh = useCallback(() => {
-    refetch();
-  }, [refetch]);
+    Promise.all([refetch(), refetchMemories(), refetchTasks(), refetchTopics()]).catch(() => {});
+  }, [refetch, refetchMemories, refetchTasks, refetchTopics]);
 
   const reports = data?.reports ?? [];
   const latest = reports[0];
@@ -52,22 +58,68 @@ export default function InsightsScreen() {
     };
   }, [reports]);
 
+  const liveInsights = useMemo(() => {
+    const memories = memoriesData?.memories ?? [];
+    const tasks = tasksData?.tasks ?? [];
+    const topics = [...(topicsData?.topics ?? [])].sort((a, b) => b.memoryCount - a.memoryCount);
+
+    const now = new Date();
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(now.getDate() - 7);
+
+    const entriesLast7d = memories.filter((memory) => new Date(memory.created_at) >= sevenDaysAgo);
+    const audioCount = entriesLast7d.filter((memory) => memory.message_type === "audio").length;
+    const imageCount = entriesLast7d.filter((memory) => memory.message_type === "image").length;
+    const textCount = entriesLast7d.filter((memory) => memory.message_type === "text").length;
+    const openTasks = tasks.filter((task) => !task.is_completed).length;
+
+    const dateSet = new Set(memories.map((memory) => memory.created_at.slice(0, 10)));
+    let streakDays = 0;
+    const cursor = new Date(now);
+    while (streakDays < 30) {
+      const dateKey = cursor.toISOString().slice(0, 10);
+      if (!dateSet.has(dateKey)) break;
+      streakDays += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+
+    let guidance = "Keep writing daily to unlock stronger weekly trends.";
+    if (openTasks >= 5) guidance = "Task load is high. Close 1-2 tasks before capturing more.";
+    else if (entriesLast7d.length >= 5) guidance = "Momentum is strong. Turn one repeated theme into a concrete task.";
+    else if (audioCount >= Math.max(textCount, 2)) guidance = "Voice captures are dominant. Add one short text reflection for clarity.";
+
+    return {
+      hasData: memories.length > 0 || tasks.length > 0 || topics.length > 0,
+      entriesLast7d: entriesLast7d.length,
+      audioCount,
+      imageCount,
+      textCount,
+      openTasks,
+      streakDays,
+      topTopicName: topics[0]?.name ?? "No topic yet",
+      guidance,
+    };
+  }, [memoriesData?.memories, tasksData?.tasks, topicsData?.topics]);
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
-        <GradientBackground>
-          <View style={styles.center}>
-            <ActivityIndicator size="large" color={colors.primary} />
-          </View>
-        </GradientBackground>
+        <TabSwipeView currentTab="insights" enabled={isTabRoute}>
+          <GradientBackground>
+            <View style={styles.center}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+          </GradientBackground>
+        </TabSwipeView>
       </SafeAreaView>
     );
   }
 
   return (
-    <GradientBackground>
-      <SafeAreaView style={styles.container}>
-        <ScrollView
+    <SafeAreaView style={styles.container}>
+      <TabSwipeView currentTab="insights" enabled={isTabRoute}>
+        <GradientBackground>
+          <ScrollView
           contentContainerStyle={styles.scroll}
           refreshControl={
             <RefreshControl
@@ -78,35 +130,75 @@ export default function InsightsScreen() {
           }
           showsVerticalScrollIndicator={false}
         >
-          <DeepScreenHeader
-            title="Insights"
-            subtitle="Weekly synthesis from your memory stream."
-            onBack={() => router.back()}
-            tags={["Weekly Reports", "Trends"]}
-          />
+          {isTabRoute ? (
+            <View style={styles.tabHeader}>
+              <Text style={[styles.tabTitle, { color: colors.foreground }]}>Insights</Text>
+              <Text style={[styles.tabSubtitle, { color: colors.mutedForeground }]}>
+                Weekly synthesis from your memory stream.
+              </Text>
+            </View>
+          ) : (
+            <DeepScreenHeader
+              title="Insights"
+              subtitle="Weekly synthesis from your memory stream."
+              onBack={() => router.back()}
+              tags={["Weekly Reports", "Trends"]}
+            />
+          )}
 
           {!reports.length ? (
-            <Animated.View entering={FadeInDown.duration(420)}>
-              <GlassCard padding={26}>
-                <View style={styles.emptyState}>
-                  <View
-                    style={[
-                      styles.emptyIconContainer,
-                      { backgroundColor: colors.glassSurface },
-                    ]}
-                  >
-                    <BarChart3 size={32} color={colors.mutedForeground} strokeWidth={1.1} />
+            liveInsights.hasData ? (
+              <>
+                <SectionHeader title="Live Insights" />
+                <GlassCard padding={18} accentColor={colors.primary} style={styles.summaryCard}>
+                  <View style={styles.summaryRow}>
+                    <Stat label="7d Entries" value={liveInsights.entriesLast7d} />
+                    <Stat label="Open Tasks" value={liveInsights.openTasks} />
+                    <Stat label="Streak" value={liveInsights.streakDays} />
                   </View>
-                  <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-                    No reports yet
+                </GlassCard>
+
+                <GlassCard padding={16} style={styles.reportCard}>
+                  <Text style={[styles.liveTitle, { color: colors.foreground }]}>Capture Mix</Text>
+                  <Text style={[styles.liveBody, { color: colors.mutedForeground }]}>
+                    Text {liveInsights.textCount} • Voice {liveInsights.audioCount} • Photo {liveInsights.imageCount}
                   </Text>
-                  <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>
-                    Weekly insights appear automatically as you keep journaling.
-                    Check back after your first full week.
+                  <Text style={[styles.liveBody, { color: colors.mutedForeground }]}>
+                    Top topic: {liveInsights.topTopicName}
                   </Text>
-                </View>
-              </GlassCard>
-            </Animated.View>
+                </GlassCard>
+
+                <GlassCard padding={16} style={styles.reportCard}>
+                  <View style={styles.insightsRow}>
+                    <TrendingUp size={12} color={colors.chart2} strokeWidth={1.6} />
+                    <Text style={[styles.insightsText, { color: colors.mutedForeground }]}>
+                      {liveInsights.guidance}
+                    </Text>
+                  </View>
+                </GlassCard>
+              </>
+            ) : (
+              <Animated.View entering={FadeInDown.duration(420)}>
+                <GlassCard padding={26}>
+                  <View style={styles.emptyState}>
+                    <View
+                      style={[
+                        styles.emptyIconContainer,
+                        { backgroundColor: colors.glassSurface },
+                      ]}
+                    >
+                      <BarChart3 size={32} color={colors.mutedForeground} strokeWidth={1.1} />
+                    </View>
+                    <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+                      No insights yet
+                    </Text>
+                    <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>
+                      Add journal entries and tasks. Insights will start filling automatically.
+                    </Text>
+                  </View>
+                </GlassCard>
+              </Animated.View>
+            )
           ) : (
             <>
               <GlassCard padding={18} accentColor={colors.primary} style={styles.summaryCard}>
@@ -214,9 +306,10 @@ export default function InsightsScreen() {
             </>
           )}
           <View style={styles.bottomSpacer} />
-        </ScrollView>
-      </SafeAreaView>
-    </GradientBackground>
+          </ScrollView>
+        </GradientBackground>
+      </TabSwipeView>
+    </SafeAreaView>
   );
 }
 
@@ -242,6 +335,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: 40,
+  },
+  tabHeader: {
+    marginBottom: 16,
+  },
+  tabTitle: {
+    fontFamily: "Sora_700Bold",
+    ...typography["2xl"],
+  },
+  tabSubtitle: {
+    marginTop: 2,
+    fontFamily: "Manrope_400Regular",
+    ...typography.sm,
   },
   emptyState: {
     alignItems: "center",
@@ -329,6 +434,16 @@ const styles = StyleSheet.create({
     ...typography.xs,
     fontStyle: "italic",
     lineHeight: 18,
+  },
+  liveTitle: {
+    fontFamily: "Sora_600SemiBold",
+    ...typography.base,
+    marginBottom: 6,
+  },
+  liveBody: {
+    fontFamily: "Manrope_400Regular",
+    ...typography.sm,
+    lineHeight: 20,
   },
   bottomSpacer: {
     height: 20,
