@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
   },
   name: {
     fontFamily: "Sora_700Bold",
-    ...typography.hero,
+    ...typography["2xl"],
   },
   subheading: {
     marginTop: 2,

@@ -2,11 +2,15 @@ import { Tabs } from "expo-router";
 import { BlurView } from "expo-blur";
 import { Platform } from "react-native";
 import { Home, BookOpen, CheckSquare, Menu } from "lucide-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTheme } from "../../lib/theme/provider";
 
 export default function TabLayout() {
   const { colors, resolvedMode } = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, Platform.OS === "ios" ? 12 : 10);
+  const tabBarHeight = 58 + bottomInset;
 
   return (
     <Tabs
@@ -16,9 +20,9 @@ export default function TabLayout() {
         tabBarInactiveTintColor: colors.mutedForeground,
         tabBarHideOnKeyboard: true,
         tabBarStyle: {
-          height: Platform.OS === "ios" ? 90 : 80,
-          paddingTop: 8,
-          paddingBottom: Platform.OS === "ios" ? 22 : 14,
+          height: tabBarHeight,
+          paddingTop: 6,
+          paddingBottom: bottomInset,
           paddingHorizontal: 10,
           borderTopWidth: 1,
           borderWidth: 1,
@@ -33,16 +37,17 @@ export default function TabLayout() {
         tabBarItemStyle: {
           borderRadius: 14,
           marginHorizontal: 2,
-          marginVertical: 3,
-          paddingTop: 3,
-          paddingBottom: 4,
+          marginVertical: 1,
+          paddingTop: 2,
+          paddingBottom: 0,
           overflow: "hidden",
         },
         tabBarLabelStyle: {
           fontFamily: "Manrope_600SemiBold",
-          fontSize: 11,
+          fontSize: 10,
+          lineHeight: 12,
           letterSpacing: 0.1,
-          marginTop: 3,
+          marginTop: 2,
         },
         tabBarActiveBackgroundColor: colors.secondary,
         tabBarIconStyle: {
