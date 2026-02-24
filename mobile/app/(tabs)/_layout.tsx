@@ -52,11 +52,6 @@ export default function TabLayout() {
           ),
         }}
       />
-      {/* Hidden — old screens kept temporarily for file compatibility */}
-      <Tabs.Screen name="journal" options={{ href: null }} />
-      <Tabs.Screen name="stories" options={{ href: null }} />
-      <Tabs.Screen name="mood" options={{ href: null }} />
-      <Tabs.Screen name="more" options={{ href: null }} />
     </Tabs>
   );
 }
