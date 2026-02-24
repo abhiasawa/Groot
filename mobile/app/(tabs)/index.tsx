@@ -121,7 +121,6 @@ export default function HomeScreen() {
             <View style={styles.planStats}>
               <PlanStat label="Tasks" value={home.pendingTasks} />
               <PlanStat label="Journal" value={home.recentMemories?.length ?? 0} />
-              <PlanStat label="Habits" value={home.habitsCount} />
             </View>
           </GlassCard>
 

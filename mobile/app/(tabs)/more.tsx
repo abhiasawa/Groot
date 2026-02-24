@@ -3,7 +3,6 @@ import { View, Text, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import {
-  Flame,
   CheckSquare,
   BookOpen,
   BarChart3,
@@ -55,14 +54,6 @@ function useMenuItems(): MenuItem[] {
       route: "/(tabs)/journal",
       group: "plan",
       icon: <BookOpen size={18} color={colors.primary} strokeWidth={1.7} />,
-    },
-    {
-      key: "habits",
-      label: "Habits",
-      description: "Track routines and streaks",
-      route: "/(tabs)/habits",
-      group: "plan",
-      icon: <Flame size={18} color={colors.primary} strokeWidth={1.7} />,
     },
     {
       key: "people",

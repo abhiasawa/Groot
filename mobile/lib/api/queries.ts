@@ -8,7 +8,6 @@ import type {
   StoriesResponse,
   StoryStats,
   MoodResponse,
-  HabitsResponse,
   TasksResponse,
   ReportsResponse,
   TopicsData,
@@ -27,7 +26,6 @@ export const qk = {
   stories: ["stories"] as const,
   storyStats: ["storyStats"] as const,
   mood: (year: number) => ["mood", year] as const,
-  habits: ["habits"] as const,
   tasks: ["tasks"] as const,
   reports: ["reports"] as const,
   topics: ["topics"] as const,
@@ -112,15 +110,6 @@ export function useMood(year: number) {
     queryKey: qk.mood(year),
     queryFn: () => apiFetch<MoodResponse>(`/api/mood?year=${year}`),
     staleTime: 60_000,
-  });
-}
-
-/** GET /api/habits */
-export function useHabits() {
-  return useQuery<HabitsResponse>({
-    queryKey: qk.habits,
-    queryFn: () => apiFetch<HabitsResponse>("/api/habits?include=checkins"),
-    staleTime: 30_000,
   });
 }
 
