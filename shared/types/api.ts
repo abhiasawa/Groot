@@ -246,6 +246,18 @@ export interface DeleteProfileFactPayload {
   factId: string;
 }
 
+/** POST /api/mood body */
+export interface RecordMoodPayload {
+  mood: string;
+}
+
+/** POST /api/mood response */
+export interface RecordMoodResponse {
+  ok: true;
+  mood: string;
+  score: number;
+}
+
 /** Generic success response from mutations */
 export interface OkResponse {
   ok: true;

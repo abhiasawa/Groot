@@ -11,7 +11,7 @@ import { GlassCard } from "../../components/ui/glass-card";
 import { PressScale } from "../../components/ui/press-scale";
 import { SectionHeader } from "../../components/ui/section-header";
 import { SearchInput } from "../../components/ui/search-input";
-import { TabSwipeView } from "../../components/ui/tab-swipe-view";
+
 
 type GroupKey = "discover" | "account";
 interface MenuItem {
@@ -92,7 +92,6 @@ export default function MoreScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <TabSwipeView currentTab="more">
         <GradientBackground>
           <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
             <View style={styles.header}>
@@ -110,7 +109,6 @@ export default function MoreScreen() {
             <View style={styles.bottomGap} />
           </ScrollView>
         </GradientBackground>
-      </TabSwipeView>
     </SafeAreaView>
   );
 }

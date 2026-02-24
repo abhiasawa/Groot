@@ -5,7 +5,6 @@ import { useTheme } from "../../lib/theme/provider";
 
 interface GradientBackgroundProps {
   children: React.ReactNode;
-  /** Override gradient colors (min 2) */
   colors?: readonly [ColorValue, ColorValue, ...ColorValue[]];
 }
 
@@ -34,11 +33,6 @@ export function GradientBackground({ children, colors: overrideColors }: Gradien
         pointerEvents="none"
         style={[styles.aura, styles.auraSecondary, { backgroundColor: colors.auraSecondary }]}
       />
-      <View
-        pointerEvents="none"
-        style={[styles.aura, styles.auraTertiary, { backgroundColor: colors.auraTertiary }]}
-      />
-      <View pointerEvents="none" style={styles.paperWash} />
       {children}
     </LinearGradient>
   );
@@ -51,32 +45,19 @@ const styles = StyleSheet.create({
   aura: {
     position: "absolute",
     borderRadius: 999,
-    opacity: 0.14,
   },
   auraPrimary: {
-    width: 220,
-    height: 220,
-    top: -150,
-    right: -110,
+    width: 280,
+    height: 280,
+    top: -180,
+    right: -120,
+    opacity: 0.5,
   },
   auraSecondary: {
-    width: 210,
-    height: 210,
-    top: "44%",
-    left: -130,
-  },
-  auraTertiary: {
-    width: 230,
-    height: 230,
-    bottom: -170,
-    right: -60,
-  },
-  paperWash: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(255,255,255,0.015)",
+    width: 240,
+    height: 240,
+    bottom: -160,
+    left: -100,
+    opacity: 0.4,
   },
 });

@@ -42,70 +42,42 @@ export function getMoodColor(score: number, colors: ThemeColors): string {
  *  - Low:   low, tired, stressed, anxious, worried, overwhelmed, frustrated, down
  *  - Bad:   bad, sad, angry, terrible, awful, miserable, depressed, devastated
  */
+const MOOD_NAME_GREAT = new Set([
+  "happy", "excited", "amazing", "fantastic", "wonderful", "great", "elated", "thrilled",
+]);
+const MOOD_NAME_GOOD = new Set([
+  "good", "calm", "content", "peaceful", "relaxed", "grateful", "hopeful", "optimistic",
+]);
+const MOOD_NAME_OKAY = new Set([
+  "okay", "fine", "neutral", "meh", "alright", "so-so",
+]);
+const MOOD_NAME_LOW = new Set([
+  "low", "tired", "stressed", "anxious", "worried", "overwhelmed", "frustrated", "down",
+]);
+const MOOD_NAME_BAD = new Set([
+  "bad", "sad", "angry", "terrible", "awful", "miserable", "depressed", "devastated",
+]);
+
 export function getMoodColorFromName(
   mood: string,
   colors: ThemeColors,
 ): string {
   const normalized = mood.toLowerCase().trim();
 
-  const great = new Set([
-    "happy",
-    "excited",
-    "amazing",
-    "fantastic",
-    "wonderful",
-    "great",
-    "elated",
-    "thrilled",
-  ]);
-
-  const good = new Set([
-    "good",
-    "calm",
-    "content",
-    "peaceful",
-    "relaxed",
-    "grateful",
-    "hopeful",
-    "optimistic",
-  ]);
-
-  const okay = new Set([
-    "okay",
-    "fine",
-    "neutral",
-    "meh",
-    "alright",
-    "so-so",
-  ]);
-
-  const low = new Set([
-    "low",
-    "tired",
-    "stressed",
-    "anxious",
-    "worried",
-    "overwhelmed",
-    "frustrated",
-    "down",
-  ]);
-
-  const bad = new Set([
-    "bad",
-    "sad",
-    "angry",
-    "terrible",
-    "awful",
-    "miserable",
-    "depressed",
-    "devastated",
-  ]);
-
-  if (great.has(normalized)) return colors.moodGreat;
-  if (good.has(normalized)) return colors.moodGood;
-  if (okay.has(normalized)) return colors.moodOkay;
-  if (low.has(normalized)) return colors.moodLow;
-  if (bad.has(normalized)) return colors.moodBad;
+  if (MOOD_NAME_GREAT.has(normalized)) return colors.moodGreat;
+  if (MOOD_NAME_GOOD.has(normalized)) return colors.moodGood;
+  if (MOOD_NAME_OKAY.has(normalized)) return colors.moodOkay;
+  if (MOOD_NAME_LOW.has(normalized)) return colors.moodLow;
+  if (MOOD_NAME_BAD.has(normalized)) return colors.moodBad;
 
   return colors.moodNone;
 }
+
+/** Score-to-face-label mapping used by the mood check-in UI */
+export const MOOD_FACE_LABELS: Record<number, string> = {
+  1: "Terrible",
+  2: "Bad",
+  3: "Okay",
+  4: "Good",
+  5: "Excellent",
+};

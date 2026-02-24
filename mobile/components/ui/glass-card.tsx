@@ -5,13 +5,9 @@ import { useTheme } from "../../lib/theme/provider";
 interface GlassCardProps {
   children: React.ReactNode;
   style?: ViewStyle;
-  /** Left border accent color */
   accentColor?: string;
-  /** Animation delay in ms (for stagger effects) */
   delay?: number;
-  /** Padding inside the card. Default 20 */
   padding?: number;
-  /** Blur intensity. Default 40 */
   intensity?: number;
 }
 
@@ -23,34 +19,24 @@ export function GlassCard({
   padding = 20,
   intensity = 40,
 }: GlassCardProps) {
-  const { colors, resolvedMode } = useTheme();
+  const { colors } = useTheme();
   void delay;
   void intensity;
 
   return (
     <View
       style={[
-        styles.outer,
+        styles.card,
         {
-          borderColor: colors.glassBorder,
+          backgroundColor: colors.glassSurface,
           shadowColor: colors.elevatedShadowColor,
-          borderLeftWidth: accentColor ? 2 : 1,
-          borderLeftColor: accentColor ?? colors.glassBorder,
+          borderLeftWidth: accentColor ? 3 : 0,
+          borderLeftColor: accentColor ?? "transparent",
         },
         style,
       ]}
     >
-      <View
-        style={[
-          styles.card,
-          {
-            backgroundColor: colors.glassSurface,
-            borderTopColor:
-              resolvedMode === "dark" ? "rgba(255,255,255,0.07)" : "rgba(255,255,255,0.75)",
-            padding,
-          },
-        ]}
-      >
+      <View style={{ padding }}>
         {children}
       </View>
     </View>
@@ -58,19 +44,12 @@ export function GlassCard({
 }
 
 const styles = StyleSheet.create({
-  outer: {
-    borderRadius: 18,
-    borderWidth: 1,
-    overflow: "hidden",
-    // Shadow
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.16,
-    shadowRadius: 8,
-    elevation: 2,
-  },
   card: {
+    borderRadius: 16,
     overflow: "hidden",
-    position: "relative",
-    borderTopWidth: 1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 3,
   },
 });

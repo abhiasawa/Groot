@@ -1,11 +1,18 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { View, Text, Pressable, StyleSheet, Platform } from "react-native";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from "react-native-reanimated";
+import * as Haptics from "expo-haptics";
+import { Plus } from "lucide-react-native";
 
 import { useTheme } from "../../lib/theme/provider";
 
-const PRIMARY_TABS = new Set(["journal", "tasks", "insights", "more"]);
+const TAB_ORDER = ["journal", "mood", "__fab__", "tasks", "settings"] as const;
 
 function getTabLabel(name: string, title?: string) {
   if (title) return title;
@@ -17,7 +24,18 @@ export function BottomTabBar({ state, descriptors, navigation }: BottomTabBarPro
   const insets = useSafeAreaInsets();
   const bottomInset = Math.max(insets.bottom, Platform.OS === "ios" ? 8 : 6);
 
-  const visibleRoutes = state.routes.filter((route) => PRIMARY_TABS.has(route.name));
+  const fabScale = useSharedValue(1);
+  const fabAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: fabScale.value }],
+  }));
+
+  const handleFabPress = useCallback(() => {
+    fabScale.value = withSpring(0.85, { damping: 15, stiffness: 400 }, () => {
+      fabScale.value = withSpring(1, { damping: 12, stiffness: 350 });
+    });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    navigation.navigate("journal");
+  }, [navigation, fabScale]);
 
   return (
     <View
@@ -25,14 +43,34 @@ export function BottomTabBar({ state, descriptors, navigation }: BottomTabBarPro
         styles.shell,
         {
           paddingBottom: bottomInset,
-          backgroundColor: colors.background,
-          borderTopColor: colors.glassBorder,
+          backgroundColor: colors.card,
+          shadowColor: colors.shadowColor,
         },
       ]}
     >
       <View style={styles.row}>
-        {visibleRoutes.map((route) => {
+        {TAB_ORDER.map((slot) => {
+          if (slot === "__fab__") {
+            return (
+              <View key="fab" style={styles.fabSlot}>
+                <Animated.View style={fabAnimStyle}>
+                  <Pressable
+                    onPress={handleFabPress}
+                    style={[styles.fab, { backgroundColor: colors.primary }]}
+                  >
+                    <Plus size={26} color={colors.primaryForeground} strokeWidth={2.4} />
+                  </Pressable>
+                </Animated.View>
+              </View>
+            );
+          }
+
+          const route = state.routes.find((r) => r.name === slot);
+          if (!route) return <View key={slot} style={styles.item} />;
+
           const descriptor = descriptors[route.key];
+          if (!descriptor) return <View key={slot} style={styles.item} />;
+
           const focused = state.index === state.routes.findIndex((r) => r.key === route.key);
           const label = getTabLabel(route.name, typeof descriptor.options.title === "string" ? descriptor.options.title : undefined);
           const tint = focused ? colors.primary : colors.mutedForeground;
@@ -43,7 +81,6 @@ export function BottomTabBar({ state, descriptors, navigation }: BottomTabBarPro
               target: route.key,
               canPreventDefault: true,
             });
-
             if (!focused && !event.defaultPrevented) {
               navigation.navigate(route.name);
             }
@@ -61,36 +98,17 @@ export function BottomTabBar({ state, descriptors, navigation }: BottomTabBarPro
               key={route.key}
               onPress={onPress}
               onLongPress={() => {
-                navigation.emit({
-                  type: "tabLongPress",
-                  target: route.key,
-                });
+                navigation.emit({ type: "tabLongPress", target: route.key });
               }}
-              style={[
-                styles.item,
-                focused && {
-                  backgroundColor: colors.secondary,
-                  borderColor: colors.primary,
-                  borderWidth: 1,
-                },
-              ]}
+              style={styles.item}
             >
-              <View
-                style={[
-                  styles.iconWrap,
-                  {
-                    backgroundColor: focused ? `${colors.primary}12` : "transparent",
-                  },
-                ]}
-              >
-                {icon}
-              </View>
+              <View style={styles.iconWrap}>{icon}</View>
               <Text
                 style={[
                   styles.label,
                   {
                     color: tint,
-                    fontFamily: "Manrope_600SemiBold",
+                    fontFamily: focused ? "Manrope_700Bold" : "Manrope_500Medium",
                   },
                 ]}
                 numberOfLines={1}
@@ -108,35 +126,51 @@ export function BottomTabBar({ state, descriptors, navigation }: BottomTabBarPro
 const styles = StyleSheet.create({
   shell: {
     paddingTop: 8,
-    paddingHorizontal: 10,
-    borderTopWidth: 1,
+    paddingHorizontal: 6,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 8,
   },
   row: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
+    alignItems: "flex-end",
   },
   item: {
     flex: 1,
-    minHeight: 58,
-    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 7,
-    borderWidth: 1,
-    borderColor: "transparent",
+    paddingVertical: 6,
+    height: 52,
   },
   iconWrap: {
-    width: 29,
-    height: 29,
-    borderRadius: 14.5,
+    height: 24,
     justifyContent: "center",
     alignItems: "center",
   },
   label: {
-    marginTop: 3,
-    fontSize: 12,
-    lineHeight: 15,
+    marginTop: 4,
+    fontSize: 10,
+    lineHeight: 13,
     includeFontPadding: false,
+  },
+  fabSlot: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "flex-end",
+    paddingBottom: 4,
+  },
+  fab: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: -24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 6,
   },
 });

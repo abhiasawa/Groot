@@ -9,27 +9,32 @@ import {
   Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Heart, TrendingUp, BarChart3 } from "lucide-react-native";
+import * as Haptics from "expo-haptics";
 
 import { useTheme } from "../../lib/theme/provider";
 import { useMood } from "../../lib/api/queries";
+import { useRecordMood } from "../../lib/api/mutations";
 import {
   getMoodColor,
   getMoodColorFromName,
   MOOD_LABELS,
+  MOOD_FACE_LABELS,
 } from "../../constants/mood";
 import { typography } from "../../constants/typography";
 import { GlassCard } from "../../components/ui/glass-card";
 import { GradientBackground } from "../../components/ui/gradient-background";
 import { SectionHeader } from "../../components/ui/section-header";
+import { PressScale } from "../../components/ui/press-scale";
+import { MoodFace } from "../../components/illustrations/mood-faces";
+import { TabSwipeView } from "../../components/ui/tab-swipe-view";
 import type { DailyMood, WeeklyTrend } from "../../../shared/types/api";
 
 // ── Constants ────────────────────────────────
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const GRID_PADDING = 20;
-const DOT_GAP = 2;
-const COLS = 20; // dots per row
+const DOT_GAP = 3;
+const COLS = 14; // dots per row — larger for readability
 const DOT_SIZE = Math.floor(
   (SCREEN_WIDTH - GRID_PADDING * 2 - DOT_GAP * (COLS - 1)) / COLS,
 );
@@ -102,17 +107,42 @@ function getTrendDescription(weeklyTrend: WeeklyTrend[]): string {
 
 // ── Component ────────────────────────────────
 
+// Score → mood name used for the check-in
+const CHECKIN_MOODS: Record<number, string> = {
+  1: "bad",
+  2: "low",
+  3: "okay",
+  4: "good",
+  5: "great",
+};
+
 export default function MoodScreen() {
   const { colors } = useTheme();
   const currentYear = new Date().getFullYear();
   const [year] = useState(currentYear);
   const { data, isLoading, refetch } = useMood(year);
+  const recordMood = useRecordMood();
   const [isPullRefreshing, setIsPullRefreshing] = useState(false);
+  const [justRecorded, setJustRecorded] = useState<string | null>(null);
 
   const onRefresh = useCallback(() => {
     setIsPullRefreshing(true);
+    setJustRecorded(null);
     refetch().finally(() => setIsPullRefreshing(false));
   }, [refetch]);
+
+  const handleCheckin = useCallback(
+    (score: number) => {
+      const moodName = CHECKIN_MOODS[score] ?? "okay";
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setJustRecorded(moodName);
+      recordMood.mutate({ mood: moodName });
+    },
+    [recordMood],
+  );
+
+  // If user just recorded or server has a recent mood, show it
+  const activeMood = justRecorded ?? data?.recentMood ?? null;
 
   const yearGrid = useMemo(
     () => buildYearGrid(year, data?.dailyMoods ?? []),
@@ -129,11 +159,7 @@ export default function MoodScreen() {
     [data?.weeklyTrend],
   );
 
-  const moodAccentColor = data?.recentMood
-    ? getMoodColorFromName(data.recentMood, colors)
-    : undefined;
-
-  const s = styles(colors);
+  const s = useMemo(() => styles(colors), [colors]);
 
   if (isLoading) {
     return (
@@ -148,7 +174,8 @@ export default function MoodScreen() {
   }
 
   return (
-    <SafeAreaView style={s.safe}>
+    <TabSwipeView currentTab="mood">
+      <SafeAreaView style={s.safe}>
       <GradientBackground>
         <ScrollView
           contentContainerStyle={s.scroll}
@@ -162,32 +189,55 @@ export default function MoodScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Page header */}
-          <View style={s.header}>
+          <View style={s.headerRow}>
             <Text style={s.pageTitle}>Mood</Text>
-            <Text style={s.pageSubtitle}>Track how you're feeling</Text>
           </View>
 
-          {/* Current mood hero */}
-          {data?.recentMood && (
-            <GlassCard accentColor={moodAccentColor} delay={0}>
+          {/* Mood check-in / current mood */}
+          {activeMood ? (
+            <GlassCard accentColor={getMoodColorFromName(activeMood, colors)} delay={0}>
               <Text style={s.heroLabel}>Currently feeling...</Text>
               <View style={s.heroRow}>
-                <View
-                  style={[
-                    s.heroDot,
-                    {
-                      backgroundColor: moodAccentColor,
-                    },
-                  ]}
+                <MoodFace
+                  score={Object.entries(CHECKIN_MOODS).find(([, v]) => v === activeMood)?.[0]
+                    ? Number(Object.entries(CHECKIN_MOODS).find(([, v]) => v === activeMood)![0])
+                    : 3}
+                  size={32}
+                  color={getMoodColorFromName(activeMood, colors)}
                 />
                 <Text
                   style={[
                     s.heroMoodName,
-                    { color: moodAccentColor },
+                    { color: getMoodColorFromName(activeMood, colors) },
                   ]}
                 >
-                  {data.recentMood}
+                  {activeMood}
                 </Text>
+              </View>
+              <PressScale
+                onPress={() => setJustRecorded(null)}
+                haptic={false}
+                style={s.changeMoodBtn}
+              >
+                <Text style={[s.changeMoodText, { color: colors.mutedForeground }]}>
+                  Change
+                </Text>
+              </PressScale>
+            </GlassCard>
+          ) : (
+            <GlassCard delay={0} padding={20}>
+              <Text style={s.checkinTitle}>How are you feeling?</Text>
+              <View style={s.checkinRow}>
+                {[1, 2, 3, 4, 5].map((score) => (
+                  <PressScale key={score} onPress={() => handleCheckin(score)} scale={0.9}>
+                    <View style={s.checkinItem}>
+                      <MoodFace score={score} size={36} color={getMoodColor(score, colors)} />
+                      <Text style={[s.checkinLabel, { color: colors.mutedForeground }]}>
+                        {MOOD_FACE_LABELS[score]}
+                      </Text>
+                    </View>
+                  </PressScale>
+                ))}
               </View>
             </GlassCard>
           )}
@@ -215,6 +265,7 @@ export default function MoodScreen() {
                           day.score !== null
                             ? getMoodColor(day.score, colors)
                             : colors.moodNone,
+                        opacity: day.score !== null ? 1 : 0.35,
                       },
                     ]}
                   />
@@ -224,17 +275,18 @@ export default function MoodScreen() {
 
             {/* Legend */}
             <View style={s.legend}>
-              <Text style={s.legendLabel}>Bad</Text>
-              {[1, 2, 3, 4, 5].map((score) => (
-                <View
-                  key={score}
-                  style={[
-                    s.legendDot,
-                    { backgroundColor: getMoodColor(score, colors) },
-                  ]}
-                />
+              {[
+                { score: 1, label: "Bad" },
+                { score: 2, label: "Low" },
+                { score: 3, label: "Okay" },
+                { score: 4, label: "Good" },
+                { score: 5, label: "Great" },
+              ].map((item) => (
+                <View key={item.score} style={s.legendItem}>
+                  <View style={[s.legendDot, { backgroundColor: getMoodColor(item.score, colors) }]} />
+                  <Text style={s.legendLabel}>{item.label}</Text>
+                </View>
               ))}
-              <Text style={s.legendLabel}>Great</Text>
             </View>
           </GlassCard>
 
@@ -247,20 +299,12 @@ export default function MoodScreen() {
             {(data?.weeklyTrend?.length ?? 0) > 0 && (
               <View style={s.trendWeeks}>
                 {(data?.weeklyTrend ?? []).slice(-6).map((week) => {
-                  const scoreLabel =
-                    MOOD_LABELS[Math.round(week.avgScore)] ?? "?";
                   return (
                     <View key={week.weekStart} style={s.trendWeekItem}>
-                      <View
-                        style={[
-                          s.trendWeekDot,
-                          {
-                            backgroundColor: getMoodColor(
-                              Math.round(week.avgScore),
-                              colors,
-                            ),
-                          },
-                        ]}
+                      <MoodFace
+                        score={Math.round(week.avgScore)}
+                        size={18}
+                        color={getMoodColor(Math.round(week.avgScore), colors)}
                       />
                       <Text style={s.trendWeekScore}>
                         {week.avgScore.toFixed(1)}
@@ -286,14 +330,7 @@ export default function MoodScreen() {
               {distribution.map((item) => (
                 <View key={item.score} style={s.distRow}>
                   <View style={s.distLabelRow}>
-                    <View
-                      style={[
-                        s.distDot,
-                        {
-                          backgroundColor: getMoodColor(item.score, colors),
-                        },
-                      ]}
-                    />
+                    <MoodFace score={item.score} size={16} color={getMoodColor(item.score, colors)} />
                     <Text style={s.distLabel}>{item.label}</Text>
                   </View>
                   <View style={s.distBarContainer}>
@@ -314,7 +351,8 @@ export default function MoodScreen() {
           </GlassCard>
         </ScrollView>
       </GradientBackground>
-    </SafeAreaView>
+      </SafeAreaView>
+    </TabSwipeView>
   );
 }
 
@@ -337,7 +375,10 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
     },
 
     // ── Header ──
-    header: {
+    headerRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
       marginBottom: 20,
     },
     pageTitle: {
@@ -346,13 +387,6 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       color: c.foreground,
       letterSpacing: -0.3,
     },
-    pageSubtitle: {
-      fontFamily: "Manrope_400Regular",
-      ...typography.sm,
-      color: c.mutedForeground,
-      marginTop: 4,
-    },
-
     // ── Section spacing ──
     sectionGap: {
       marginTop: 20,
@@ -370,15 +404,38 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       alignItems: "center",
       gap: 10,
     },
-    heroDot: {
-      width: 14,
-      height: 14,
-      borderRadius: 7,
-    },
     heroMoodName: {
       fontFamily: "Sora_700Bold",
       ...typography.xl,
       textTransform: "capitalize",
+    },
+    changeMoodBtn: {
+      marginTop: 12,
+    },
+    changeMoodText: {
+      fontFamily: "Manrope_500Medium",
+      ...typography.xs,
+    },
+
+    // ── Check-in ──
+    checkinTitle: {
+      fontFamily: "Sora_600SemiBold",
+      ...typography.base,
+      color: c.foreground,
+      marginBottom: 16,
+    },
+    checkinRow: {
+      flexDirection: "row",
+      justifyContent: "space-around",
+    },
+    checkinItem: {
+      alignItems: "center",
+      gap: 6,
+      minWidth: 52,
+    },
+    checkinLabel: {
+      fontFamily: "Manrope_500Medium",
+      fontSize: 11,
     },
 
     // ── Year in Pixels ──
@@ -390,7 +447,7 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
     pixel: {
       width: DOT_SIZE,
       height: DOT_SIZE,
-      borderRadius: DOT_SIZE / 3,
+      borderRadius: DOT_SIZE / 4,
     },
     emptyPixels: {
       alignItems: "center",
@@ -407,13 +464,18 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
-      gap: 6,
+      gap: 12,
       marginTop: 14,
     },
+    legendItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
     legendDot: {
-      width: 12,
-      height: 12,
-      borderRadius: 4,
+      width: 10,
+      height: 10,
+      borderRadius: 3,
     },
     legendLabel: {
       fontFamily: "Manrope_400Regular",
@@ -437,12 +499,6 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
     trendWeekItem: {
       alignItems: "center",
       flex: 1,
-    },
-    trendWeekDot: {
-      width: 10,
-      height: 10,
-      borderRadius: 5,
-      marginBottom: 4,
     },
     trendWeekScore: {
       fontFamily: "Sora_600SemiBold",
@@ -471,11 +527,6 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       alignItems: "center",
       width: 60,
       gap: 6,
-    },
-    distDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
     },
     distLabel: {
       fontFamily: "Manrope_500Medium",

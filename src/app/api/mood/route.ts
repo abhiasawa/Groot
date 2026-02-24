@@ -37,6 +37,50 @@ function inferMoodFromText(text: string): string | null {
 }
 
 /**
+ * POST /api/mood — Record an explicit mood check-in.
+ * Body: { mood: string }
+ */
+export async function POST(request: NextRequest) {
+  let userId: string;
+  try {
+    const user = await getAuthenticatedPortalUser(request);
+    userId = user.id;
+  } catch (error) {
+    if (error instanceof PortalAuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
+
+  const body = (await request.json()) as { mood?: string };
+  const moodName = body.mood?.trim().toLowerCase();
+  if (!moodName || !(moodName in MOOD_SCORE)) {
+    return NextResponse.json({ error: "Invalid mood value" }, { status: 400 });
+  }
+
+  const supabase = getSupabaseAdmin();
+
+  // Insert as an inbound message with explicit mood metadata.
+  // The GET handler already prioritises metadata.mood over text inference.
+  const { error } = await supabase.from("messages").insert({
+    user_id: userId,
+    direction: "inbound",
+    message_type: "text",
+    content: `Mood check-in: ${moodName}`,
+    metadata: { mood: moodName, source: "manual_checkin" },
+  });
+
+  if (error) {
+    logger.error({ error, userId }, "Failed to record mood check-in");
+    return NextResponse.json({ error: "Failed to record mood" }, { status: 500 });
+  }
+
+  logger.info({ userId, mood: moodName }, "Manual mood check-in recorded");
+
+  return NextResponse.json({ ok: true, mood: moodName, score: MOOD_SCORE[moodName] ?? 3 });
+}
+
+/**
  * GET /api/mood?year=2026 — Daily moods + weekly trend.
  */
 export async function GET(request: NextRequest) {

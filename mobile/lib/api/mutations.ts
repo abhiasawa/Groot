@@ -6,6 +6,8 @@ import type {
   ToggleTaskPayload,
   UpdatePreferencePayload,
   DeleteProfileFactPayload,
+  RecordMoodPayload,
+  RecordMoodResponse,
   OkResponse,
   TasksResponse,
   SettingsResponse,
@@ -198,6 +200,31 @@ export function useDeleteProfileFact() {
 
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: qk.profile });
+    },
+  });
+}
+
+// ── useRecordMood ────────────────────────────
+
+/**
+ * POST /api/mood — record an explicit mood check-in.
+ * Invalidates mood + home queries so the UI updates.
+ */
+export function useRecordMood() {
+  const queryClient = useQueryClient();
+
+  return useMutation<RecordMoodResponse, Error, RecordMoodPayload>({
+    mutationFn: (payload) =>
+      apiFetch<RecordMoodResponse>("/api/mood", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+
+    onSettled: () => {
+      // Refresh mood data for the current year
+      void queryClient.invalidateQueries({ queryKey: ["mood"] });
+      // Home screen also shows recent mood
+      void queryClient.invalidateQueries({ queryKey: qk.home });
     },
   });
 }

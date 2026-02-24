@@ -9,7 +9,7 @@ import {
   Switch,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useSegments } from "expo-router";
 import {
   Sun,
   Moon,
@@ -21,7 +21,6 @@ import {
   User,
   LogOut,
   Mail,
-  Sparkles,
 } from "lucide-react-native";
 
 import { useAuth } from "../lib/auth/provider";
@@ -35,6 +34,7 @@ import { PressScale } from "../components/ui/press-scale";
 import { SectionHeader } from "../components/ui/section-header";
 import { DeepScreenHeader } from "../components/ui/deep-screen-header";
 import { PillBadge } from "../components/ui/pill-badge";
+import { TabSwipeView } from "../components/ui/tab-swipe-view";
 
 interface NotificationPref {
   key: string;
@@ -78,6 +78,8 @@ export default function SettingsScreen() {
   const { colors, mode, setMode } = useTheme();
   const { signOut } = useAuth();
   const router = useRouter();
+  const segments = useSegments();
+  const isTabRoute = segments[0] === "(tabs)";
   const { data, isLoading, refetch } = useSettings();
   const {
     data: meData,
@@ -124,7 +126,7 @@ export default function SettingsScreen() {
     );
   }
 
-  return (
+  const inner = (
     <SafeAreaView style={styles.flex}>
       <GradientBackground>
         <ScrollView
@@ -138,27 +140,18 @@ export default function SettingsScreen() {
           }
           showsVerticalScrollIndicator={false}
         >
-          <DeepScreenHeader
-            title="Settings"
-            subtitle="Tune your experience and account controls."
-            onBack={() => router.back()}
-            tags={["Preferences", "Account"]}
-          />
-
-          <GlassCard padding={18} accentColor={colors.primary} style={styles.summaryCard}>
-            <View style={styles.summaryHeader}>
-              <Sparkles size={13} color={colors.accent} strokeWidth={1.8} />
-              <Text style={[styles.summaryLabel, { color: colors.accent }]}>Control Center</Text>
+          {isTabRoute ? (
+            <View style={styles.tabHeader}>
+              <Text style={[styles.tabTitle, { color: colors.foreground }]}>Settings</Text>
             </View>
-            <View style={styles.summaryRow}>
-              <SummaryStat label="Theme" value={mode === "system" ? "Auto" : mode} />
-              <SummaryStat
-                label="Alerts"
-                value={`${enabledCount}/${notificationPrefs.length}`}
-              />
-              <SummaryStat label="Channel" value="WhatsApp" />
-            </View>
-          </GlassCard>
+          ) : (
+            <DeepScreenHeader
+              title="Settings"
+              subtitle="Tune your experience and account controls."
+              onBack={() => router.back()}
+              tags={["Preferences", "Account"]}
+            />
+          )}
 
           <View style={styles.sectionWrap}>
             <SectionHeader title="Appearance" />
@@ -168,7 +161,7 @@ export default function SettingsScreen() {
                 icon={
                   <Sun
                     size={17}
-                    color={mode === "light" ? colors.primary : colors.mutedForeground}
+                    color={mode === "light" ? colors.primaryForeground : colors.mutedForeground}
                     strokeWidth={1.6}
                   />
                 }
@@ -180,7 +173,7 @@ export default function SettingsScreen() {
                 icon={
                   <Moon
                     size={17}
-                    color={mode === "dark" ? colors.primary : colors.mutedForeground}
+                    color={mode === "dark" ? colors.primaryForeground : colors.mutedForeground}
                     strokeWidth={1.6}
                   />
                 }
@@ -192,7 +185,7 @@ export default function SettingsScreen() {
                 icon={
                   <Monitor
                     size={17}
-                    color={mode === "system" ? colors.primary : colors.mutedForeground}
+                    color={mode === "system" ? colors.primaryForeground : colors.mutedForeground}
                     strokeWidth={1.6}
                   />
                 }
@@ -307,6 +300,8 @@ export default function SettingsScreen() {
       </GradientBackground>
     </SafeAreaView>
   );
+
+  return isTabRoute ? <TabSwipeView currentTab="settings">{inner}</TabSwipeView> : inner;
 }
 
 function ThemeOption({
@@ -324,10 +319,14 @@ function ThemeOption({
 
   return (
     <PressScale onPress={onPress} style={styles.themeOptionWrap}>
-      <GlassCard
-        padding={13}
-        accentColor={active ? colors.primary : undefined}
-        style={active ? { borderColor: colors.primary, borderWidth: 1.4 } : undefined}
+      <View
+        style={[
+          styles.themeOptionBox,
+          {
+            backgroundColor: active ? colors.primary : colors.secondary,
+            borderRadius: 14,
+          },
+        ]}
       >
         <View style={styles.themeOptionInner}>
           {icon}
@@ -335,7 +334,7 @@ function ThemeOption({
             style={[
               styles.themeOptionLabel,
               {
-                color: active ? colors.primary : colors.mutedForeground,
+                color: active ? colors.primaryForeground : colors.foreground,
                 fontFamily: active ? "Sora_600SemiBold" : "Manrope_500Medium",
               },
             ]}
@@ -343,19 +342,8 @@ function ThemeOption({
             {label}
           </Text>
         </View>
-      </GlassCard>
+      </View>
     </PressScale>
-  );
-}
-
-function SummaryStat({ label, value }: { label: string; value: string }) {
-  const { colors } = useTheme();
-
-  return (
-    <View style={styles.stat}>
-      <Text style={[styles.statValue, { color: colors.foreground }]}>{value}</Text>
-      <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{label}</Text>
-    </View>
   );
 }
 
@@ -371,37 +359,12 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 40,
   },
-  summaryCard: {
-    marginBottom: 22,
+  tabHeader: {
+    marginBottom: 16,
   },
-  summaryHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 10,
-  },
-  summaryLabel: {
-    fontFamily: "Manrope_600SemiBold",
-    ...typography.xs,
-    letterSpacing: 0.45,
-    textTransform: "uppercase",
-  },
-  summaryRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  stat: {
-    flex: 1,
-  },
-  statValue: {
+  tabTitle: {
     fontFamily: "Sora_700Bold",
-    ...typography.lg,
-    textTransform: "capitalize",
-  },
-  statLabel: {
-    marginTop: 2,
-    fontFamily: "Manrope_500Medium",
-    ...typography.xs,
+    ...typography.title,
   },
   sectionWrap: {
     marginBottom: 22,
@@ -412,6 +375,9 @@ const styles = StyleSheet.create({
   },
   themeOptionWrap: {
     flex: 1,
+  },
+  themeOptionBox: {
+    padding: 13,
   },
   themeOptionInner: {
     alignItems: "center",

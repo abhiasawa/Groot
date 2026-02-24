@@ -4,11 +4,8 @@ import { useTheme } from "../../lib/theme/provider";
 
 interface PillBadgeProps {
   label: string;
-  /** Background color override */
   color?: string;
-  /** Text color override */
   textColor?: string;
-  /** Small variant */
   small?: boolean;
   style?: ViewStyle;
 }
@@ -23,7 +20,6 @@ export function PillBadge({ label, color, textColor, small, style }: PillBadgePr
         small && styles.pillSmall,
         {
           backgroundColor: color ?? colors.secondary,
-          borderColor: colors.glassBorder,
         },
         style,
       ]}
@@ -44,19 +40,18 @@ export function PillBadge({ label, color, textColor, small, style }: PillBadgePr
 
 const styles = StyleSheet.create({
   pill: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
   pillSmall: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 7,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 16,
   },
   text: {
     fontFamily: "Manrope_600SemiBold",
-    fontSize: 11,
+    fontSize: 12,
     letterSpacing: 0.1,
   },
   textSmall: {

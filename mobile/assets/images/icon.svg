@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="224" fill="#4A7C59"/>
+
+  <!-- Inner glow circle -->
+  <circle cx="512" cy="512" r="380" fill="#5A8E69" opacity="0.3"/>
+  <circle cx="512" cy="512" r="280" fill="#6BA07A" opacity="0.2"/>
+
+  <!-- Pot / base -->
+  <path d="M410 720 L420 800 Q512 840 604 800 L614 720 Z" fill="#E8EDDF" opacity="0.9"/>
+  <path d="M395 690 Q395 725 420 725 L604 725 Q629 725 629 690 Z" fill="#FFFFFF" opacity="0.25"/>
+
+  <!-- Stem -->
+  <path d="M512 700 Q505 580 512 440" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round" fill="none" opacity="0.9"/>
+
+  <!-- Left leaf -->
+  <path d="M512 560 Q380 480 340 400 Q420 420 512 530" fill="#FFFFFF" opacity="0.7"/>
+  <path d="M505 550 Q420 490 360 420" stroke="#4A7C59" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.2"/>
+
+  <!-- Right leaf -->
+  <path d="M512 490 Q650 380 700 300 Q630 340 512 465" fill="#FFFFFF" opacity="0.85"/>
+  <path d="M518 480 Q630 390 685 320" stroke="#4A7C59" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.2"/>
+
+  <!-- Top sprout -->
+  <path d="M512 440 Q480 320 460 230 Q495 300 512 400 Q529 300 564 230 Q544 320 512 440" fill="#FFFFFF"/>
+
+  <!-- Face — eyes -->
+  <circle cx="478" cy="640" r="12" fill="#2D3A2E" opacity="0.5"/>
+  <circle cx="546" cy="640" r="12" fill="#2D3A2E" opacity="0.5"/>
+  <!-- Eye highlights -->
+  <circle cx="482" cy="636" r="4" fill="#FFFFFF" opacity="0.8"/>
+  <circle cx="550" cy="636" r="4" fill="#FFFFFF" opacity="0.8"/>
+
+  <!-- Smile -->
+  <path d="M485 665 Q512 685 539 665" stroke="#2D3A2E" stroke-width="7" stroke-linecap="round" fill="none" opacity="0.4"/>
+
+  <!-- Cheek blush -->
+  <circle cx="460" cy="658" r="14" fill="#E8845A" opacity="0.25"/>
+  <circle cx="564" cy="658" r="14" fill="#E8845A" opacity="0.25"/>
+</svg>

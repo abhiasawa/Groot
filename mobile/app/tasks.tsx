@@ -6,10 +6,12 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
+  Modal,
+  Pressable,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useSegments } from "expo-router";
-import { CheckSquare, ListTodo, Sparkles, Square } from "lucide-react-native";
+import { Calendar, CheckSquare, ListTodo, Sparkles, Square, Tag, X } from "lucide-react-native";
 
 import { useTheme } from "../lib/theme/provider";
 import { useTasks } from "../lib/api/queries";
@@ -22,6 +24,7 @@ import { SectionHeader } from "../components/ui/section-header";
 import { PillBadge } from "../components/ui/pill-badge";
 import { DeepScreenHeader } from "../components/ui/deep-screen-header";
 import { TabSwipeView } from "../components/ui/tab-swipe-view";
+
 import type { Task } from "../../shared/types/api";
 
 type TaskFilter = "all" | "pending" | "completed";
@@ -75,6 +78,7 @@ export default function TasksScreen() {
   const toggleTask = useToggleTask();
   const [filter, setFilter] = useState<TaskFilter>("all");
   const [isPullRefreshing, setIsPullRefreshing] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   const isTabRoute = segments[0] === "(tabs)";
 
@@ -135,11 +139,10 @@ export default function TasksScreen() {
   const showPending = filter !== "completed";
   const showCompleted = filter !== "pending";
 
-  return (
+  const content = (
     <SafeAreaView style={styles.flex}>
-      <TabSwipeView currentTab="tasks" enabled={isTabRoute}>
-        <GradientBackground>
-          <ScrollView
+      <GradientBackground>
+        <ScrollView
           contentContainerStyle={styles.scroll}
           refreshControl={
             <RefreshControl
@@ -153,7 +156,6 @@ export default function TasksScreen() {
           {isTabRoute ? (
             <View style={styles.tabHeader}>
               <Text style={[styles.tabTitle, { color: colors.foreground }]}>Tasks</Text>
-              <Text style={[styles.tabSubtitle, { color: colors.mutedForeground }]}>Your daily execution board.</Text>
             </View>
           ) : (
             <DeepScreenHeader
@@ -221,6 +223,7 @@ export default function TasksScreen() {
                       key={task.id}
                       task={task}
                       onToggle={handleToggle}
+                      onOpen={setSelectedTask}
                       delay={index * 55}
                       tone="overdue"
                     />
@@ -238,6 +241,7 @@ export default function TasksScreen() {
                       key={task.id}
                       task={task}
                       onToggle={handleToggle}
+                      onOpen={setSelectedTask}
                       delay={80 + index * 55}
                       tone="default"
                     />
@@ -253,6 +257,7 @@ export default function TasksScreen() {
                       key={task.id}
                       task={task}
                       onToggle={handleToggle}
+                      onOpen={setSelectedTask}
                       delay={120 + index * 55}
                       tone="done"
                     />
@@ -271,21 +276,29 @@ export default function TasksScreen() {
           )}
 
             <View style={styles.bottomSpacer} />
-          </ScrollView>
-        </GradientBackground>
-      </TabSwipeView>
+        </ScrollView>
+        <TaskDetailModal
+          task={selectedTask}
+          onClose={() => setSelectedTask(null)}
+          onToggle={handleToggle}
+        />
+      </GradientBackground>
     </SafeAreaView>
   );
+
+  return isTabRoute ? <TabSwipeView currentTab="tasks">{content}</TabSwipeView> : content;
 }
 
 function TaskRow({
   task,
   onToggle,
+  onOpen,
   delay,
   tone,
 }: {
   task: Task;
   onToggle: (task: Task) => void;
+  onOpen: (task: Task) => void;
   delay: number;
   tone: TaskTone;
 }) {
@@ -298,18 +311,24 @@ function TaskRow({
 
   return (
     <View style={styles.taskCardWrap}>
-      <PressScale onPress={() => onToggle(task)}>
+      <PressScale onPress={() => onOpen(task)}>
         <GlassCard padding={14} delay={delay} accentColor={accentColor}>
           <View style={styles.taskRow}>
-            {done ? (
-              <CheckSquare size={20} color={colors.moodGood} strokeWidth={1.6} />
-            ) : (
-              <Square
-                size={20}
-                color={overdue ? colors.destructive : colors.mutedForeground}
-                strokeWidth={1.6}
-              />
-            )}
+            <Pressable
+              onPress={(e) => { e.stopPropagation(); onToggle(task); }}
+              hitSlop={8}
+              style={styles.checkboxHit}
+            >
+              {done ? (
+                <CheckSquare size={20} color={colors.moodGood} strokeWidth={1.6} />
+              ) : (
+                <Square
+                  size={20}
+                  color={overdue ? colors.destructive : colors.mutedForeground}
+                  strokeWidth={1.6}
+                />
+              )}
+            </Pressable>
 
             <View style={styles.taskCopy}>
               <Text
@@ -342,6 +361,125 @@ function TaskRow({
   );
 }
 
+function TaskDetailModal({
+  task,
+  onClose,
+  onToggle,
+}: {
+  task: Task | null;
+  onClose: () => void;
+  onToggle: (task: Task) => void;
+}) {
+  const { colors } = useTheme();
+  if (!task) return null;
+
+  const done = task.is_completed;
+  const overdue = !done && !!task.due_date && isOverdueDate(task.due_date);
+
+  return (
+    <Modal transparent animationType="fade" visible={!!task} onRequestClose={onClose}>
+      <View style={styles.modalOverlay}>
+        <Pressable style={styles.modalBackdrop} onPress={onClose} />
+        <View style={styles.modalWrap}>
+          <GlassCard padding={20}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.foreground }]}>Task Details</Text>
+              <PressScale onPress={onClose} haptic={false}>
+                <View style={styles.modalCloseBtn}>
+                  <X size={18} color={colors.mutedForeground} strokeWidth={2} />
+                </View>
+              </PressScale>
+            </View>
+
+            <Text style={[styles.modalContent, { color: colors.foreground }]}>{task.content}</Text>
+
+            <View style={styles.modalMetaList}>
+              <View style={styles.modalMetaItem}>
+                <View style={[styles.modalMetaIcon, { backgroundColor: colors.glassSurface }]}>
+                  {done ? (
+                    <CheckSquare size={15} color={colors.moodGood} strokeWidth={1.6} />
+                  ) : (
+                    <Square size={15} color={colors.mutedForeground} strokeWidth={1.6} />
+                  )}
+                </View>
+                <Text style={[styles.modalMetaLabel, { color: colors.mutedForeground }]}>Status</Text>
+                <Text style={[styles.modalMetaValue, { color: done ? colors.moodGood : colors.foreground }]}>
+                  {done ? "Completed" : "Pending"}
+                </Text>
+              </View>
+
+              {task.due_date ? (
+                <View style={styles.modalMetaItem}>
+                  <View style={[styles.modalMetaIcon, { backgroundColor: colors.glassSurface }]}>
+                    <Calendar size={15} color={overdue ? colors.destructive : colors.mutedForeground} strokeWidth={1.6} />
+                  </View>
+                  <Text style={[styles.modalMetaLabel, { color: colors.mutedForeground }]}>Due</Text>
+                  <Text style={[styles.modalMetaValue, { color: overdue ? colors.destructive : colors.foreground }]}>
+                    {new Date(task.due_date).toLocaleDateString("en-US", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                    {overdue ? " (overdue)" : ""}
+                  </Text>
+                </View>
+              ) : null}
+
+              {task.category ? (
+                <View style={styles.modalMetaItem}>
+                  <View style={[styles.modalMetaIcon, { backgroundColor: colors.glassSurface }]}>
+                    <Tag size={15} color={colors.mutedForeground} strokeWidth={1.6} />
+                  </View>
+                  <Text style={[styles.modalMetaLabel, { color: colors.mutedForeground }]}>Category</Text>
+                  <Text style={[styles.modalMetaValue, { color: colors.foreground }]}>{task.category}</Text>
+                </View>
+              ) : null}
+
+              <View style={styles.modalMetaItem}>
+                <View style={[styles.modalMetaIcon, { backgroundColor: colors.glassSurface }]}>
+                  <Calendar size={15} color={colors.mutedForeground} strokeWidth={1.6} />
+                </View>
+                <Text style={[styles.modalMetaLabel, { color: colors.mutedForeground }]}>Created</Text>
+                <Text style={[styles.modalMetaValue, { color: colors.foreground }]}>
+                  {new Date(task.created_at).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </Text>
+              </View>
+            </View>
+
+            <PressScale
+              onPress={() => {
+                onToggle(task);
+                onClose();
+              }}
+              scale={0.97}
+            >
+              <View
+                style={[
+                  styles.modalActionBtn,
+                  { backgroundColor: done ? colors.secondary : colors.primary },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.modalActionText,
+                    { color: done ? colors.foreground : colors.primaryForeground },
+                  ]}
+                >
+                  {done ? "Mark as Pending" : "Mark as Complete"}
+                </Text>
+              </View>
+            </PressScale>
+          </GlassCard>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 function SummaryStat({ label, value }: { label: string; value: number }) {
   const { colors } = useTheme();
 
@@ -366,16 +504,14 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   tabHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   tabTitle: {
     fontFamily: "Sora_700Bold",
     ...typography.title,
-  },
-  tabSubtitle: {
-    marginTop: 2,
-    fontFamily: "Manrope_400Regular",
-    ...typography.sm,
   },
   summaryCard: {
     marginBottom: 18,
@@ -424,6 +560,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 12,
+  },
+  checkboxHit: {
+    paddingTop: 1,
   },
   taskCopy: {
     flex: 1,
@@ -476,5 +615,76 @@ const styles = StyleSheet.create({
   },
   bottomSpacer: {
     height: 20,
+  },
+  // ── Task Detail Modal ──
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 18,
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(5, 12, 28, 0.68)",
+  },
+  modalWrap: {
+    maxHeight: "80%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  modalTitle: {
+    fontFamily: "Sora_600SemiBold",
+    ...typography.lg,
+  },
+  modalCloseBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalContent: {
+    fontFamily: "Manrope_400Regular",
+    ...typography.base,
+    lineHeight: 24,
+    marginBottom: 18,
+  },
+  modalMetaList: {
+    gap: 14,
+    marginBottom: 22,
+  },
+  modalMetaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  modalMetaIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalMetaLabel: {
+    fontFamily: "Manrope_500Medium",
+    ...typography.xs,
+    width: 60,
+  },
+  modalMetaValue: {
+    flex: 1,
+    fontFamily: "Manrope_600SemiBold",
+    ...typography.sm,
+  },
+  modalActionBtn: {
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+  },
+  modalActionText: {
+    fontFamily: "Sora_600SemiBold",
+    ...typography.sm,
   },
 });

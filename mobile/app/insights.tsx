@@ -21,7 +21,7 @@ import { GlassCard } from "../components/ui/glass-card";
 import { SectionHeader } from "../components/ui/section-header";
 import { PillBadge } from "../components/ui/pill-badge";
 import { DeepScreenHeader } from "../components/ui/deep-screen-header";
-import { TabSwipeView } from "../components/ui/tab-swipe-view";
+
 import type { Report } from "../../shared/types/api";
 
 function formatWeekRange(start: string, end: string): string {
@@ -108,20 +108,17 @@ export default function InsightsScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
-        <TabSwipeView currentTab="insights" enabled={isTabRoute}>
           <GradientBackground>
             <View style={styles.center}>
               <ActivityIndicator size="large" color={colors.primary} />
             </View>
           </GradientBackground>
-        </TabSwipeView>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <TabSwipeView currentTab="insights" enabled={isTabRoute}>
         <GradientBackground>
           <ScrollView
           contentContainerStyle={styles.scroll}
@@ -312,7 +309,6 @@ export default function InsightsScreen() {
           <View style={styles.bottomSpacer} />
           </ScrollView>
         </GradientBackground>
-      </TabSwipeView>
     </SafeAreaView>
   );
 }
