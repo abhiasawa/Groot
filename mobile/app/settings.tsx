@@ -10,7 +10,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import Animated, { FadeIn } from "react-native-reanimated";
 import {
   ArrowLeft,
   Sun,
@@ -20,20 +19,16 @@ import {
   BookOpen,
   Calendar,
   Clock,
-  User,
   LogOut,
-  Mail,
 } from "lucide-react-native";
 
 import { useAuth } from "../lib/auth/provider";
 import { useTheme } from "../lib/theme/provider";
 import { useSettings } from "../lib/api/queries";
 import { useUpdatePreference } from "../lib/api/mutations";
-import { typography } from "../constants/typography";
-import { GlassCard } from "../components/ui/glass-card";
-import { GradientBackground } from "../components/ui/gradient-background";
+import { Sheet } from "../components/ui/sheet";
+import { SectionLabel } from "../components/ui/section-label";
 import { PressScale } from "../components/ui/press-scale";
-import { SectionHeader } from "../components/ui/section-header";
 
 // ── Notification preference config ───────────
 
@@ -96,254 +91,132 @@ export default function SettingsScreen() {
     [updatePref],
   );
 
-  // ── Loading ──────────────────────────────
-
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.flex}>
-        <GradientBackground>
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-          </View>
-        </GradientBackground>
+      <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]}>
+        <View style={s.center}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
       </SafeAreaView>
     );
   }
 
-  // ── Main render ──────────────────────────
-
   return (
-    <SafeAreaView style={styles.flex}>
-      <GradientBackground>
-        {/* Header */}
-        <View style={styles.header}>
-          <PressScale onPress={() => router.back()}>
-            <ArrowLeft size={24} color={colors.foreground} strokeWidth={1.5} />
-          </PressScale>
-          <View style={{ width: 24 }} />
+    <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]}>
+      {/* Header */}
+      <View style={s.header}>
+        <PressScale onPress={() => router.back()}>
+          <ArrowLeft size={24} color={colors.foreground} strokeWidth={1.5} />
+        </PressScale>
+        <Text style={[s.headerTitle, { color: colors.foreground }]}>Settings</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
+      <ScrollView
+        contentContainerStyle={s.scroll}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ── Appearance ─────────────────── */}
+        <View style={s.section}>
+          <SectionLabel>Appearance</SectionLabel>
+          <View style={s.themeRow}>
+            <ThemeOption
+              label="Light"
+              icon={<Sun size={18} color={mode === "light" ? colors.primary : colors.mutedForeground} strokeWidth={1.5} />}
+              active={mode === "light"}
+              onPress={() => setMode("light")}
+              colors={colors}
+            />
+            <ThemeOption
+              label="Dark"
+              icon={<Moon size={18} color={mode === "dark" ? colors.primary : colors.mutedForeground} strokeWidth={1.5} />}
+              active={mode === "dark"}
+              onPress={() => setMode("dark")}
+              colors={colors}
+            />
+            <ThemeOption
+              label="System"
+              icon={<Monitor size={18} color={mode === "system" ? colors.primary : colors.mutedForeground} strokeWidth={1.5} />}
+              active={mode === "system"}
+              onPress={() => setMode("system")}
+              colors={colors}
+            />
+          </View>
         </View>
 
-        <ScrollView
-          contentContainerStyle={styles.scroll}
-          refreshControl={
-            <RefreshControl
-              refreshing={isRefetching}
-              onRefresh={onRefresh}
-              tintColor={colors.primary}
-            />
-          }
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Title */}
-          <Animated.View
-            entering={FadeIn.duration(700)}
-            style={styles.titleSection}
-          >
-            <Text style={[styles.pageTitle, { color: colors.foreground }]}>
-              Settings
-            </Text>
-            <Text style={[styles.pageSubtitle, { color: colors.mutedForeground }]}>
-              Customize your experience
-            </Text>
-          </Animated.View>
+        {/* ── Notifications ──────────────── */}
+        <View style={s.section}>
+          <SectionLabel>Notifications</SectionLabel>
+          <Sheet padding={0}>
+            {notificationPrefs.map((pref, index) => {
+              const enabled = data?.preferences?.[pref.key] ?? true;
+              const isLast = index === notificationPrefs.length - 1;
 
-          {/* ── Appearance section ────────── */}
-          <View style={styles.section}>
-            <SectionHeader title="Appearance" />
-            <View style={styles.themeRow}>
-              <ThemeOption
-                label="Light"
-                icon={
-                  <Sun
-                    size={18}
-                    color={
-                      mode === "light"
-                        ? colors.primary
-                        : colors.mutedForeground
-                    }
-                    strokeWidth={1.5}
-                  />
-                }
-                active={mode === "light"}
-                onPress={() => setMode("light")}
-                colors={colors}
-              />
-              <ThemeOption
-                label="Dark"
-                icon={
-                  <Moon
-                    size={18}
-                    color={
-                      mode === "dark"
-                        ? colors.primary
-                        : colors.mutedForeground
-                    }
-                    strokeWidth={1.5}
-                  />
-                }
-                active={mode === "dark"}
-                onPress={() => setMode("dark")}
-                colors={colors}
-              />
-              <ThemeOption
-                label="System"
-                icon={
-                  <Monitor
-                    size={18}
-                    color={
-                      mode === "system"
-                        ? colors.primary
-                        : colors.mutedForeground
-                    }
-                    strokeWidth={1.5}
-                  />
-                }
-                active={mode === "system"}
-                onPress={() => setMode("system")}
-                colors={colors}
-              />
-            </View>
-          </View>
-
-          {/* ── Notifications section ────── */}
-          <View style={styles.section}>
-            <SectionHeader title="Notifications" />
-            <GlassCard delay={200} padding={0}>
-              {notificationPrefs.map((pref, index) => {
-                const enabled = data?.preferences?.[pref.key] ?? true;
-                const isLast = index === notificationPrefs.length - 1;
-
-                return (
-                  <View
-                    key={pref.key}
-                    style={[
-                      styles.notifRow,
-                      !isLast && {
-                        borderBottomWidth: StyleSheet.hairlineWidth,
-                        borderBottomColor: colors.glassBorder,
-                      },
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.notifIconWrap,
-                        { backgroundColor: colors.glassSurface },
-                      ]}
-                    >
-                      {pref.icon}
-                    </View>
-                    <View style={styles.notifContent}>
-                      <Text style={[styles.notifLabel, { color: colors.foreground }]}>
-                        {pref.label}
-                      </Text>
-                      <Text style={[styles.notifDesc, { color: colors.mutedForeground }]}>
-                        {pref.description}
-                      </Text>
-                    </View>
-                    <Switch
-                      value={enabled}
-                      onValueChange={(value) =>
-                        handleTogglePref(pref.key, value)
-                      }
-                      trackColor={{
-                        false: colors.input,
-                        true: colors.primary,
-                      }}
-                      thumbColor="#FFFFFF"
-                    />
-                  </View>
-                );
-              })}
-            </GlassCard>
-          </View>
-
-          {/* ── Account section ──────────── */}
-          <View style={styles.section}>
-            <SectionHeader title="Account" />
-            <GlassCard delay={300} padding={0}>
-              <View
-                style={[
-                  styles.notifRow,
-                  {
-                    borderBottomWidth: StyleSheet.hairlineWidth,
-                    borderBottomColor: colors.glassBorder,
-                  },
-                ]}
-              >
+              return (
                 <View
+                  key={pref.key}
                   style={[
-                    styles.notifIconWrap,
-                    { backgroundColor: colors.glassSurface },
-                  ]}
-                >
-                  <Mail size={18} color={colors.primary} strokeWidth={1.5} />
-                </View>
-                <View style={styles.notifContent}>
-                  <Text style={[styles.notifLabel, { color: colors.foreground }]}>
-                    Account
-                  </Text>
-                  <Text style={[styles.notifDesc, { color: colors.mutedForeground }]}>
-                    Signed in via WhatsApp
-                  </Text>
-                </View>
-              </View>
-              <PressScale onPress={() => router.push("/profile" as never)}>
-                <View
-                  style={[
-                    styles.notifRow,
-                    {
+                    s.row,
+                    !isLast && {
                       borderBottomWidth: StyleSheet.hairlineWidth,
-                      borderBottomColor: colors.glassBorder,
+                      borderBottomColor: colors.border,
                     },
                   ]}
                 >
-                  <View
-                    style={[
-                      styles.notifIconWrap,
-                      { backgroundColor: colors.glassSurface },
-                    ]}
-                  >
-                    <User size={18} color={colors.accent} strokeWidth={1.5} />
+                  <View style={[s.rowIcon, { backgroundColor: colors.muted }]}>
+                    {pref.icon}
                   </View>
-                  <View style={styles.notifContent}>
-                    <Text style={[styles.notifLabel, { color: colors.foreground }]}>
-                      Personal Profile
+                  <View style={s.rowContent}>
+                    <Text style={[s.rowLabel, { color: colors.foreground }]}>
+                      {pref.label}
                     </Text>
-                    <Text style={[styles.notifDesc, { color: colors.mutedForeground }]}>
-                      Review what Groot has learned about you
+                    <Text style={[s.rowDesc, { color: colors.mutedForeground }]}>
+                      {pref.description}
                     </Text>
                   </View>
+                  <Switch
+                    value={enabled}
+                    onValueChange={(value) => handleTogglePref(pref.key, value)}
+                    trackColor={{ false: colors.input, true: colors.primary }}
+                    thumbColor="#FFFFFF"
+                  />
                 </View>
-              </PressScale>
-              <PressScale onPress={signOut}>
-                <View style={styles.signOutRow}>
-                  <View
-                    style={[
-                      styles.notifIconWrap,
-                      { backgroundColor: colors.destructive + "15" },
-                    ]}
-                  >
-                    <LogOut size={18} color={colors.destructive} strokeWidth={1.5} />
-                  </View>
-                  <Text style={[styles.signOutLabel, { color: colors.destructive }]}>
-                    Sign Out
-                  </Text>
+              );
+            })}
+          </Sheet>
+        </View>
+
+        {/* ── Account ────────────────────── */}
+        <View style={s.section}>
+          <SectionLabel>Account</SectionLabel>
+          <Sheet padding={0}>
+            <PressScale onPress={signOut}>
+              <View style={s.signOutRow}>
+                <View style={[s.rowIcon, { backgroundColor: colors.destructive + "15" }]}>
+                  <LogOut size={18} color={colors.destructive} strokeWidth={1.5} />
                 </View>
-              </PressScale>
-            </GlassCard>
-          </View>
+                <Text style={[s.signOutLabel, { color: colors.destructive }]}>
+                  Sign Out
+                </Text>
+              </View>
+            </PressScale>
+          </Sheet>
+        </View>
 
-          {/* Version */}
-          <Animated.Text
-            entering={FadeIn.delay(400).duration(600)}
-            style={[styles.versionText, { color: colors.mutedForeground }]}
-          >
-            Groot Mobile v1.0.0
-          </Animated.Text>
+        {/* Version */}
+        <Text style={[s.versionText, { color: colors.mutedForeground }]}>
+          Groot Mobile v1.0.0
+        </Text>
 
-          <View style={styles.bottomSpacer} />
-        </ScrollView>
-      </GradientBackground>
+        <View style={{ height: 40 }} />
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -364,22 +237,21 @@ function ThemeOption({
   colors: ReturnType<typeof useTheme>["colors"];
 }) {
   return (
-    <PressScale onPress={onPress} style={styles.themeOptionWrap}>
-      <GlassCard
+    <PressScale onPress={onPress} style={s.themeOptionWrap}>
+      <Sheet
         padding={14}
         accentColor={active ? colors.primary : undefined}
-        delay={100}
         style={
           active
             ? { borderColor: colors.primary, borderWidth: 1.5 }
             : undefined
         }
       >
-        <View style={styles.themeOptionContent}>
+        <View style={s.themeOptionContent}>
           {icon}
           <Text
             style={[
-              styles.themeOptionLabel,
+              s.themeOptionLabel,
               {
                 fontFamily: active ? "Inter_600SemiBold" : "Inter_400Regular",
                 color: active ? colors.primary : colors.mutedForeground,
@@ -389,22 +261,16 @@ function ThemeOption({
             {label}
           </Text>
         </View>
-      </GlassCard>
+      </Sheet>
     </PressScale>
   );
 }
 
 // ── Styles ───────────────────────────────────
 
-const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
+const s = StyleSheet.create({
+  safe: { flex: 1 },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -412,45 +278,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
   },
+  headerTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 17,
+  },
   scroll: {
     paddingHorizontal: 20,
     paddingBottom: 40,
   },
-  titleSection: {
-    marginBottom: 24,
-  },
-  pageTitle: {
-    fontFamily: "Inter_700Bold",
-    ...typography.hero,
-    marginBottom: 4,
-  },
-  pageSubtitle: {
-    fontFamily: "Inter_400Regular",
-    ...typography.sm,
-  },
-  section: {
-    marginBottom: 32,
-  },
+  section: { marginBottom: 28 },
   themeRow: {
     flexDirection: "row",
     gap: 10,
   },
-  themeOptionWrap: {
-    flex: 1,
-  },
+  themeOptionWrap: { flex: 1 },
   themeOptionContent: {
     alignItems: "center",
     gap: 6,
   },
   themeOptionLabel: {
-    ...typography.sm,
+    fontSize: 14,
   },
-  notifRow: {
+  row: {
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
   },
-  notifIconWrap: {
+  rowIcon: {
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -458,17 +312,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 12,
   },
-  notifContent: {
-    flex: 1,
-  },
-  notifLabel: {
+  rowContent: { flex: 1 },
+  rowLabel: {
     fontFamily: "Inter_500Medium",
-    ...typography.sm,
+    fontSize: 14,
     marginBottom: 2,
   },
-  notifDesc: {
+  rowDesc: {
     fontFamily: "Inter_400Regular",
-    ...typography.xs,
+    fontSize: 12,
   },
   signOutRow: {
     flexDirection: "row",
@@ -477,15 +329,12 @@ const styles = StyleSheet.create({
   },
   signOutLabel: {
     fontFamily: "Inter_600SemiBold",
-    ...typography.sm,
+    fontSize: 14,
   },
   versionText: {
     fontFamily: "Inter_400Regular",
-    ...typography.xs,
+    fontSize: 12,
     textAlign: "center",
     marginTop: 8,
-  },
-  bottomSpacer: {
-    height: 20,
   },
 });
