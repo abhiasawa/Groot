@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Sun, BookOpen, Activity, Sprout, Settings } from "lucide-react-native";
+import { Sun, Sprout, User, Settings } from "lucide-react-native";
 
 import { BottomTabBar } from "../../components/ui/bottom-tab-bar";
 import { ComposeModal } from "../../components/ui/compose-modal";
@@ -35,33 +35,20 @@ function TabsInner() {
           }}
         />
         <Tabs.Screen
-          name="journal"
-          options={{
-            title: "Journal",
-            tabBarIcon: ({ color, size, focused }) => (
-              <BookOpen size={size} color={color} strokeWidth={focused ? 2.2 : 1.7} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="tasks"
-          options={{ href: null }}
-        />
-        <Tabs.Screen
-          name="mood"
-          options={{
-            title: "Pulse",
-            tabBarIcon: ({ color, size, focused }) => (
-              <Activity size={size} color={color} strokeWidth={focused ? 2.2 : 1.7} />
-            ),
-          }}
-        />
-        <Tabs.Screen
           name="garden"
           options={{
             title: "Garden",
             tabBarIcon: ({ color, size, focused }) => (
               <Sprout size={size} color={color} strokeWidth={focused ? 2.2 : 1.7} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="mirror"
+          options={{
+            title: "Mirror",
+            tabBarIcon: ({ color, size, focused }) => (
+              <User size={size} color={color} strokeWidth={focused ? 2.2 : 1.7} />
             ),
           }}
         />
@@ -75,6 +62,9 @@ function TabsInner() {
           }}
         />
         {/* Hidden routes accessible via navigation but not in tab bar */}
+        <Tabs.Screen name="journal" options={{ href: null }} />
+        <Tabs.Screen name="tasks" options={{ href: null }} />
+        <Tabs.Screen name="mood" options={{ href: null }} />
         <Tabs.Screen name="stories" options={{ href: null }} />
         <Tabs.Screen name="topics" options={{ href: null }} />
         <Tabs.Screen name="profile" options={{ href: null }} />

@@ -50,6 +50,7 @@ export const qk = {
   profile: ["profile"] as const,
   settings: ["settings"] as const,
   currentUser: ["currentUser"] as const,
+  mirror: ["mirror"] as const,
 };
 
 // ── Param types ──────────────────────────────
@@ -199,5 +200,59 @@ export function useCurrentUser() {
     queryKey: qk.currentUser,
     queryFn: () => apiFetch<MeResponse>("/api/me"),
     staleTime: 300_000,
+  });
+}
+
+/** Mirror screen data */
+export interface MirrorData {
+  narrativeBio: string | null;
+  patterns: Array<{
+    id: string;
+    category: string;
+    title: string;
+    description: string;
+    confidence: number;
+    timeframe: string;
+  }>;
+  milestones: Array<{
+    id: string;
+    type: string;
+    title: string;
+    description: string;
+    achievedAt: string;
+    icon: string;
+  }>;
+  weeklyReports: Array<{
+    id: string;
+    week_start: string;
+    week_end: string;
+    summary: string;
+    key_topics: string[] | null;
+    mood_trend: string | null;
+    insights: string | null;
+    created_at: string;
+  }>;
+  profileFacts: Array<{
+    id: string;
+    key: string;
+    value: string;
+    confidence: number;
+    source: string;
+    lastMentioned: string | null;
+  }>;
+  stats: {
+    totalMessages: number;
+    totalMemories: number;
+    daysActive: number;
+    displayName: string | null;
+  };
+}
+
+/** GET /api/mobile/mirror */
+export function useMirror() {
+  return useQuery<MirrorData>({
+    queryKey: qk.mirror,
+    queryFn: () => apiFetch<MirrorData>("/api/mobile/mirror"),
+    staleTime: 120_000,
   });
 }
