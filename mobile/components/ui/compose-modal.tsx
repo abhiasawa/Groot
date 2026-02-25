@@ -206,14 +206,32 @@ export function ComposeModal({ visible, onClose }: ComposeModalProps) {
       const uri = recordingRef.current.getURI();
       recordingRef.current = null;
 
-      if (!uri) return;
+      if (!uri) {
+        setReply("Recording failed — no audio file was created.");
+        return;
+      }
 
       setSending(true);
       setReply(null);
 
-      const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: "base64" as const,
-      });
+      // Read audio file as base64
+      let base64: string;
+      try {
+        base64 = await FileSystem.readAsStringAsync(uri, {
+          encoding: "base64" as const,
+        });
+      } catch {
+        setReply("Couldn't read the recorded audio file. Try again.");
+        setSending(false);
+        return;
+      }
+
+      // Reject empty or suspiciously small recordings
+      if (!base64 || base64.length < 100) {
+        setReply("Recording was too short or empty. Hold the button longer.");
+        setSending(false);
+        return;
+      }
 
       const response = await apiFetch<ComposeResponse>("/api/mobile/compose", {
         method: "POST",
@@ -227,8 +245,18 @@ export function ComposeModal({ visible, onClose }: ComposeModalProps) {
       if (response.reply) {
         setReply(response.reply);
       }
-    } catch {
-      setReply("Couldn't process the voice note. Try again.");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Unknown error";
+      if (message.includes("413") || message.includes("too large")) {
+        setReply("Voice note is too large. Try a shorter recording.");
+      } else if (message.includes("401") || message.includes("auth")) {
+        setReply("Session expired. Please restart the app and try again.");
+      } else if (message.includes("timeout") || message.includes("network")) {
+        setReply("Network issue. Check your connection and try again.");
+      } else {
+        setReply(`Couldn't process the voice note: ${message}`);
+      }
     } finally {
       setSending(false);
       setRecordingDuration(0);

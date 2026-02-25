@@ -825,7 +825,7 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
     },
     scroll: {
       padding: GRID_PADDING,
-      paddingBottom: 40,
+      paddingBottom: 90,
     },
 
     // ── Header ──

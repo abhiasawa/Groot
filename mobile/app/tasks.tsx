@@ -623,7 +623,7 @@ const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 40,
+    paddingBottom: 90,
   },
   tabHeader: {
     flexDirection: "row",

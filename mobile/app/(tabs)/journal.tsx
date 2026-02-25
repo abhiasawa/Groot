@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: 18,
     paddingTop: 10,
-    paddingBottom: 48,
+    paddingBottom: 90,
   },
   headerRow: {
     flexDirection: "row",
@@ -539,7 +539,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   bottomGap: {
-    height: 70,
+    height: 20,
   },
   calendarCard: {
     marginTop: 14,

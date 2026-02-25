@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="#features">Features</a> · <a href="#how-it-works">How It Works</a> · <a href="#self-hosting-guide">Self-Host</a> · <a href="#mobile-app">Mobile App</a> · <a href="#api-reference">API</a>
+  <a href="#quick-start">Quick Start</a> · <a href="#features">Features</a> · <a href="#how-it-works">How It Works</a> · <a href="#self-hosting-guide">Self-Host</a> · <a href="#mobile-app">Mobile App</a> · <a href="#api-reference">API</a>
 </p>
 
 <p align="center">
@@ -19,6 +19,31 @@
   <img src="https://img.shields.io/badge/Claude-Sonnet-D97706?logo=anthropic" alt="Claude" />
   <img src="https://img.shields.io/badge/License-MIT-blue" alt="MIT License" />
 </p>
+
+---
+
+## Quick Start
+
+**Get Groot running in 5 minutes:**
+
+```bash
+# 1. Clone and install
+git clone https://github.com/your-username/groot.git && cd groot && npm install
+
+# 2. Copy env template
+cp .env.example .env.local
+
+# 3. Fill in your API keys in .env.local (see below)
+
+# 4. Run database migrations (via Supabase SQL Editor or CLI)
+
+# 5. Start the server
+npm run dev
+```
+
+**Minimum keys needed:** Supabase (URL + keys), Anthropic API key, OpenAI API key, Supermemory API key. WhatsApp & Telegram are optional.
+
+**For the mobile app:** See the [Mobile App](#mobile-app) section below.
 
 ---
 
@@ -158,6 +183,7 @@ npm install
 011_cleanup_habits.sql
 012_add_email_to_users.sql
 013_login_otps.sql
+014_cleanup_old_habits.sql
 ```
 
 Or if you have the [Supabase CLI](https://supabase.com/docs/guides/cli):

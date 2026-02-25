@@ -8,6 +8,9 @@ import { storeOutboundMessage } from "@/lib/memory/short-term";
 import { addMemory } from "@/lib/memory/supermemory-client";
 import { logger } from "@/lib/logger";
 
+// Allow up to 60s for audio transcription + AI response
+export const maxDuration = 60;
+
 /**
  * POST /api/mobile/compose — Send a message to Groot from the mobile app.
  *
