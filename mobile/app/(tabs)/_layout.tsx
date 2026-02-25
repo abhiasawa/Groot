@@ -2,12 +2,12 @@ import { Tabs } from "expo-router";
 import { BookOpen, Activity, CheckSquare, Settings } from "lucide-react-native";
 
 import { BottomTabBar } from "../../components/ui/bottom-tab-bar";
-import { ComposeModal } from "../../components/ui/compose-modal";
+import { ChatScreen } from "../../components/ui/chat-screen";
 import { ComposeProvider, useCompose } from "../../lib/compose-context";
 
-function ComposeOverlay() {
+function ChatOverlay() {
   const { visible, close } = useCompose();
-  return <ComposeModal visible={visible} onClose={close} />;
+  return <ChatScreen visible={visible} onClose={close} />;
 }
 
 function TabsInner() {
@@ -73,7 +73,7 @@ function TabsInner() {
         <Tabs.Screen name="more" options={{ href: null }} />
       </Tabs>
 
-      <ComposeOverlay />
+      <ChatOverlay />
     </>
   );
 }

@@ -1,15 +1,16 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
-import { Sprout, ArrowLeft, MessageCircle } from "lucide-react-native";
+import { Sprout, LogIn } from "lucide-react-native";
+import * as AuthSession from "expo-auth-session";
+import * as WebBrowser from "expo-web-browser";
 
 import { useAuth } from "../../lib/auth/provider";
 import { useTheme } from "../../lib/theme/provider";
@@ -18,99 +19,99 @@ import { GlassCard } from "../../components/ui/glass-card";
 import { GradientBackground } from "../../components/ui/gradient-background";
 import { PressScale } from "../../components/ui/press-scale";
 
+// Required for Expo AuthSession on Android
+WebBrowser.maybeCompleteAuthSession();
+
 const API_BASE = (
   process.env.EXPO_PUBLIC_API_BASE_URL ?? "https://groot-three.vercel.app"
 ).replace(/\/$/, "");
+
+const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ?? "";
 
 export default function LoginScreen() {
   const { setToken } = useAuth();
   const { colors } = useTheme();
 
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<"phone" | "otp">("phone");
   const [error, setError] = useState<string | null>(null);
 
-  const otpInputRef = useRef<TextInput>(null);
+  // Google OAuth discovery document
+  const discovery = AuthSession.useAutoDiscovery("https://accounts.google.com");
 
-  // ── Step 1: Request OTP via WhatsApp ────────────
-  const handleRequestOtp = async () => {
-    const cleaned = phone.trim();
-    if (!cleaned) return;
+  // Build the auth request
+  const redirectUri = AuthSession.makeRedirectUri({
+    scheme: "thegarden",
+  });
 
-    setLoading(true);
+  const [request, response, promptAsync] = AuthSession.useAuthRequest(
+    {
+      clientId: GOOGLE_CLIENT_ID,
+      scopes: ["openid", "profile", "email"],
+      redirectUri,
+      responseType: AuthSession.ResponseType.IdToken,
+    },
+    discovery,
+  );
+
+  // Handle the OAuth response
+  useEffect(() => {
+    if (response?.type === "success" && response.params?.id_token) {
+      handleGoogleToken(response.params.id_token);
+    } else if (response?.type === "error") {
+      setError(response.error?.message ?? "Google sign-in failed");
+      setLoading(false);
+    } else if (response?.type === "dismiss") {
+      setLoading(false);
+    }
+  }, [response]);
+
+  const handleGoogleSignIn = async () => {
     setError(null);
+    setLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE}/api/auth/request-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone_number: cleaned }),
-      });
-
-      const data = (await res.json()) as { success?: boolean; error?: string };
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.error ?? "Failed to send code");
-      }
-
-      setStep("otp");
-      setTimeout(() => otpInputRef.current?.focus(), 300);
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Something went wrong";
-      setError(message);
-    } finally {
+      await promptAsync();
+    } catch {
+      setError("Could not open Google sign-in");
       setLoading(false);
     }
   };
 
-  // ── Step 2: Verify OTP ─────────────────────────
-  const handleVerifyOtp = async () => {
-    if (!otp.trim() || otp.trim().length < 6) {
-      setError("Please enter the 6-digit code from WhatsApp");
-      return;
-    }
-
+  const handleGoogleToken = async (idToken: string) => {
     setLoading(true);
     setError(null);
 
     try {
-      const res = await fetch(`${API_BASE}/api/auth/verify-otp`, {
+      const res = await fetch(`${API_BASE}/api/auth/google`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone_number: phone.trim(),
-          code: otp.trim(),
-        }),
+        body: JSON.stringify({ id_token: idToken }),
       });
 
       const data = (await res.json()) as {
+        ok?: boolean;
         token?: string;
+        user?: { id: string; display_name: string; email: string };
         error?: string;
+        message?: string;
       };
 
       if (!res.ok || !data.token) {
-        throw new Error(data.error ?? "Invalid code");
+        if (data.error === "not_allowed") {
+          setError(data.message ?? "Groot is invite-only. Ask the owner to add your email.");
+        } else {
+          setError(data.error ?? data.message ?? "Sign-in failed");
+        }
+        return;
       }
 
-      // Store JWT — this triggers AuthGate redirect to main app
+      // Store JWT — triggers navigation to main app
       await setToken(data.token);
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Invalid code. Please try again.";
-      setError(message);
+    } catch {
+      setError("Network error. Please check your connection.");
     } finally {
       setLoading(false);
     }
-  };
-
-  // ── Go back to phone step ──────────────────────
-  const handleBack = () => {
-    setStep("phone");
-    setOtp("");
-    setError(null);
   };
 
   return (
@@ -141,190 +142,83 @@ export default function LoginScreen() {
             </Text>
           </Animated.View>
 
-          {step === "otp" ? (
-            /* ── OTP Verification Step ── */
-            <Animated.View entering={FadeIn.delay(100).duration(500)}>
-              <GlassCard delay={0} padding={24}>
-                <View style={styles.form}>
-                  <View style={styles.otpHeader}>
-                    <PressScale onPress={handleBack}>
-                      <ArrowLeft
-                        size={20}
-                        color={colors.mutedForeground}
-                        strokeWidth={1.5}
-                      />
-                    </PressScale>
-                    <Text
-                      style={[styles.otpTitle, { color: colors.foreground }]}
-                    >
-                      Check your WhatsApp
-                    </Text>
-                  </View>
+          {/* Google Sign-In Card */}
+          <Animated.View entering={FadeIn.delay(200).duration(500)}>
+            <GlassCard delay={100} padding={24}>
+              <View style={styles.form}>
+                <Text
+                  style={[styles.welcomeText, { color: colors.mutedForeground }]}
+                >
+                  Sign in to start chatting with Groot — your empathetic AI
+                  companion that remembers everything.
+                </Text>
 
-                  <View style={styles.otpDescRow}>
-                    <MessageCircle
-                      size={16}
-                      color={colors.primary}
-                      strokeWidth={1.5}
-                    />
-                    <Text
-                      style={[styles.otpBody, { color: colors.mutedForeground }]}
-                    >
-                      We sent a 6-digit code to {phone}
-                    </Text>
-                  </View>
-
-                  <TextInput
-                    ref={otpInputRef}
-                    style={[
-                      styles.otpInput,
-                      {
-                        backgroundColor: colors.glassSurface,
-                        color: colors.foreground,
-                        borderColor: colors.glassBorder,
-                      },
-                    ]}
-                    placeholder="000000"
-                    placeholderTextColor={colors.mutedForeground}
-                    value={otp}
-                    onChangeText={(text) => {
-                      const digits = text.replace(/\D/g, "").slice(0, 6);
-                      setOtp(digits);
-                    }}
-                    keyboardType="number-pad"
-                    textContentType="oneTimeCode"
-                    autoComplete="one-time-code"
-                    maxLength={6}
-                    editable={!loading}
-                  />
-
-                  {error ? (
+                {error ? (
+                  <View style={[styles.errorBox, { backgroundColor: `${colors.destructive}12` }]}>
                     <Text
                       style={[styles.errorText, { color: colors.destructive }]}
                     >
                       {error}
                     </Text>
-                  ) : null}
+                  </View>
+                ) : null}
 
-                  <PressScale
-                    onPress={handleVerifyOtp}
-                    haptic={!loading && otp.length === 6}
-                  >
-                    <View
-                      style={[
-                        styles.button,
-                        {
-                          backgroundColor: colors.primary,
-                          opacity: loading || otp.length < 6 ? 0.6 : 1,
-                        },
-                      ]}
-                    >
-                      {loading ? (
-                        <ActivityIndicator color={colors.primaryForeground} />
-                      ) : (
-                        <Text
-                          style={[
-                            styles.buttonText,
-                            { color: colors.primaryForeground },
-                          ]}
-                        >
-                          Verify & Sign In
-                        </Text>
-                      )}
-                    </View>
-                  </PressScale>
-
-                  <PressScale onPress={handleRequestOtp} haptic={!loading}>
-                    <Text
-                      style={[styles.resendLink, { color: colors.primary }]}
-                    >
-                      Resend code
-                    </Text>
-                  </PressScale>
-                </View>
-              </GlassCard>
-            </Animated.View>
-          ) : (
-            /* ── Phone Number Input Step ── */
-            <Animated.View entering={FadeIn.delay(200).duration(500)}>
-              <GlassCard delay={100} padding={24}>
-                <View style={styles.form}>
-                  <Text
-                    style={[styles.inputLabel, { color: colors.mutedForeground }]}
-                  >
-                    Enter your WhatsApp number
-                  </Text>
-
-                  <TextInput
+                <PressScale
+                  onPress={handleGoogleSignIn}
+                  haptic={!loading}
+                >
+                  <View
                     style={[
-                      styles.input,
+                      styles.googleButton,
                       {
-                        backgroundColor: colors.glassSurface,
-                        color: colors.foreground,
-                        borderColor: colors.glassBorder,
+                        backgroundColor: colors.foreground,
+                        opacity: loading || !request ? 0.6 : 1,
                       },
                     ]}
-                    placeholder="98765 43210"
-                    placeholderTextColor={colors.mutedForeground}
-                    value={phone}
-                    onChangeText={setPhone}
-                    autoCapitalize="none"
-                    autoComplete="tel"
-                    keyboardType="phone-pad"
-                    textContentType="telephoneNumber"
-                    editable={!loading}
-                  />
-
-                  {error ? (
-                    <Text
-                      style={[styles.errorText, { color: colors.destructive }]}
-                    >
-                      {error}
-                    </Text>
-                  ) : null}
-
-                  <PressScale
-                    onPress={handleRequestOtp}
-                    haptic={!loading && !!phone.trim()}
                   >
-                    <View
-                      style={[
-                        styles.button,
-                        {
-                          backgroundColor: colors.primary,
-                          opacity: loading || !phone.trim() ? 0.6 : 1,
-                        },
-                      ]}
-                    >
-                      {loading ? (
-                        <ActivityIndicator color={colors.primaryForeground} />
-                      ) : (
+                    {loading ? (
+                      <ActivityIndicator color={colors.background} />
+                    ) : (
+                      <View style={styles.googleButtonInner}>
+                        <View style={styles.googleIconWrap}>
+                          <GoogleIcon size={20} />
+                        </View>
                         <Text
                           style={[
-                            styles.buttonText,
-                            { color: colors.primaryForeground },
+                            styles.googleButtonText,
+                            { color: colors.background },
                           ]}
                         >
-                          Send Code via WhatsApp
+                          Continue with Google
                         </Text>
-                      )}
-                    </View>
-                  </PressScale>
-                </View>
-              </GlassCard>
-            </Animated.View>
-          )}
+                      </View>
+                    )}
+                  </View>
+                </PressScale>
+              </View>
+            </GlassCard>
+          </Animated.View>
 
           <Animated.View entering={FadeIn.delay(400).duration(500)}>
             <Text
               style={[styles.footer, { color: colors.mutedForeground }]}
             >
-              Message Groot on WhatsApp first to create your account
+              Groot is invite-only. Ask the owner to add your email to get started.
             </Text>
           </Animated.View>
         </View>
       </KeyboardAvoidingView>
     </GradientBackground>
+  );
+}
+
+// ── Simple Google "G" icon using SVG ──
+function GoogleIcon({ size }: { size: number }) {
+  // Using a simple text "G" with Google colors as a lightweight alternative
+  return (
+    <View style={{ width: size, height: size, justifyContent: "center", alignItems: "center" }}>
+      <Text style={{ fontSize: size * 0.8, fontWeight: "700", color: "#4285F4" }}>G</Text>
+    </View>
   );
 }
 
@@ -360,72 +254,50 @@ const styles = StyleSheet.create({
   form: {
     gap: 16,
   },
-  inputLabel: {
-    fontFamily: "Manrope_500Medium",
-    ...typography.sm,
-  },
-  input: {
-    height: 50,
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    fontFamily: "Manrope_400Regular",
-    ...typography.base,
-  },
-  otpHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  otpTitle: {
-    fontFamily: "Sora_600SemiBold",
-    ...typography.lg,
-  },
-  otpDescRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  otpBody: {
+  welcomeText: {
     fontFamily: "Manrope_400Regular",
     ...typography.sm,
-    lineHeight: 20,
-    flex: 1,
-  },
-  otpInput: {
-    height: 58,
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    fontFamily: "Sora_700Bold",
-    fontSize: 28,
-    letterSpacing: 10,
+    lineHeight: 22,
     textAlign: "center",
   },
-  button: {
-    height: 50,
+  errorBox: {
     borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  buttonText: {
-    fontFamily: "Sora_600SemiBold",
-    ...typography.base,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   errorText: {
     fontFamily: "Manrope_400Regular",
     ...typography.xs,
     textAlign: "center",
   },
-  resendLink: {
-    fontFamily: "Manrope_500Medium",
-    ...typography.sm,
-    textAlign: "center",
+  googleButton: {
+    height: 52,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  googleButtonInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  googleIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  googleButtonText: {
+    fontFamily: "Sora_600SemiBold",
+    ...typography.base,
   },
   footer: {
     fontFamily: "Manrope_400Regular",
     ...typography.xs,
     textAlign: "center",
     marginTop: 24,
+    lineHeight: 18,
   },
 });

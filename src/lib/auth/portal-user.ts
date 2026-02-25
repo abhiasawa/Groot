@@ -7,8 +7,11 @@ import { logger } from "@/lib/logger";
 
 export interface PortalUser {
   id: string;
-  whatsapp_number: string;
+  whatsapp_number: string | null;
   display_name: string | null;
+  email: string | null;
+  google_id: string | null;
+  avatar_url: string | null;
   onboarding_step: number;
   onboarding_completed_at: string | null;
   created_at: string;
@@ -30,7 +33,7 @@ let cacheExpiry = 0;
 const CACHE_TTL_MS = 60_000; // 60 seconds
 
 const USER_SELECT_FIELDS =
-  "id, whatsapp_number, display_name, onboarding_step, onboarding_completed_at, created_at, timezone" as const;
+  "id, whatsapp_number, display_name, email, google_id, avatar_url, onboarding_step, onboarding_completed_at, created_at, timezone" as const;
 const ALLOW_SINGLE_USER_FALLBACK = process.env.ALLOW_SINGLE_USER_FALLBACK === "true";
 
 /**

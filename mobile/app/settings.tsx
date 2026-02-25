@@ -7,6 +7,8 @@ import {
   RefreshControl,
   ActivityIndicator,
   Switch,
+  TextInput,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useSegments } from "expo-router";
@@ -23,12 +25,18 @@ import {
   User,
   LogOut,
   Mail,
+  MessageCircle,
+  Phone,
+  Link2,
+  Unlink,
+  Check,
 } from "lucide-react-native";
 
 import { useAuth } from "../lib/auth/provider";
 import { useTheme } from "../lib/theme/provider";
 import { useSettings, useCurrentUser } from "../lib/api/queries";
 import { useUpdatePreference } from "../lib/api/mutations";
+import { apiFetch } from "../lib/api/client";
 import { requestPermissions } from "../lib/notifications";
 import { typography } from "../constants/typography";
 import { GlassCard } from "../components/ui/glass-card";
@@ -94,6 +102,12 @@ export default function SettingsScreen() {
     "undetermined",
   );
 
+  // WhatsApp linking state
+  const [showWhatsAppInput, setShowWhatsAppInput] = useState(false);
+  const [whatsAppNumber, setWhatsAppNumber] = useState("");
+  const [whatsAppLinking, setWhatsAppLinking] = useState(false);
+  const [whatsAppError, setWhatsAppError] = useState<string | null>(null);
+
   const notificationPrefs = useNotificationPrefs();
 
   // Check notification permission status
@@ -131,6 +145,61 @@ export default function SettingsScreen() {
   }, [signOut]);
 
   const user = meData?.user;
+  const hasWhatsApp = !!user?.whatsapp_number;
+
+  const handleLinkWhatsApp = useCallback(async () => {
+    if (!whatsAppNumber.trim()) {
+      setWhatsAppError("Please enter your WhatsApp number");
+      return;
+    }
+
+    setWhatsAppLinking(true);
+    setWhatsAppError(null);
+
+    try {
+      await apiFetch<{ ok: boolean; whatsapp_number: string }>(
+        "/api/auth/link-whatsapp",
+        {
+          method: "POST",
+          body: JSON.stringify({ whatsapp_number: whatsAppNumber.trim() }),
+        },
+      );
+
+      setShowWhatsAppInput(false);
+      setWhatsAppNumber("");
+      void refetchMe();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to link WhatsApp";
+      setWhatsAppError(message);
+    } finally {
+      setWhatsAppLinking(false);
+    }
+  }, [whatsAppNumber, refetchMe]);
+
+  const handleUnlinkWhatsApp = useCallback(() => {
+    Alert.alert(
+      "Unlink WhatsApp",
+      "You won't receive Groot messages on WhatsApp anymore. Continue?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Unlink",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await apiFetch<{ ok: boolean }>(
+                "/api/auth/link-whatsapp",
+                { method: "DELETE" },
+              );
+              void refetchMe();
+            } catch {
+              Alert.alert("Error", "Failed to unlink WhatsApp. Please try again.");
+            }
+          },
+        },
+      ],
+    );
+  }, [refetchMe]);
 
   if (isLoading) {
     return (
@@ -272,6 +341,124 @@ export default function SettingsScreen() {
             </GlassCard>
           </View>
 
+          {/* WhatsApp Linking Section */}
+          <View style={styles.sectionWrap}>
+            <SectionHeader title="WhatsApp" />
+            <GlassCard padding={0}>
+              {hasWhatsApp ? (
+                /* WhatsApp is linked */
+                <View style={styles.prefRow}>
+                  <View style={[styles.prefIconWrap, { backgroundColor: `${colors.chart2}20` }]}>
+                    <MessageCircle size={17} color={colors.chart2} strokeWidth={1.6} />
+                  </View>
+                  <View style={styles.prefCopy}>
+                    <Text style={[styles.prefLabel, { color: colors.foreground }]}>
+                      +{user.whatsapp_number}
+                    </Text>
+                    <Text style={[styles.prefDesc, { color: colors.mutedForeground }]}>
+                      Groot can message you on WhatsApp
+                    </Text>
+                  </View>
+                  <PressScale onPress={handleUnlinkWhatsApp}>
+                    <View style={[styles.unlinkBtn, { backgroundColor: `${colors.destructive}15` }]}>
+                      <Unlink size={14} color={colors.destructive} strokeWidth={1.8} />
+                    </View>
+                  </PressScale>
+                </View>
+              ) : showWhatsAppInput ? (
+                /* Input form to link WhatsApp */
+                <View style={styles.linkForm}>
+                  <View style={styles.linkFormHeader}>
+                    <View style={[styles.prefIconWrap, { backgroundColor: `${colors.chart2}20` }]}>
+                      <Phone size={17} color={colors.chart2} strokeWidth={1.6} />
+                    </View>
+                    <View style={styles.prefCopy}>
+                      <Text style={[styles.prefLabel, { color: colors.foreground }]}>
+                        Link WhatsApp
+                      </Text>
+                      <Text style={[styles.prefDesc, { color: colors.mutedForeground }]}>
+                        Include country code (e.g. +91 98765 43210)
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.linkInputRow}>
+                    <TextInput
+                      style={[
+                        styles.linkInput,
+                        {
+                          color: colors.foreground,
+                          backgroundColor: colors.glassSurface,
+                          borderColor: whatsAppError ? colors.destructive : colors.glassBorder,
+                        },
+                      ]}
+                      placeholder="+91 98765 43210"
+                      placeholderTextColor={colors.mutedForeground}
+                      keyboardType="phone-pad"
+                      value={whatsAppNumber}
+                      onChangeText={(text) => {
+                        setWhatsAppNumber(text);
+                        setWhatsAppError(null);
+                      }}
+                      autoFocus
+                      editable={!whatsAppLinking}
+                    />
+                    <PressScale
+                      onPress={handleLinkWhatsApp}
+                      haptic={!whatsAppLinking}
+                    >
+                      <View
+                        style={[
+                          styles.linkSubmitBtn,
+                          {
+                            backgroundColor: colors.primary,
+                            opacity: whatsAppLinking ? 0.6 : 1,
+                          },
+                        ]}
+                      >
+                        {whatsAppLinking ? (
+                          <ActivityIndicator size="small" color={colors.primaryForeground} />
+                        ) : (
+                          <Check size={18} color={colors.primaryForeground} strokeWidth={2.2} />
+                        )}
+                      </View>
+                    </PressScale>
+                  </View>
+
+                  {whatsAppError ? (
+                    <Text style={[styles.linkError, { color: colors.destructive }]}>
+                      {whatsAppError}
+                    </Text>
+                  ) : null}
+
+                  <PressScale onPress={() => { setShowWhatsAppInput(false); setWhatsAppError(null); }}>
+                    <Text style={[styles.linkCancel, { color: colors.mutedForeground }]}>
+                      Cancel
+                    </Text>
+                  </PressScale>
+                </View>
+              ) : (
+                /* CTA to link WhatsApp */
+                <PressScale onPress={() => setShowWhatsAppInput(true)}>
+                  <View style={styles.prefRow}>
+                    <View style={[styles.prefIconWrap, { backgroundColor: `${colors.chart2}20` }]}>
+                      <Link2 size={17} color={colors.chart2} strokeWidth={1.6} />
+                    </View>
+                    <View style={styles.prefCopy}>
+                      <Text style={[styles.prefLabel, { color: colors.foreground }]}>
+                        Link WhatsApp
+                      </Text>
+                      <Text style={[styles.prefDesc, { color: colors.mutedForeground }]}>
+                        Get Groot check-ins and reminders on WhatsApp
+                      </Text>
+                    </View>
+                    <PillBadge label="Optional" small />
+                  </View>
+                </PressScale>
+              )}
+            </GlassCard>
+          </View>
+
           <View style={styles.sectionWrap}>
             <SectionHeader title="Account" />
             <GlassCard padding={0}>
@@ -289,13 +476,13 @@ export default function SettingsScreen() {
                 </View>
                 <View style={styles.prefCopy}>
                   <Text style={[styles.prefLabel, { color: colors.foreground }]}>
-                    {user?.display_name || "WhatsApp account"}
+                    {user?.display_name || "Your account"}
                   </Text>
                   <Text style={[styles.prefDesc, { color: colors.mutedForeground }]}>
-                    {user?.whatsapp_number || "Connected with WhatsApp"}
+                    {user?.email || "Signed in with Google"}
                   </Text>
                 </View>
-                <PillBadge label="Connected" small />
+                <PillBadge label="Google" small />
               </View>
 
               <PressScale onPress={() => router.push("/(tabs)/profile" as never)}>
@@ -471,6 +658,54 @@ const styles = StyleSheet.create({
   signOutLabel: {
     fontFamily: "Sora_600SemiBold",
     ...typography.sm,
+  },
+  // WhatsApp linking styles
+  unlinkBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  linkForm: {
+    padding: 14,
+    gap: 10,
+  },
+  linkFormHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  linkInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  linkInput: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    fontFamily: "Manrope_500Medium",
+    ...typography.sm,
+  },
+  linkSubmitBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  linkError: {
+    fontFamily: "Manrope_400Regular",
+    ...typography.xs,
+    paddingHorizontal: 2,
+  },
+  linkCancel: {
+    fontFamily: "Manrope_500Medium",
+    ...typography.xs,
+    textAlign: "center",
+    paddingVertical: 4,
   },
   versionText: {
     marginTop: 2,
