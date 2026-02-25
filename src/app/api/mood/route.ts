@@ -177,10 +177,17 @@ export async function GET(request: NextRequest) {
     avgScore: Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10,
   })).sort((a, b) => a.weekStart.localeCompare(b.weekStart));
 
-  // Recent mood — only return if it's from today (IST / Asia/Kolkata)
+  // Recent mood — only return if there was an explicit manual check-in today (IST)
   const todayIST = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }); // YYYY-MM-DD
-  const todayEntry = dailyMoods.find((dm) => dm.date === todayIST);
-  const recentMood = todayEntry?.mood ?? null;
+  const todayManualCheckin = (messages ?? []).find((msg) => {
+    const meta = msg.metadata as Record<string, unknown> | null;
+    if (meta?.source !== "manual_checkin") return false;
+    const msgDate = new Date(msg.created_at as string).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+    return msgDate === todayIST;
+  });
+  const recentMood = todayManualCheckin
+    ? normalizeMood(((todayManualCheckin.metadata as Record<string, unknown>)?.mood as string) ?? "")
+    : null;
 
   logger.info({ userId, year, totalDays: dailyMoods.length, weeks: weeklyTrend.length }, "Mood data loaded");
 
