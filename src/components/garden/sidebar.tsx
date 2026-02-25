@@ -3,26 +3,29 @@
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
-  Home,
-  BookOpen,
-  BarChart3,
-  Settings,
-  Heart,
-  Lightbulb,
-  Sparkles,
+  Sun,
   Sprout,
+  User,
+  Settings,
+  BookOpen,
+  Heart,
+  BarChart3,
+  Sparkles,
+  Lightbulb,
 } from "lucide-react";
 
 const PRIMARY_NAV_ITEMS = [
-  { href: "/garden", label: "Home", icon: Home },
-  { href: "/garden/journal", label: "Journal", icon: BookOpen },
-  { href: "/garden/habits", label: "Habits", icon: BarChart3 },
+  { href: "/garden", label: "Today", icon: Sun },
+  { href: "/garden/garden", label: "Garden", icon: Sprout },
+  { href: "/garden/mirror", label: "Mirror", icon: User },
   { href: "/garden/settings", label: "Settings", icon: Settings },
 ] as const;
 
-const DEEP_DIVE_ITEMS = [
-  { href: "/garden/insights", label: "Insights", icon: Lightbulb },
+const EXPLORE_ITEMS = [
+  { href: "/garden/journal", label: "Journal", icon: BookOpen },
   { href: "/garden/mood", label: "Mood", icon: Heart },
+  { href: "/garden/habits", label: "Habits", icon: BarChart3 },
+  { href: "/garden/insights", label: "Insights", icon: Lightbulb },
   { href: "/garden/stories", label: "Stories", icon: Sparkles },
 ] as const;
 
@@ -40,11 +43,14 @@ export default function Sidebar() {
 
       <nav className="flex-1 overflow-y-auto p-3">
         <p className="px-3 pb-2 text-[11px] uppercase tracking-wider text-muted-foreground">
-          Daily
+          Main
         </p>
         <div className="space-y-1">
           {PRIMARY_NAV_ITEMS.map((item) => {
-            const isActive = pathname === item.href || (item.href !== "/garden" && pathname.startsWith(item.href));
+            const isActive =
+              item.href === "/garden"
+                ? pathname === "/garden"
+                : pathname.startsWith(item.href);
             const Icon = item.icon;
 
             return (
@@ -66,11 +72,11 @@ export default function Sidebar() {
         </div>
 
         <p className="px-3 pb-2 pt-5 text-[11px] uppercase tracking-wider text-muted-foreground">
-          Deep Dives
+          Explore
         </p>
         <div className="space-y-1">
-          {DEEP_DIVE_ITEMS.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href);
+          {EXPLORE_ITEMS.map((item) => {
+            const isActive = pathname.startsWith(item.href);
             const Icon = item.icon;
 
             return (
