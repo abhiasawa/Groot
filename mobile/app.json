@@ -24,7 +24,10 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.groot.thegarden",
-      "permissions": ["android.permission.ACTIVITY_RECOGNITION"]
+      "permissions": [
+        "android.permission.ACTIVITY_RECOGNITION",
+        "android.permission.health.READ_STEPS"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -57,7 +60,10 @@
           "microphonePermission": "Record voice messages for Groot"
         }
       ],
-      "expo-sensors"
+      "expo-sensors",
+      "@react-native-community/datetimepicker",
+      "react-native-health-connect",
+      "./plugins/withHealthConnect.js"
     ],
     "experiments": {
       "typedRoutes": true

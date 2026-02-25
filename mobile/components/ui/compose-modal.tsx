@@ -64,12 +64,17 @@ export function ComposeModal({ visible, onClose }: ComposeModalProps) {
   const pulseAnim = useRef(new RNAnimated.Value(1)).current;
   const inputRef = useRef<TextInput>(null);
 
-  // Focus input when modal opens
+  // Focus input only when modal first opens (not on reply changes)
+  const justOpened = useRef(false);
   useEffect(() => {
-    if (visible && !reply) {
-      setTimeout(() => inputRef.current?.focus(), 300);
+    if (visible && !justOpened.current) {
+      justOpened.current = true;
+      setTimeout(() => inputRef.current?.focus(), 350);
     }
-  }, [visible, reply]);
+    if (!visible) {
+      justOpened.current = false;
+    }
+  }, [visible]);
 
   // Cleanup on close
   const handleClose = useCallback(() => {
@@ -275,8 +280,7 @@ export function ComposeModal({ visible, onClose }: ComposeModalProps) {
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+        behavior="padding"
       >
         <Pressable style={s.overlay} onPress={handleClose}>
           <Pressable

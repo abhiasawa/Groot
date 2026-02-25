@@ -13,6 +13,8 @@ export interface Memory {
   message_type: string;
   metadata?: Record<string, unknown> | null;
   created_at: string;
+  /** Groot's preceding message that prompted this user message (computed at query time) */
+  context_message?: string | null;
 }
 
 /** Stories share the same DB shape as memories. */

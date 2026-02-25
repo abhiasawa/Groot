@@ -1,199 +1,428 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { View, Text, StyleSheet, AppState, Platform } from "react-native";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  AppState,
+  Platform,
+  Dimensions,
+  PermissionsAndroid,
+} from "react-native";
 import { Pedometer } from "expo-sensors";
-import { Footprints, TrendingUp, Flame } from "lucide-react-native";
-import Svg, { Circle } from "react-native-svg";
+import {
+  initialize,
+  readRecords,
+  getSdkStatus,
+  SdkAvailabilityStatus,
+} from "react-native-health-connect";
+import { Footprints, MapPin, Flame, Target } from "lucide-react-native";
+import Svg, { Rect } from "react-native-svg";
 
 import { useTheme } from "../../lib/theme/provider";
 import { typography } from "../../constants/typography";
 import { GlassCard } from "./glass-card";
-import { SectionHeader } from "./section-header";
 
 // ── Constants ──
 
 const DEFAULT_GOAL = 10000;
-const RING_SIZE = 80;
-const RING_STROKE = 5;
+const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const SHORT_DAY = ["M", "T", "W", "T", "F", "S", "S"];
+
+// ── Types ──
+
+type DaySteps = { date: string; steps: number; dayLabel: string; isToday: boolean };
+type StepsStatus = "loading" | "ready" | "no_health_connect";
 
 // ── Helpers ──
 
-function getStartOfDay(): Date {
+function getStartOfDayISO(): string {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
-  return now;
+  return now.toISOString();
 }
 
-function formatSteps(n: number): string {
-  if (n >= 1000) {
-    const k = n / 1000;
-    return k % 1 === 0 ? `${k}k` : `${k.toFixed(1)}k`;
+function formatNumber(n: number): string {
+  return n.toLocaleString();
+}
+
+/** Build array of past 7 days (ending today) */
+function buildWeekDays(): { start: Date; end: Date; dayLabel: string; isToday: boolean }[] {
+  const now = new Date();
+  const days: { start: Date; end: Date; dayLabel: string; isToday: boolean }[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    const start = new Date(d);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(d);
+    end.setHours(23, 59, 59, 999);
+    days.push({
+      start,
+      end: i === 0 ? now : end,
+      dayLabel: DAY_LABELS[start.getDay() === 0 ? 6 : start.getDay() - 1] ?? "",
+      isToday: i === 0,
+    });
   }
-  return String(n);
+  return days;
 }
 
-// ── Progress Ring ──
+// ── Mini Week Chart ──
 
-function StepsRing({
-  progress,
-  color,
-  bgColor,
+function MiniWeekChart({
+  weekData,
+  goal,
+  colors,
 }: {
-  progress: number;
-  color: string;
-  bgColor: string;
+  weekData: DaySteps[];
+  goal: number;
+  colors: Record<string, string>;
 }) {
-  const radius = (RING_SIZE - RING_STROKE) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const clampedProgress = Math.min(progress, 1);
-  const strokeDashoffset = circumference * (1 - clampedProgress);
+  const screenWidth = Dimensions.get("window").width;
+  const chartWidth = screenWidth - 80; // card padding
+  const barGap = 8;
+  const barWidth = (chartWidth - barGap * 6) / 7;
+  const chartHeight = 64;
+
+  // Smart scale: use data max so bars are always proportionally visible
+  // Only include goal in scale if any day actually approached it (>30%)
+  const maxSteps = useMemo(() => {
+    const dataMax = Math.max(...weekData.map((d) => d.steps), 1); // min 1 to avoid /0
+    const anyNearGoal = dataMax > goal * 0.3;
+    const ceiling = anyNearGoal ? Math.max(dataMax, goal) : dataMax;
+    return ceiling * 1.15; // 15% headroom
+  }, [weekData, goal]);
 
   return (
-    <Svg width={RING_SIZE} height={RING_SIZE}>
-      <Circle
-        cx={RING_SIZE / 2}
-        cy={RING_SIZE / 2}
-        r={radius}
-        stroke={bgColor}
-        strokeWidth={RING_STROKE}
-        fill="none"
-      />
-      <Circle
-        cx={RING_SIZE / 2}
-        cy={RING_SIZE / 2}
-        r={radius}
-        stroke={color}
-        strokeWidth={RING_STROKE}
-        fill="none"
-        strokeDasharray={`${circumference} ${circumference}`}
-        strokeDashoffset={strokeDashoffset}
-        strokeLinecap="round"
-        rotation="-90"
-        origin={`${RING_SIZE / 2}, ${RING_SIZE / 2}`}
-      />
-    </Svg>
+    <View style={cs.chartWrap}>
+      <Svg width={chartWidth} height={chartHeight}>
+        {weekData.map((day, i) => {
+          const ratio = maxSteps > 0 ? day.steps / maxSteps : 0;
+          // Min bar height of 4px for any non-zero day so it's always visible
+          const barH = day.steps > 0 ? Math.max(ratio * chartHeight, 4) : 0;
+          const x = i * (barWidth + barGap);
+          const y = chartHeight - barH;
+          const metGoal = day.steps >= goal;
+          const barColor = day.isToday
+            ? colors.primary
+            : metGoal
+              ? colors.moodGood
+              : `${colors.primary}55`;
+
+          return (
+            <Rect
+              key={day.date}
+              x={x}
+              y={y}
+              width={barWidth}
+              height={barH || 2}
+              rx={4}
+              ry={4}
+              fill={barColor}
+              opacity={barH === 0 ? 0.15 : 1}
+            />
+          );
+        })}
+      </Svg>
+
+      {/* Day labels */}
+      <View style={[cs.dayRow, { width: chartWidth }]}>
+        {weekData.map((day, i) => (
+          <Text
+            key={day.date}
+            style={[
+              cs.dayText,
+              {
+                width: barWidth + (i < 6 ? barGap : 0),
+                color: day.isToday ? colors.primary : colors.mutedForeground,
+                fontFamily: day.isToday ? "Manrope_700Bold" : "Manrope_400Regular",
+              },
+            ]}
+          >
+            {day.isToday ? "Today" : SHORT_DAY[DAY_LABELS.indexOf(day.dayLabel)] ?? ""}
+          </Text>
+        ))}
+      </View>
+    </View>
   );
 }
+
+const cs = StyleSheet.create({
+  chartWrap: {
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(128,128,128,0.12)",
+  },
+  dayRow: {
+    flexDirection: "row",
+    marginTop: 6,
+  },
+  dayText: {
+    fontSize: 10,
+    textAlign: "center",
+    letterSpacing: 0.3,
+  },
+});
 
 // ── Main Component ──
 
 export function StepsCard({ goal = DEFAULT_GOAL }: { goal?: number }) {
   const { colors } = useTheme();
   const [steps, setSteps] = useState(0);
-  const [available, setAvailable] = useState<boolean | null>(null);
+  const [liveSteps, setLiveSteps] = useState(0);
+  const [weekData, setWeekData] = useState<DaySteps[]>([]);
+  const [status, setStatus] = useState<StepsStatus>("loading");
+  const baselineRef = useRef(0);
 
-  const fetchSteps = useCallback(async () => {
+  // ── Read today from Health Connect ──
+  const readHealthConnectToday = useCallback(async (): Promise<number> => {
     try {
-      const isAvailable = await Pedometer.isAvailableAsync();
-      setAvailable(isAvailable);
+      const sdkStatus = await getSdkStatus();
+      if (sdkStatus !== SdkAvailabilityStatus.SDK_AVAILABLE) return 0;
 
-      if (!isAvailable) return;
+      const ok = await initialize();
+      if (!ok) return 0;
 
-      const start = getStartOfDay();
-      const end = new Date();
-      const result = await Pedometer.getStepCountAsync(start, end);
-      setSteps(result.steps);
+      const startTime = getStartOfDayISO();
+      const endTime = new Date().toISOString();
+
+      const { records } = await readRecords("Steps", {
+        timeRangeFilter: { operator: "between", startTime, endTime },
+      });
+
+      let total = 0;
+      for (const record of records) {
+        total += record.count;
+      }
+      return total;
     } catch {
-      setAvailable(false);
+      return 0;
     }
   }, []);
 
-  // Fetch on mount + when app returns to foreground
+  // ── Read past 7 days from Health Connect ──
+  const readWeekHistory = useCallback(async () => {
+    try {
+      const sdkStatus = await getSdkStatus();
+      if (sdkStatus !== SdkAvailabilityStatus.SDK_AVAILABLE) return;
+      const ok = await initialize();
+      if (!ok) return;
+
+      const days = buildWeekDays();
+      const results: DaySteps[] = [];
+
+      for (const day of days) {
+        try {
+          const { records } = await readRecords("Steps", {
+            timeRangeFilter: {
+              operator: "between",
+              startTime: day.start.toISOString(),
+              endTime: day.end.toISOString(),
+            },
+          });
+          let total = 0;
+          for (const record of records) {
+            total += record.count;
+          }
+          results.push({
+            date: day.start.toISOString().slice(0, 10),
+            steps: total,
+            dayLabel: day.dayLabel,
+            isToday: day.isToday,
+          });
+        } catch {
+          results.push({
+            date: day.start.toISOString().slice(0, 10),
+            steps: 0,
+            dayLabel: day.dayLabel,
+            isToday: day.isToday,
+          });
+        }
+      }
+
+      setWeekData(results);
+    } catch {
+      // Silently fail
+    }
+  }, []);
+
+  // ── Main load ──
+  const loadSteps = useCallback(async () => {
+    if (Platform.OS !== "android") {
+      setStatus("no_health_connect");
+      return;
+    }
+
+    try {
+      const granted = await PermissionsAndroid.check(
+        PermissionsAndroid.PERMISSIONS.ACTIVITY_RECOGNITION,
+      );
+      if (!granted) {
+        await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACTIVITY_RECOGNITION,
+          {
+            title: "Step Tracking",
+            message: "The Garden needs access to your activity data to count steps.",
+            buttonPositive: "Allow",
+            buttonNegative: "Deny",
+          },
+        );
+      }
+    } catch {
+      // Permission request failed, continue anyway
+    }
+
+    const hcSteps = await readHealthConnectToday();
+    baselineRef.current = hcSteps;
+    setSteps(hcSteps + liveSteps);
+    setStatus("ready");
+
+    readWeekHistory();
+  }, [readHealthConnectToday, readWeekHistory, liveSteps]);
+
+  // Check on mount + when app returns to foreground
   useEffect(() => {
-    fetchSteps();
+    loadSteps();
 
     const sub = AppState.addEventListener("change", (state) => {
-      if (state === "active") fetchSteps();
+      if (state === "active") loadSteps();
     });
 
     return () => sub.remove();
-  }, [fetchSteps]);
+  }, [loadSteps]);
 
-  // Live pedometer subscription (updates in real-time when available)
+  // Subscribe to live pedometer
   useEffect(() => {
-    if (available !== true) return;
+    if (Platform.OS !== "android") return;
 
-    const sub = Pedometer.watchStepCount((result) => {
-      // watchStepCount gives steps since subscription started
-      // We need to add to the base count, so refetch instead
-      fetchSteps();
+    let subscription: { remove: () => void } | null = null;
+
+    Pedometer.isAvailableAsync().then((available) => {
+      if (!available) return;
+      subscription = Pedometer.watchStepCount((result) => {
+        setLiveSteps(result.steps);
+      });
     });
 
-    return () => sub.remove();
-  }, [available, fetchSteps]);
+    return () => {
+      subscription?.remove();
+    };
+  }, []);
 
-  // Don't render if pedometer is unavailable
-  if (available === false) return null;
-  // Still loading
-  if (available === null) return null;
+  // Update displayed steps when live count changes
+  useEffect(() => {
+    if (status === "ready") {
+      setSteps(baselineRef.current + liveSteps);
+    }
+  }, [liveSteps, status]);
 
-  const progress = steps / goal;
-  const pct = Math.min(Math.round(progress * 100), 100);
-  const remaining = Math.max(goal - steps, 0);
-  const ringColor = progress >= 1 ? colors.moodGood : colors.primary;
-
-  // Rough calorie estimate: ~0.04 cal per step
+  // ── Derived values ──
+  const progress = goal > 0 ? Math.min(steps / goal, 1) : 0;
+  const pct = Math.round(progress * 100);
   const calories = Math.round(steps * 0.04);
-  // Rough distance: ~0.0008 km per step (avg stride)
   const distKm = (steps * 0.0008).toFixed(1);
 
+  // ── No Health Connect ──
+  if (status === "no_health_connect") {
+    return (
+      <GlassCard delay={50} padding={20}>
+        <View style={s.headerRow}>
+          <View style={s.iconWrap}>
+            <Footprints size={16} color={colors.mutedForeground} strokeWidth={1.8} />
+          </View>
+          <Text style={[s.headerLabel, { color: colors.mutedForeground }]}>Steps</Text>
+        </View>
+        <Text style={[s.unavailableText, { color: colors.mutedForeground }]}>
+          Step tracking unavailable on this device.
+        </Text>
+      </GlassCard>
+    );
+  }
+
+  // ── Loading ──
+  if (status === "loading") {
+    return (
+      <GlassCard delay={50} padding={20}>
+        <View style={s.headerRow}>
+          <View style={[s.iconWrap, { backgroundColor: `${colors.primary}15` }]}>
+            <Footprints size={16} color={colors.primary} strokeWidth={1.8} />
+          </View>
+          <Text style={[s.headerLabel, { color: colors.foreground }]}>Steps</Text>
+        </View>
+        <Text style={[s.heroCount, { color: colors.mutedForeground }]}>—</Text>
+        <View style={[s.progressTrack, { backgroundColor: colors.secondary }]}>
+          <View style={[s.progressFill, { width: "0%", backgroundColor: colors.secondary }]} />
+        </View>
+      </GlassCard>
+    );
+  }
+
+  // ── Ready ──
+  const goalReached = steps >= goal;
+  const accentColor = goalReached ? colors.moodGood : colors.primary;
+
   return (
-    <GlassCard delay={50} padding={18}>
-      <SectionHeader title="Steps" />
-
-      <View style={s.row}>
-        {/* Ring */}
-        <View style={s.ringWrap}>
-          <StepsRing
-            progress={progress}
-            color={ringColor}
-            bgColor={colors.secondary}
-          />
-          <View style={s.ringCenter}>
-            <Footprints size={20} color={ringColor} strokeWidth={1.8} />
-          </View>
+    <GlassCard delay={50} padding={20}>
+      {/* Header: icon + label + percentage */}
+      <View style={s.headerRow}>
+        <View style={[s.iconWrap, { backgroundColor: `${accentColor}15` }]}>
+          <Footprints size={16} color={accentColor} strokeWidth={1.8} />
         </View>
+        <Text style={[s.headerLabel, { color: colors.foreground }]}>Steps</Text>
+        <View style={{ flex: 1 }} />
+        <Text style={[s.pctLabel, { color: accentColor }]}>{pct}%</Text>
+      </View>
 
-        {/* Stats */}
-        <View style={s.stats}>
-          <Text style={[s.stepCount, { color: colors.foreground }]}>
-            {steps.toLocaleString()}
-          </Text>
-          <Text style={[s.goalLabel, { color: colors.mutedForeground }]}>
-            / {formatSteps(goal)} goal
-          </Text>
+      {/* Hero step count */}
+      <Text style={[s.heroCount, { color: colors.foreground }]}>
+        {formatNumber(steps)}
+      </Text>
 
-          <View style={s.metaRow}>
-            <View style={s.metaItem}>
-              <Flame size={12} color={colors.accent} strokeWidth={2} />
-              <Text style={[s.metaText, { color: colors.mutedForeground }]}>
-                {calories} cal
-              </Text>
-            </View>
-            <View style={s.metaItem}>
-              <TrendingUp size={12} color={colors.chart3} strokeWidth={2} />
-              <Text style={[s.metaText, { color: colors.mutedForeground }]}>
-                {distKm} km
-              </Text>
-            </View>
-          </View>
+      {/* Progress bar */}
+      <View style={[s.progressTrack, { backgroundColor: colors.secondary }]}>
+        <View
+          style={[
+            s.progressFill,
+            {
+              width: `${pct}%`,
+              backgroundColor: accentColor,
+            },
+          ]}
+        />
+      </View>
+
+      {/* Goal label */}
+      <Text style={[s.goalText, { color: colors.mutedForeground }]}>
+        {goalReached ? "Goal reached!" : `${formatNumber(Math.max(goal - steps, 0))} to go`}
+        {"  ·  "}
+        <Text style={{ color: colors.mutedForeground }}>
+          Goal {formatNumber(goal)}
+        </Text>
+      </Text>
+
+      {/* Stat pills */}
+      <View style={s.statsRow}>
+        <View style={[s.statPill, { backgroundColor: `${colors.accent}12` }]}>
+          <Flame size={13} color={colors.accent} strokeWidth={2} />
+          <Text style={[s.statValue, { color: colors.foreground }]}>{calories}</Text>
+          <Text style={[s.statUnit, { color: colors.mutedForeground }]}>cal</Text>
         </View>
-
-        {/* Percentage badge */}
-        <View style={[s.pctBadge, { backgroundColor: `${ringColor}18` }]}>
-          <Text style={[s.pctText, { color: ringColor }]}>{pct}%</Text>
+        <View style={[s.statPill, { backgroundColor: `${colors.chart3}12` }]}>
+          <MapPin size={13} color={colors.chart3} strokeWidth={2} />
+          <Text style={[s.statValue, { color: colors.foreground }]}>{distKm}</Text>
+          <Text style={[s.statUnit, { color: colors.mutedForeground }]}>km</Text>
+        </View>
+        <View style={[s.statPill, { backgroundColor: `${colors.primary}12` }]}>
+          <Target size={13} color={colors.primary} strokeWidth={2} />
+          <Text style={[s.statValue, { color: colors.foreground }]}>{formatNumber(goal)}</Text>
+          <Text style={[s.statUnit, { color: colors.mutedForeground }]}>goal</Text>
         </View>
       </View>
 
-      {/* Progress message */}
-      {progress >= 1 ? (
-        <Text style={[s.progressMsg, { color: colors.moodGood }]}>
-          🎉 Goal reached! Keep it up!
-        </Text>
-      ) : remaining > 0 ? (
-        <Text style={[s.progressMsg, { color: colors.mutedForeground }]}>
-          {formatSteps(remaining)} steps to go
-        </Text>
-      ) : null}
+      {/* Weekly mini chart */}
+      {weekData.length === 7 && (
+        <MiniWeekChart weekData={weekData} goal={goal} colors={colors} />
+      )}
     </GlassCard>
   );
 }
@@ -201,62 +430,84 @@ export function StepsCard({ goal = DEFAULT_GOAL }: { goal?: number }) {
 // ── Styles ──
 
 const s = StyleSheet.create({
-  row: {
+  // Header
+  headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
+    gap: 8,
+    marginBottom: 14,
   },
-  ringWrap: {
-    width: RING_SIZE,
-    height: RING_SIZE,
+  iconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
     justifyContent: "center",
     alignItems: "center",
   },
-  ringCenter: {
-    position: "absolute",
-    justifyContent: "center",
-    alignItems: "center",
+  headerLabel: {
+    fontFamily: "Sora_600SemiBold",
+    ...typography.sm,
   },
-  stats: {
-    flex: 1,
-  },
-  stepCount: {
-    fontFamily: "Sora_700Bold",
-    fontSize: 26,
-    lineHeight: 30,
-  },
-  goalLabel: {
-    fontFamily: "Manrope_400Regular",
-    ...typography.xs,
-    marginTop: 2,
-  },
-  metaRow: {
-    flexDirection: "row",
-    gap: 14,
-    marginTop: 8,
-  },
-  metaItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  metaText: {
-    fontFamily: "Manrope_500Medium",
-    fontSize: 11,
-  },
-  pctBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-  },
-  pctText: {
+  pctLabel: {
     fontFamily: "Sora_700Bold",
     ...typography.sm,
   },
-  progressMsg: {
+
+  // Hero count
+  heroCount: {
+    fontFamily: "Sora_700Bold",
+    fontSize: 38,
+    lineHeight: 44,
+    letterSpacing: -1,
+    marginBottom: 10,
+  },
+
+  // Progress bar
+  progressTrack: {
+    height: 6,
+    borderRadius: 3,
+    overflow: "hidden",
+    marginBottom: 8,
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 3,
+  },
+
+  // Goal text
+  goalText: {
     fontFamily: "Manrope_500Medium",
-    ...typography.xs,
-    marginTop: 12,
-    textAlign: "center",
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 14,
+  },
+
+  // Stats row
+  statsRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  statPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 10,
+  },
+  statValue: {
+    fontFamily: "Sora_600SemiBold",
+    fontSize: 13,
+  },
+  statUnit: {
+    fontFamily: "Manrope_400Regular",
+    fontSize: 11,
+  },
+
+  // Unavailable
+  unavailableText: {
+    fontFamily: "Manrope_400Regular",
+    ...typography.sm,
+    marginTop: 4,
   },
 });

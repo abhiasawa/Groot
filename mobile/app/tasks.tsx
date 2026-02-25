@@ -17,7 +17,7 @@ import { Calendar, CheckSquare, ListTodo, Sparkles, Square, Tag, X } from "lucid
 
 import { TextInput } from "react-native";
 import * as Haptics from "expo-haptics";
-import { Pencil } from "lucide-react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
 import { useTheme } from "../lib/theme/provider";
 import { useTasks } from "../lib/api/queries";
@@ -397,22 +397,36 @@ function TaskDetailModal({
   onUpdate: (taskId: string, updates: { content?: string; due_date?: string | null }) => void;
 }) {
   const { colors } = useTheme();
-  const [editing, setEditing] = React.useState(false);
+  const [editingContent, setEditingContent] = React.useState(false);
   const [editContent, setEditContent] = React.useState("");
-  const [editDueDate, setEditDueDate] = React.useState("");
+  const [showDatePicker, setShowDatePicker] = React.useState(false);
+  const [dirty, setDirty] = React.useState(false);
 
   React.useEffect(() => {
     if (task) {
       setEditContent(task.content);
-      setEditDueDate(task.due_date ? task.due_date.split("T")[0] ?? "" : "");
-      setEditing(false);
+      setEditingContent(false);
+      setShowDatePicker(false);
+      setDirty(false);
     }
   }, [task]);
+
+  // Auto-save content when exiting inline edit
+  const commitContentEdit = React.useCallback(() => {
+    if (!task) return;
+    const trimmed = editContent.trim();
+    if (trimmed && trimmed !== task.content) {
+      onUpdate(task.id, { content: trimmed });
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    setEditingContent(false);
+  }, [task, editContent, onUpdate]);
 
   if (!task) return null;
 
   const done = task.is_completed;
   const overdue = !done && !!task.due_date && isOverdueDate(task.due_date);
+  const currentDueDate = task.due_date ? new Date(task.due_date) : new Date();
 
   return (
     <Modal transparent animationType="fade" visible={!!task} onRequestClose={onClose}>
@@ -426,66 +440,42 @@ function TaskDetailModal({
           <GlassCard padding={20}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.foreground }]}>Task Details</Text>
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                {!editing && (
-                  <PressScale onPress={() => setEditing(true)} haptic={false}>
-                    <View style={styles.modalCloseBtn}>
-                      <Pencil size={16} color={colors.primary} strokeWidth={2} />
-                    </View>
-                  </PressScale>
-                )}
-                <PressScale onPress={onClose} haptic={false}>
-                  <View style={styles.modalCloseBtn}>
-                    <X size={18} color={colors.mutedForeground} strokeWidth={2} />
-                  </View>
-                </PressScale>
-              </View>
+              <PressScale onPress={onClose} haptic={false}>
+                <View style={styles.modalCloseBtn}>
+                  <X size={18} color={colors.mutedForeground} strokeWidth={2} />
+                </View>
+              </PressScale>
             </View>
 
-            {editing ? (
-              <>
-                <TextInput
-                  style={[
-                    styles.editInput,
-                    {
-                      color: colors.foreground,
-                      borderColor: colors.glassBorder,
-                      backgroundColor: colors.secondary,
-                    },
-                  ]}
-                  value={editContent}
-                  onChangeText={setEditContent}
-                  multiline
-                  autoFocus
-                  textAlignVertical="top"
-                />
-                <View style={styles.editDateRow}>
-                  <Calendar size={15} color={colors.mutedForeground} strokeWidth={1.6} />
-                  <Text style={[styles.editDateLabel, { color: colors.mutedForeground }]}>Due date</Text>
-                  <TextInput
-                    style={[
-                      styles.editDateInput,
-                      {
-                        color: colors.foreground,
-                        borderColor: colors.glassBorder,
-                        backgroundColor: colors.secondary,
-                      },
-                    ]}
-                    value={editDueDate}
-                    onChangeText={setEditDueDate}
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor={colors.mutedForeground}
-                    maxLength={10}
-                  />
-                  {editDueDate.length > 0 && (
-                    <Pressable onPress={() => setEditDueDate("")} hitSlop={8}>
-                      <X size={14} color={colors.mutedForeground} />
-                    </Pressable>
-                  )}
-                </View>
-              </>
+            {/* Tappable content — tap to edit inline */}
+            {editingContent ? (
+              <TextInput
+                style={[
+                  styles.editInput,
+                  {
+                    color: colors.foreground,
+                    borderColor: colors.primary,
+                    backgroundColor: colors.secondary,
+                  },
+                ]}
+                value={editContent}
+                onChangeText={setEditContent}
+                multiline
+                autoFocus
+                textAlignVertical="top"
+                onBlur={commitContentEdit}
+                returnKeyType="done"
+                blurOnSubmit
+              />
             ) : (
-              <Text style={[styles.modalContent, { color: colors.foreground }]}>{task.content}</Text>
+              <Pressable onPress={() => setEditingContent(true)}>
+                <Text style={[styles.modalContent, { color: colors.foreground }]}>
+                  {task.content}
+                </Text>
+                <Text style={[styles.tapToEditHint, { color: colors.mutedForeground }]}>
+                  Tap to edit
+                </Text>
+              </Pressable>
             )}
 
             <View style={styles.modalMetaList}>
@@ -503,22 +493,41 @@ function TaskDetailModal({
                 </Text>
               </View>
 
-              {task.due_date ? (
+              {/* Tappable due date — opens native calendar picker */}
+              <Pressable onPress={() => setShowDatePicker(true)}>
                 <View style={styles.modalMetaItem}>
                   <View style={[styles.modalMetaIcon, { backgroundColor: colors.glassSurface }]}>
-                    <Calendar size={15} color={overdue ? colors.destructive : colors.mutedForeground} strokeWidth={1.6} />
+                    <Calendar size={15} color={overdue ? colors.destructive : colors.primary} strokeWidth={1.6} />
                   </View>
                   <Text style={[styles.modalMetaLabel, { color: colors.mutedForeground }]}>Due</Text>
-                  <Text style={[styles.modalMetaValue, { color: overdue ? colors.destructive : colors.foreground }]}>
-                    {new Date(task.due_date).toLocaleDateString("en-US", {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                    {overdue ? " (overdue)" : ""}
-                  </Text>
+                  {task.due_date ? (
+                    <View style={styles.dueDateValueRow}>
+                      <Text style={[styles.modalMetaValue, { color: overdue ? colors.destructive : colors.foreground, flex: 0 }]}>
+                        {new Date(task.due_date).toLocaleDateString("en-US", {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                        {overdue ? " (overdue)" : ""}
+                      </Text>
+                      <Pressable
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          onUpdate(task.id, { due_date: null });
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        }}
+                        hitSlop={10}
+                      >
+                        <X size={14} color={colors.mutedForeground} />
+                      </Pressable>
+                    </View>
+                  ) : (
+                    <Text style={[styles.modalMetaValue, { color: colors.primary }]}>
+                      Set date
+                    </Text>
+                  )}
                 </View>
-              ) : null}
+              </Pressable>
 
               {task.category ? (
                 <View style={styles.modalMetaItem}>
@@ -545,70 +554,50 @@ function TaskDetailModal({
               </View>
             </View>
 
-            {editing ? (
-              <View style={{ flexDirection: "row", gap: 10 }}>
-                <PressScale
-                  onPress={() => setEditing(false)}
-                  scale={0.97}
-                  style={{ flex: 1 }}
-                >
-                  <View style={[styles.modalActionBtn, { backgroundColor: colors.secondary }]}>
-                    <Text style={[styles.modalActionText, { color: colors.foreground }]}>Cancel</Text>
-                  </View>
-                </PressScale>
-                <PressScale
-                  onPress={() => {
-                    const updates: { content?: string; due_date?: string | null } = {};
-                    if (editContent.trim() && editContent.trim() !== task.content) {
-                      updates.content = editContent.trim();
-                    }
-                    const origDate = task.due_date ? (task.due_date.split("T")[0] ?? "") : "";
-                    if (editDueDate !== origDate) {
-                      updates.due_date = editDueDate || null;
-                    }
-                    if (Object.keys(updates).length > 0) {
-                      onUpdate(task.id, updates);
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }
-                    setEditing(false);
-                  }}
-                  scale={0.97}
-                  style={{ flex: 1 }}
-                >
-                  <View style={[styles.modalActionBtn, { backgroundColor: colors.primary }]}>
-                    <Text style={[styles.modalActionText, { color: colors.primaryForeground }]}>Save</Text>
-                  </View>
-                </PressScale>
-              </View>
-            ) : (
-              <PressScale
-                onPress={() => {
-                  onToggle(task);
-                  onClose();
-                }}
-                scale={0.97}
+            <PressScale
+              onPress={() => {
+                onToggle(task);
+                onClose();
+              }}
+              scale={0.97}
+            >
+              <View
+                style={[
+                  styles.modalActionBtn,
+                  { backgroundColor: done ? colors.secondary : colors.primary },
+                ]}
               >
-                <View
+                <Text
                   style={[
-                    styles.modalActionBtn,
-                    { backgroundColor: done ? colors.secondary : colors.primary },
+                    styles.modalActionText,
+                    { color: done ? colors.foreground : colors.primaryForeground },
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.modalActionText,
-                      { color: done ? colors.foreground : colors.primaryForeground },
-                    ]}
-                  >
-                    {done ? "Mark as Pending" : "Mark as Complete"}
-                  </Text>
-                </View>
-              </PressScale>
-            )}
+                  {done ? "Mark as Pending" : "Mark as Complete"}
+                </Text>
+              </View>
+            </PressScale>
           </GlassCard>
         </View>
       </View>
       </KeyboardAvoidingView>
+
+      {/* Native Date Picker */}
+      {showDatePicker && (
+        <DateTimePicker
+          value={currentDueDate}
+          mode="date"
+          display={Platform.OS === "ios" ? "spinner" : "calendar"}
+          onChange={(_event, selectedDate) => {
+            setShowDatePicker(false);
+            if (selectedDate) {
+              const dateStr = selectedDate.toISOString().slice(0, 10);
+              onUpdate(task.id, { due_date: dateStr });
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }
+          }}
+        />
+      )}
     </Modal>
   );
 }
@@ -815,31 +804,24 @@ const styles = StyleSheet.create({
     fontFamily: "Manrope_400Regular",
     ...typography.base,
     lineHeight: 24,
-    marginBottom: 10,
-    borderWidth: 1,
+    marginBottom: 8,
+    borderWidth: 1.5,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
     minHeight: 80,
   },
-  editDateRow: {
+  tapToEditHint: {
+    fontFamily: "Manrope_400Regular",
+    fontSize: 11,
+    marginTop: 4,
+    marginBottom: 10,
+  },
+  dueDateValueRow: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 18,
-  },
-  editDateLabel: {
-    fontFamily: "Manrope_500Medium",
-    ...typography.xs,
-  },
-  editDateInput: {
-    flex: 1,
-    fontFamily: "Manrope_500Medium",
-    ...typography.sm,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    justifyContent: "space-between",
   },
   modalActionBtn: {
     paddingVertical: 14,

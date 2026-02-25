@@ -216,6 +216,18 @@ export default function JournalScreen() {
                           ) : null}
                         </View>
 
+                        {/* Groot's preceding question for context */}
+                        {memory.context_message ? (
+                          <View style={[styles.contextWrap, { borderLeftColor: `${colors.primary}40` }]}>
+                            <Text style={[styles.contextLabel, { color: colors.mutedForeground }]}>
+                              Groot asked:
+                            </Text>
+                            <Text style={[styles.contextText, { color: `${colors.mutedForeground}CC` }]} numberOfLines={2}>
+                              {memory.context_message}
+                            </Text>
+                          </View>
+                        ) : null}
+
                         {memory.media_url &&
                           (memory.media_url.startsWith("storage:") || memory.media_url.startsWith("media:")) &&
                           (memory.message_type === "image" || memory.message_type === "audio") ? (
@@ -393,6 +405,18 @@ function MemoryModal({ memory, onClose }: { memory: Memory | null; onClose: () =
             </Text>
 
             <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              {/* Groot's question context in full view */}
+              {memory.context_message ? (
+                <View style={[styles.contextWrap, { borderLeftColor: `${colors.primary}40`, marginBottom: 12 }]}>
+                  <Text style={[styles.contextLabel, { color: colors.mutedForeground }]}>
+                    Groot asked:
+                  </Text>
+                  <Text style={[styles.contextText, { color: `${colors.mutedForeground}CC` }]}>
+                    {memory.context_message}
+                  </Text>
+                </View>
+              ) : null}
+
               {memory.media_url &&
               (memory.media_url.startsWith("storage:") || memory.media_url.startsWith("media:")) ? (
                 <View style={styles.modalMedia}>
@@ -494,8 +518,28 @@ const styles = StyleSheet.create({
     ...typography.sm,
     lineHeight: 22,
   },
+  // ── Groot context message ──
+  contextWrap: {
+    borderLeftWidth: 2,
+    paddingLeft: 10,
+    marginBottom: 10,
+    paddingBottom: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(128,128,128,0.12)",
+  },
+  contextLabel: {
+    fontFamily: "Manrope_600SemiBold",
+    fontSize: 10,
+    letterSpacing: 0.3,
+    marginBottom: 3,
+  },
+  contextText: {
+    fontFamily: "Manrope_400Regular",
+    fontSize: 12,
+    lineHeight: 18,
+  },
   bottomGap: {
-    height: 90,
+    height: 70,
   },
   calendarCard: {
     marginTop: 14,

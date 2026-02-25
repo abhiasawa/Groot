@@ -50,7 +50,7 @@ import { PressScale } from "../../components/ui/press-scale";
 import { MoodFace } from "../../components/illustrations/mood-faces";
 import { TabSwipeView } from "../../components/ui/tab-swipe-view";
 import { StepsCard } from "../../components/ui/steps-card";
-import type { DailyMood, WeeklyTrend, Habit } from "../../../shared/types/api";
+import type { DailyMood, Habit } from "../../../shared/types/api";
 
 // ── Constants ────────────────────────────────
 
@@ -108,24 +108,6 @@ function getMoodDistribution(
     count: counts[score] ?? 0,
     pct: Math.round(((counts[score] ?? 0) / total) * 100),
   }));
-}
-
-function getTrendDescription(weeklyTrend: WeeklyTrend[]): string {
-  if (weeklyTrend.length < 2) return "Not enough data for trend analysis yet.";
-
-  const recent = weeklyTrend.slice(-4);
-  const firstEntry = recent[0];
-  const lastEntry = recent[recent.length - 1];
-  if (!firstEntry || !lastEntry) return "Not enough data for trend analysis yet.";
-  const first = firstEntry.avgScore;
-  const last = lastEntry.avgScore;
-  const diff = last - first;
-
-  if (Math.abs(diff) < 0.3) return "Your mood has been steady over recent weeks.";
-  if (diff > 0.5) return "Your mood has been trending upward recently. Keep it up!";
-  if (diff > 0) return "Your mood is slightly improving week over week.";
-  if (diff < -0.5) return "Your mood has dipped recently. Remember to take care of yourself.";
-  return "Your mood has been slightly lower this week.";
 }
 
 // ── Component ────────────────────────────────
@@ -583,11 +565,6 @@ export default function PulseScreen() {
     [data?.dailyMoods],
   );
 
-  const trendText = useMemo(
-    () => getTrendDescription(data?.weeklyTrend ?? []),
-    [data?.weeklyTrend],
-  );
-
   const s = useMemo(() => styles(colors), [colors]);
 
   if (isLoading) {
@@ -622,104 +599,57 @@ export default function PulseScreen() {
             <Text style={s.pageTitle}>Pulse</Text>
           </View>
 
-          {/* Mood check-in / current mood */}
+          {/* Mood check-in — collapses to compact after recording */}
           {activeMood ? (
-            <GlassCard accentColor={getMoodColorFromName(activeMood, colors)} delay={0}>
-              <Text style={s.heroLabel}>Currently feeling...</Text>
-              <View style={s.heroRow}>
+            <GlassCard
+              accentColor={getMoodColorFromName(activeMood, colors)}
+              delay={0}
+              padding={14}
+            >
+              <View style={s.moodCompactRow}>
                 <MoodFace
-                  score={Object.entries(CHECKIN_MOODS).find(([, v]) => v === activeMood)?.[0]
-                    ? Number(Object.entries(CHECKIN_MOODS).find(([, v]) => v === activeMood)![0])
-                    : 3}
-                  size={32}
+                  score={Object.entries(CHECKIN_MOODS).find(([, v]) => v === activeMood)?.[0] ? Number(Object.entries(CHECKIN_MOODS).find(([, v]) => v === activeMood)![0]) : 3}
+                  size={28}
                   color={getMoodColorFromName(activeMood, colors)}
                 />
-                <Text
-                  style={[
-                    s.heroMoodName,
-                    { color: getMoodColorFromName(activeMood, colors) },
-                  ]}
-                >
-                  {activeMood}
+                <Text style={s.moodCompactLabel}>
+                  Feeling{" "}
+                  <Text style={{ color: getMoodColorFromName(activeMood, colors), fontFamily: "Sora_700Bold", textTransform: "capitalize" }}>
+                    {activeMood}
+                  </Text>
+                  {" "}today
                 </Text>
               </View>
-              <PressScale
-                onPress={() => setJustRecorded(null)}
-                haptic={false}
-                style={s.changeMoodBtn}
-              >
-                <Text style={[s.changeMoodText, { color: colors.mutedForeground }]}>
-                  Change
-                </Text>
-              </PressScale>
             </GlassCard>
           ) : (
             <GlassCard delay={0} padding={20}>
               <Text style={s.checkinTitle}>How are you feeling?</Text>
               <View style={s.checkinRow}>
-                {[1, 2, 3, 4, 5].map((score) => (
-                  <PressScale key={score} onPress={() => handleCheckin(score)} scale={0.9}>
-                    <View style={s.checkinItem}>
-                      <MoodFace score={score} size={36} color={getMoodColor(score, colors)} />
-                      <Text style={[s.checkinLabel, { color: colors.mutedForeground }]}>
-                        {MOOD_FACE_LABELS[score]}
-                      </Text>
-                    </View>
-                  </PressScale>
-                ))}
+                {[1, 2, 3, 4, 5].map((score) => {
+                  const moodName = CHECKIN_MOODS[score] ?? "okay";
+                  return (
+                    <PressScale key={score} onPress={() => handleCheckin(score)} scale={0.9}>
+                      <View style={s.checkinItem}>
+                        <MoodFace
+                          score={score}
+                          size={36}
+                          color={getMoodColor(score, colors)}
+                        />
+                        <Text style={[s.checkinLabel, { color: colors.mutedForeground }]}>
+                          {MOOD_FACE_LABELS[score]}
+                        </Text>
+                      </View>
+                    </PressScale>
+                  );
+                })}
               </View>
             </GlassCard>
           )}
 
-          {/* ── Steps ── */}
+          {/* ── Steps (top position) ── */}
           <View style={s.sectionGap}>
             <StepsCard />
           </View>
-
-          {/* ── Habits section ── */}
-          {(habitsData?.habits?.length ?? 0) > 0 && (
-            <View style={s.sectionGap}>
-              <View style={s.habitsHeader}>
-                <SectionHeader title="Habits" />
-                <Pressable
-                  onPress={() => setShowNewHabit(true)}
-                  hitSlop={10}
-                  style={[s.addHabitBtn, { backgroundColor: `${colors.primary}18` }]}
-                >
-                  <Plus size={16} color={colors.primary} strokeWidth={2.4} />
-                </Pressable>
-              </View>
-              {habitsData!.habits.map((h) => (
-                <HabitCard
-                  key={h.id}
-                  habit={h}
-                  colors={colors}
-                  onCheckin={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    habitCheckin.mutate({ habitId: h.id });
-                  }}
-                  onPress={() => setSelectedHabit(h)}
-                />
-              ))}
-            </View>
-          )}
-
-          {(habitsData?.habits?.length ?? 0) === 0 && (
-            <GlassCard delay={50} style={s.sectionGap} padding={20}>
-              <Text style={s.checkinTitle}>Track Your Habits</Text>
-              <Text style={[s.emptySubtitle, { marginBottom: 14 }]}>
-                Build streaks, track progress, and stay consistent.
-              </Text>
-              <PressScale onPress={() => setShowNewHabit(true)} scale={0.97}>
-                <View style={[s.addFirstHabitBtn, { backgroundColor: colors.primary }]}>
-                  <Plus size={18} color={colors.primaryForeground} strokeWidth={2.2} />
-                  <Text style={[s.addFirstHabitText, { color: colors.primaryForeground }]}>
-                    Add Your First Habit
-                  </Text>
-                </View>
-              </PressScale>
-            </GlassCard>
-          )}
 
           {/* Year in Pixels */}
           <GlassCard delay={100} style={s.sectionGap}>
@@ -769,40 +699,8 @@ export default function PulseScreen() {
             </View>
           </GlassCard>
 
-          {/* Weekly Trend */}
-          <GlassCard delay={200} style={s.sectionGap}>
-            <SectionHeader title="Weekly Trend" />
-
-            <Text style={s.trendText}>{trendText}</Text>
-
-            {(data?.weeklyTrend?.length ?? 0) > 0 && (
-              <View style={s.trendWeeks}>
-                {(data?.weeklyTrend ?? []).slice(-6).map((week) => {
-                  return (
-                    <View key={week.weekStart} style={s.trendWeekItem}>
-                      <MoodFace
-                        score={Math.round(week.avgScore)}
-                        size={18}
-                        color={getMoodColor(Math.round(week.avgScore), colors)}
-                      />
-                      <Text style={s.trendWeekScore}>
-                        {week.avgScore.toFixed(1)}
-                      </Text>
-                      <Text style={s.trendWeekLabel}>
-                        {new Date(week.weekStart).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
-          </GlassCard>
-
           {/* Distribution */}
-          <GlassCard delay={300} style={s.sectionGap}>
+          <GlassCard delay={150} style={s.sectionGap}>
             <SectionHeader title="Distribution" />
 
             <View style={s.distributionList}>
@@ -828,6 +726,51 @@ export default function PulseScreen() {
               ))}
             </View>
           </GlassCard>
+
+          {/* ── Habits section (bottom) ── */}
+          {(habitsData?.habits?.length ?? 0) > 0 && (
+            <View style={s.sectionGap}>
+              <View style={s.habitsHeader}>
+                <SectionHeader title="Habits" />
+                <Pressable
+                  onPress={() => setShowNewHabit(true)}
+                  hitSlop={10}
+                  style={[s.addHabitBtn, { backgroundColor: `${colors.primary}18` }]}
+                >
+                  <Plus size={16} color={colors.primary} strokeWidth={2.4} />
+                </Pressable>
+              </View>
+              {habitsData!.habits.map((h) => (
+                <HabitCard
+                  key={h.id}
+                  habit={h}
+                  colors={colors}
+                  onCheckin={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    habitCheckin.mutate({ habitId: h.id });
+                  }}
+                  onPress={() => setSelectedHabit(h)}
+                />
+              ))}
+            </View>
+          )}
+
+          {(habitsData?.habits?.length ?? 0) === 0 && (
+            <GlassCard delay={200} style={s.sectionGap} padding={20}>
+              <Text style={s.checkinTitle}>Track Your Habits</Text>
+              <Text style={[s.emptySubtitle, { marginBottom: 14 }]}>
+                Build streaks, track progress, and stay consistent.
+              </Text>
+              <PressScale onPress={() => setShowNewHabit(true)} scale={0.97}>
+                <View style={[s.addFirstHabitBtn, { backgroundColor: colors.primary }]}>
+                  <Plus size={18} color={colors.primaryForeground} strokeWidth={2.2} />
+                  <Text style={[s.addFirstHabitText, { color: colors.primaryForeground }]}>
+                    Add Your First Habit
+                  </Text>
+                </View>
+              </PressScale>
+            </GlassCard>
+          )}
         </ScrollView>
       </GradientBackground>
       </SafeAreaView>
@@ -946,14 +889,6 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       ...typography.xl,
       textTransform: "capitalize",
     },
-    changeMoodBtn: {
-      marginTop: 12,
-    },
-    changeMoodText: {
-      fontFamily: "Manrope_500Medium",
-      ...typography.xs,
-    },
-
     // ── Check-in ──
     checkinTitle: {
       fontFamily: "Sora_600SemiBold",
@@ -973,6 +908,20 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
     checkinLabel: {
       fontFamily: "Manrope_500Medium",
       fontSize: 11,
+    },
+    checkinItemActive: {
+      transform: [{ scale: 1.1 }],
+    },
+    // ── Compact mood (after recording) ──
+    moodCompactRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    moodCompactLabel: {
+      fontFamily: "Manrope_400Regular",
+      ...typography.sm,
+      color: c.mutedForeground,
     },
 
     // ── Year in Pixels ──
@@ -1018,36 +967,6 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       fontFamily: "Manrope_400Regular",
       ...typography.xs,
       color: c.mutedForeground,
-    },
-
-    // ── Weekly Trend ──
-    trendText: {
-      fontFamily: "Manrope_400Regular",
-      ...typography.sm,
-      color: c.foreground,
-      lineHeight: 22,
-      marginBottom: 14,
-    },
-    trendWeeks: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      gap: 8,
-    },
-    trendWeekItem: {
-      alignItems: "center",
-      flex: 1,
-    },
-    trendWeekScore: {
-      fontFamily: "Sora_600SemiBold",
-      ...typography.xs,
-      color: c.foreground,
-    },
-    trendWeekLabel: {
-      fontFamily: "Manrope_400Regular",
-      fontSize: 10,
-      lineHeight: 14,
-      color: c.mutedForeground,
-      marginTop: 2,
     },
 
     // ── Distribution ──
