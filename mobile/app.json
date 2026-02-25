@@ -63,6 +63,7 @@
       ],
       "expo-sensors",
       "@react-native-community/datetimepicker",
+      "@react-native-google-signin/google-signin",
       "react-native-health-connect",
       "./plugins/withHealthConnect.js"
     ],

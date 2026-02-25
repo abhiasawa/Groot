@@ -8,9 +8,13 @@ import {
   View,
 } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
-import { Sprout, LogIn } from "lucide-react-native";
-import * as AuthSession from "expo-auth-session";
-import * as WebBrowser from "expo-web-browser";
+import { Sprout } from "lucide-react-native";
+import {
+  GoogleSignin,
+  isErrorWithCode,
+  isSuccessResponse,
+  statusCodes,
+} from "@react-native-google-signin/google-signin";
 
 import { useAuth } from "../../lib/auth/provider";
 import { useTheme } from "../../lib/theme/provider";
@@ -19,14 +23,17 @@ import { GlassCard } from "../../components/ui/glass-card";
 import { GradientBackground } from "../../components/ui/gradient-background";
 import { PressScale } from "../../components/ui/press-scale";
 
-// Required for Expo AuthSession on Android
-WebBrowser.maybeCompleteAuthSession();
-
 const API_BASE = (
   process.env.EXPO_PUBLIC_API_BASE_URL ?? "https://groot-three.vercel.app"
 ).replace(/\/$/, "");
 
-const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ?? "";
+const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ?? "";
+
+// Configure Google Sign-In on module load
+GoogleSignin.configure({
+  webClientId: GOOGLE_WEB_CLIENT_ID,
+  offlineAccess: false,
+});
 
 export default function LoginScreen() {
   const { setToken } = useAuth();
@@ -35,52 +42,52 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Google OAuth discovery document
-  const discovery = AuthSession.useAutoDiscovery("https://accounts.google.com");
-
-  // Build the auth request
-  const redirectUri = AuthSession.makeRedirectUri({
-    scheme: "thegarden",
-  });
-
-  const [request, response, promptAsync] = AuthSession.useAuthRequest(
-    {
-      clientId: GOOGLE_CLIENT_ID,
-      scopes: ["openid", "profile", "email"],
-      redirectUri,
-      responseType: AuthSession.ResponseType.IdToken,
-    },
-    discovery,
-  );
-
-  // Handle the OAuth response
-  useEffect(() => {
-    if (response?.type === "success" && response.params?.id_token) {
-      handleGoogleToken(response.params.id_token);
-    } else if (response?.type === "error") {
-      setError(response.error?.message ?? "Google sign-in failed");
-      setLoading(false);
-    } else if (response?.type === "dismiss") {
-      setLoading(false);
-    }
-  }, [response]);
-
   const handleGoogleSignIn = async () => {
     setError(null);
     setLoading(true);
 
     try {
-      await promptAsync();
-    } catch {
-      setError("Could not open Google sign-in");
+      // Check Play Services availability
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+
+      // Sign in natively — no browser redirect needed
+      const response = await GoogleSignin.signIn();
+
+      if (isSuccessResponse(response)) {
+        const idToken = response.data.idToken;
+        if (idToken) {
+          await handleGoogleToken(idToken);
+        } else {
+          setError("No ID token received from Google");
+          setLoading(false);
+        }
+      } else {
+        // User cancelled
+        setLoading(false);
+      }
+    } catch (err) {
+      if (isErrorWithCode(err)) {
+        switch (err.code) {
+          case statusCodes.SIGN_IN_CANCELLED:
+            // User cancelled the sign-in flow
+            break;
+          case statusCodes.IN_PROGRESS:
+            setError("Sign-in already in progress");
+            break;
+          case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
+            setError("Google Play Services not available");
+            break;
+          default:
+            setError(err.message || "Google sign-in failed");
+        }
+      } else {
+        setError("Could not open Google sign-in");
+      }
       setLoading(false);
     }
   };
 
   const handleGoogleToken = async (idToken: string) => {
-    setLoading(true);
-    setError(null);
-
     try {
       const res = await fetch(`${API_BASE}/api/auth/google`, {
         method: "POST",
@@ -172,7 +179,7 @@ export default function LoginScreen() {
                       styles.googleButton,
                       {
                         backgroundColor: colors.foreground,
-                        opacity: loading || !request ? 0.6 : 1,
+                        opacity: loading ? 0.6 : 1,
                       },
                     ]}
                   >
@@ -212,9 +219,8 @@ export default function LoginScreen() {
   );
 }
 
-// ── Simple Google "G" icon using SVG ──
+// ── Simple Google "G" icon ──
 function GoogleIcon({ size }: { size: number }) {
-  // Using a simple text "G" with Google colors as a lightweight alternative
   return (
     <View style={{ width: size, height: size, justifyContent: "center", alignItems: "center" }}>
       <Text style={{ fontSize: size * 0.8, fontWeight: "700", color: "#4285F4" }}>G</Text>

@@ -51,32 +51,12 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
-    // ── Step 2: Check access control ──
+    // ── Step 2: Access control ──
+    // Google OAuth consent screen in "Testing" mode acts as the gatekeeper.
+    // Only users added as test users in Google Cloud Console can sign in.
+    // No additional allowed_users check needed.
     const ownerEmail = process.env.OWNER_EMAIL;
     const isOwner = ownerEmail && googleUser.email.toLowerCase() === ownerEmail.toLowerCase();
-
-    if (!isOwner) {
-      // Check if email is in allowed_users table
-      const { data: allowed } = await supabase
-        .from("allowed_users")
-        .select("id")
-        .eq("email", googleUser.email.toLowerCase())
-        .single();
-
-      if (!allowed) {
-        logger.info(
-          { email: googleUser.email },
-          "Google auth denied — email not in allowed_users",
-        );
-        return NextResponse.json(
-          {
-            error: "not_allowed",
-            message: "Groot is invite-only. Ask the owner to add your email.",
-          },
-          { status: 403 },
-        );
-      }
-    }
 
     // ── Step 3: Find or create user ──
     type DbUser = { id: string; display_name: string | null; email: string | null };
