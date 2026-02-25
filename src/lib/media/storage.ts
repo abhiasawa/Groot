@@ -9,6 +9,8 @@ const EXT_MAP: Record<string, string> = {
   "audio/ogg": "ogg",
   "audio/mpeg": "mp3",
   "audio/mp4": "m4a",
+  "audio/m4a": "m4a",
+  "audio/x-m4a": "m4a",
   "audio/wav": "wav",
   "audio/webm": "webm",
   "audio/aac": "aac",

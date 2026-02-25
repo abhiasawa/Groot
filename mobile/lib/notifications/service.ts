@@ -11,6 +11,61 @@ import { Platform } from "react-native";
 
 const CHANNEL_ID = "groot-reminders";
 
+// ── Feature tips pool ──────────────────────────
+
+export const FEATURE_TIPS = [
+  {
+    title: "Voice notes",
+    body: "Tap the mic in the chat to record a voice note. Groot will transcribe and respond to it.",
+  },
+  {
+    title: "Camera capture",
+    body: "Tap the camera icon to snap a photo and send it to Groot for analysis or journaling.",
+  },
+  {
+    title: "Evening reflection",
+    body: "Every evening at 9 PM, Groot sends you a reflection prompt. Try responding — it builds your journal.",
+  },
+  {
+    title: "Weekly report",
+    body: "Every Sunday, Groot generates a weekly summary of your mood, habits, and journal patterns.",
+  },
+  {
+    title: "WhatsApp linking",
+    body: "Link your WhatsApp in Settings to chat with Groot directly from WhatsApp.",
+  },
+  {
+    title: "Mood tracking",
+    body: "Log your mood in the Pulse tab. Over time, Groot spots patterns and gives you insights.",
+  },
+  {
+    title: "Task management",
+    body: "Mention tasks in your messages and Groot will automatically track them in the Tasks tab.",
+  },
+  {
+    title: "Journal filters",
+    body: "Switch to calendar view in Journal to filter entries by text, voice, or photo.",
+  },
+  {
+    title: "Dark mode",
+    body: "You can switch between light, dark, or system theme in Settings > Appearance.",
+  },
+  {
+    title: "Message history",
+    body: "Open the chat to scroll through your full conversation history with Groot.",
+  },
+];
+
+/** Pick a deterministic tip based on the current week number. */
+export function getTipForCurrentWeek(): (typeof FEATURE_TIPS)[number] {
+  const now = new Date();
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+  const weekNumber = Math.floor(
+    (now.getTime() - startOfYear.getTime()) / (7 * 24 * 60 * 60 * 1000),
+  );
+  return FEATURE_TIPS[weekNumber % FEATURE_TIPS.length]!;
+}
+
 // ── Notification definitions ────────────────────
 
 interface NotificationDef {
@@ -46,14 +101,6 @@ const NOTIFICATION_DEFS: NotificationDef[] = [
     hour: 10,
     minute: 0,
     weekdays: [1], // Sunday
-  },
-  {
-    key: "feature_tips",
-    title: "Did you know? \uD83D\uDCA1",
-    body: "Tap to discover a handy Groot feature you might have missed.",
-    hour: 14,
-    minute: 0,
-    weekdays: [4], // Wednesday
   },
 ];
 
@@ -102,12 +149,12 @@ export async function syncScheduledNotifications(
   // Cancel all existing scheduled notifications
   await Notifications.cancelAllScheduledNotificationsAsync();
 
+  // Schedule standard notifications
   for (const def of NOTIFICATION_DEFS) {
     const enabled = prefs[def.key] ?? true;
     if (!enabled) continue;
 
     if (def.weekdays && def.weekdays.length > 0) {
-      // Schedule one trigger per weekday
       for (const weekday of def.weekdays) {
         await Notifications.scheduleNotificationAsync({
           content: {
@@ -125,7 +172,6 @@ export async function syncScheduledNotifications(
         });
       }
     } else {
-      // Daily trigger
       await Notifications.scheduleNotificationAsync({
         content: {
           title: def.title,
@@ -141,6 +187,26 @@ export async function syncScheduledNotifications(
       });
     }
   }
+
+  // Schedule feature tips (Wednesday 2 PM, rotating content)
+  const featureTipsEnabled = prefs["feature_tips"] ?? true;
+  if (featureTipsEnabled) {
+    const tip = getTipForCurrentWeek();
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: `Tip: ${tip.title}`,
+        body: tip.body,
+        data: { screen: "/(tabs)/journal", type: "feature_tip" },
+        ...(Platform.OS === "android" && { channelId: CHANNEL_ID }),
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+        weekday: 4, // Wednesday
+        hour: 14,
+        minute: 0,
+      },
+    });
+  }
 }
 
 /**
@@ -154,8 +220,6 @@ function screenForKey(key: string): string {
       return "/(tabs)/journal";
     case "weekly_report":
       return "/(tabs)/journal";
-    case "feature_tips":
-      return "/(tabs)/settings";
     default:
       return "/(tabs)/journal";
   }

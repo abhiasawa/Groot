@@ -107,7 +107,9 @@ export default function LoginScreen() {
         if (data.error === "not_allowed") {
           setError(data.message ?? "Groot is invite-only. Ask the owner to add your email.");
         } else {
-          setError(data.error ?? data.message ?? "Sign-in failed");
+          const details = (data as Record<string, unknown>).details;
+          const msg = data.error ?? data.message ?? "Sign-in failed";
+          setError(details ? `${msg}: ${details}` : msg);
         }
         return;
       }

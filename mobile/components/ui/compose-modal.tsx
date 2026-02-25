@@ -15,7 +15,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
-import * as FileSystem from "expo-file-system";
+import { File as ExpoFile } from "expo-file-system";
 import { Audio } from "expo-av";
 import {
   X,
@@ -31,6 +31,23 @@ import { useTheme } from "../../lib/theme/provider";
 import { typography } from "../../constants/typography";
 import { apiFetch } from "../../lib/api/client";
 
+// ── Helpers ──
+
+/** Read a local file URI as a base64-encoded string (replaces deprecated readAsStringAsync). */
+async function readFileAsBase64(uri: string): Promise<string> {
+  const file = new ExpoFile(uri);
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  // Convert bytes to base64 in chunks to avoid call stack overflow
+  let binary = "";
+  const chunkSize = 8192;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
+}
+
 // ── Types ──
 
 interface ComposeResponse {
@@ -44,11 +61,13 @@ interface ComposeResponse {
 interface ComposeModalProps {
   visible: boolean;
   onClose: () => void;
+  /** Auto-trigger mode: "text" focuses input, "voice" starts recording, "image" opens gallery */
+  initialMode?: "text" | "voice" | "image" | null;
 }
 
 // ── Main Component ──
 
-export function ComposeModal({ visible, onClose }: ComposeModalProps) {
+export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const [text, setText] = useState("");
@@ -64,17 +83,26 @@ export function ComposeModal({ visible, onClose }: ComposeModalProps) {
   const pulseAnim = useRef(new RNAnimated.Value(1)).current;
   const inputRef = useRef<TextInput>(null);
 
-  // Focus input only when modal first opens (not on reply changes)
-  const justOpened = useRef(false);
+  // Track which mode was auto-triggered to avoid re-triggering
+  const triggeredModeRef = useRef<string | null>(null);
+
+  // Auto-trigger mode when modal opens
   useEffect(() => {
-    if (visible && !justOpened.current) {
-      justOpened.current = true;
-      setTimeout(() => inputRef.current?.focus(), 350);
+    if (visible && initialMode && triggeredModeRef.current !== initialMode) {
+      triggeredModeRef.current = initialMode;
+      if (initialMode === "text") {
+        setTimeout(() => inputRef.current?.focus(), 350);
+      } else if (initialMode === "voice") {
+        // Small delay to let modal animate in before starting recording
+        setTimeout(() => startRecording(), 400);
+      } else if (initialMode === "image") {
+        setTimeout(() => pickImage(), 400);
+      }
     }
     if (!visible) {
-      justOpened.current = false;
+      triggeredModeRef.current = null;
     }
-  }, [visible]);
+  }, [visible, initialMode]);
 
   // Cleanup on close
   const handleClose = useCallback(() => {
@@ -113,9 +141,7 @@ export function ComposeModal({ visible, onClose }: ComposeModalProps) {
 
       if (imagePreview) {
         // Send image
-        const base64 = await FileSystem.readAsStringAsync(imagePreview, {
-          encoding: "base64" as const,
-        });
+        const base64 = await readFileAsBase64(imagePreview);
         response = await apiFetch<ComposeResponse>("/api/mobile/compose", {
           method: "POST",
           body: JSON.stringify({
@@ -217,9 +243,7 @@ export function ComposeModal({ visible, onClose }: ComposeModalProps) {
       // Read audio file as base64
       let base64: string;
       try {
-        base64 = await FileSystem.readAsStringAsync(uri, {
-          encoding: "base64" as const,
-        });
+        base64 = await readFileAsBase64(uri);
       } catch {
         setReply("Couldn't read the recorded audio file. Try again.");
         setSending(false);

@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
-import * as FileSystem from "expo-file-system";
+import { File as ExpoFile } from "expo-file-system";
 import { Audio } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import {
@@ -23,6 +23,7 @@ import {
   Send,
   Mic,
   Image as ImageIcon,
+  Camera,
   Square,
   Sprout,
   ChevronDown,
@@ -32,6 +33,22 @@ import { useTheme } from "../../lib/theme/provider";
 import { typography } from "../../constants/typography";
 import { apiFetch } from "../../lib/api/client";
 import { ChatBubble, DateSeparator, TypingIndicator } from "./chat-bubble";
+
+// ── Helpers ──
+
+/** Read a local file URI as a base64-encoded string (replaces deprecated readAsStringAsync). */
+async function readFileAsBase64(uri: string): Promise<string> {
+  const file = new ExpoFile(uri);
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const chunkSize = 8192;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
+}
 
 // ── Types ──
 
@@ -44,6 +61,8 @@ interface ChatMessage {
   media_description?: string | null;
   metadata?: Record<string, unknown> | null;
   created_at: string;
+  /** Local file URI for optimistic display (images, voice notes). */
+  local_uri?: string | null;
 }
 
 interface MessagesResponse {
@@ -263,9 +282,7 @@ export function ChatScreen({ visible, onClose }: ChatScreenProps) {
       };
       setMessages((prev) => [...prev, userMsg]);
 
-      const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: "base64" as const,
-      });
+      const base64 = await readFileAsBase64(uri);
 
       const response = await apiFetch<ComposeResponse>("/api/mobile/compose", {
         method: "POST",
@@ -316,6 +333,20 @@ export function ChatScreen({ visible, onClose }: ChatScreenProps) {
     }
   }, []);
 
+  const takePhoto = useCallback(async () => {
+    const { granted } = await ImagePicker.requestCameraPermissionsAsync();
+    if (!granted) return;
+
+    const result = await ImagePicker.launchCameraAsync({
+      quality: 0.7,
+      base64: false,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      await sendImage(result.assets[0].uri, result.assets[0].mimeType ?? "image/jpeg");
+    }
+  }, []);
+
   const sendImage = useCallback(async (uri: string, mimeType: string) => {
     setSending(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -328,13 +359,12 @@ export function ChatScreen({ visible, onClose }: ChatScreenProps) {
       content: null,
       media_description: "Photo",
       created_at: new Date().toISOString(),
+      local_uri: uri,
     };
     setMessages((prev) => [...prev, userMsg]);
 
     try {
-      const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: "base64" as const,
-      });
+      const base64 = await readFileAsBase64(uri);
 
       const response = await apiFetch<ComposeResponse>("/api/mobile/compose", {
         method: "POST",
@@ -416,8 +446,8 @@ export function ChatScreen({ visible, onClose }: ChatScreenProps) {
     <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
       <KeyboardAvoidingView
         style={[styles.container, { backgroundColor: colors.background }]}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={0}
       >
         {/* ── Header ── */}
         <View
@@ -469,6 +499,8 @@ export function ChatScreen({ visible, onClose }: ChatScreenProps) {
                   direction={item.message.direction}
                   content={item.message.content}
                   mediaDescription={item.message.media_description}
+                  mediaUrl={item.message.media_url}
+                  localUri={item.message.local_uri}
                   messageType={item.message.message_type}
                   timestamp={item.message.created_at}
                 />
@@ -559,6 +591,9 @@ export function ChatScreen({ visible, onClose }: ChatScreenProps) {
                 </Pressable>
                 <Pressable onPress={pickImage} hitSlop={8} style={styles.mediaBtn}>
                   <ImageIcon size={20} color={colors.mutedForeground} strokeWidth={1.8} />
+                </Pressable>
+                <Pressable onPress={takePhoto} hitSlop={8} style={styles.mediaBtn}>
+                  <Camera size={20} color={colors.mutedForeground} strokeWidth={1.8} />
                 </Pressable>
               </View>
 

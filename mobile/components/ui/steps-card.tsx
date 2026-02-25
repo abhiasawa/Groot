@@ -12,6 +12,7 @@ import { Pedometer } from "expo-sensors";
 import {
   initialize,
   readRecords,
+  requestPermission,
   getSdkStatus,
   SdkAvailabilityStatus,
 } from "react-native-health-connect";
@@ -183,6 +184,9 @@ export function StepsCard({ goal = DEFAULT_GOAL }: { goal?: number }) {
       const ok = await initialize();
       if (!ok) return 0;
 
+      // Request Health Connect permission for Steps read access
+      await requestPermission([{ accessType: "read", recordType: "Steps" }]);
+
       const startTime = getStartOfDayISO();
       const endTime = new Date().toISOString();
 
@@ -274,11 +278,11 @@ export function StepsCard({ goal = DEFAULT_GOAL }: { goal?: number }) {
 
     const hcSteps = await readHealthConnectToday();
     baselineRef.current = hcSteps;
-    setSteps(hcSteps + liveSteps);
+    setSteps(hcSteps);
     setStatus("ready");
 
     readWeekHistory();
-  }, [readHealthConnectToday, readWeekHistory, liveSteps]);
+  }, [readHealthConnectToday, readWeekHistory]);
 
   // Check on mount + when app returns to foreground
   useEffect(() => {

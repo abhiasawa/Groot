@@ -4,6 +4,7 @@ import {
   PortalAuthError,
 } from "@/lib/auth/portal-user";
 import { getSupabaseAdmin } from "@/lib/supabase/server";
+import { sendWhatsAppMessage } from "@/lib/whatsapp/client";
 import { logger } from "@/lib/logger";
 
 /**
@@ -11,7 +12,7 @@ import { logger } from "@/lib/logger";
  *
  * Body: { whatsapp_number: string }
  *
- * The number should include country code (e.g. "919876543210").
+ * Accepts a 10-digit Indian number (auto-prepends 91) or a full international number.
  * If another user already has this number, the link is rejected.
  */
 export async function POST(request: NextRequest) {
@@ -29,11 +30,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Normalize: strip spaces, dashes, plus sign — keep only digits
-    const normalized = whatsapp_number.replace(/[\s\-+()]/g, "");
+    let normalized = whatsapp_number.replace(/[\s\-+()]/g, "");
+
+    // Auto-prepend 91 for 10-digit Indian numbers
+    if (normalized.length === 10 && /^[6-9]\d{9}$/.test(normalized)) {
+      normalized = `91${normalized}`;
+    }
 
     if (!/^\d{10,15}$/.test(normalized)) {
       return NextResponse.json(
-        { error: "Invalid phone number format. Include country code (e.g. 919876543210)." },
+        { error: "Invalid phone number. Enter your 10-digit mobile number." },
         { status: 400 },
       );
     }
@@ -73,6 +79,18 @@ export async function POST(request: NextRequest) {
       { userId: user.id, whatsapp_number: normalized },
       "WhatsApp number linked",
     );
+
+    // Send a welcome message on WhatsApp so the user knows it's working
+    try {
+      const displayName = user.display_name ?? "there";
+      await sendWhatsAppMessage(
+        normalized,
+        `Hey ${displayName}! Your WhatsApp is now linked to Groot. You can message me here anytime — I'll remember everything.`,
+      );
+    } catch (msgErr) {
+      // Non-fatal: linking succeeded even if the welcome message fails
+      logger.warn({ error: msgErr, userId: user.id }, "Failed to send WhatsApp welcome message");
+    }
 
     return NextResponse.json({
       ok: true,

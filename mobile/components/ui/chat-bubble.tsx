@@ -1,38 +1,43 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Image } from "react-native";
 import { useTheme } from "../../lib/theme/provider";
 import { typography } from "../../constants/typography";
+import { MediaPlayer } from "./media-player";
 
 interface ChatBubbleProps {
   direction: "inbound" | "outbound";
   content: string | null;
   mediaDescription?: string | null;
+  mediaUrl?: string | null;
+  localUri?: string | null;
   messageType: string;
   timestamp: string;
-  isFirst?: boolean; // first in a group from same direction
+  isFirst?: boolean;
 }
 
 export function ChatBubble({
   direction,
   content,
   mediaDescription,
+  mediaUrl,
+  localUri,
   messageType,
   timestamp,
   isFirst = true,
 }: ChatBubbleProps) {
   const { colors } = useTheme();
-  const isGroot = direction === "outbound"; // outbound = Groot's reply
-
-  const displayText =
-    content ||
-    mediaDescription ||
-    (messageType === "audio" ? "Voice note" : messageType === "image" ? "Photo" : "");
+  const isGroot = direction === "outbound";
 
   const time = new Date(timestamp).toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
   });
+
+  const hasMedia = messageType === "image" || messageType === "audio";
+  const hasMediaUrl = !!mediaUrl;
+  const hasLocalUri = !!localUri;
+  const isTextOnly = messageType === "text" || (!hasMedia);
 
   return (
     <View
@@ -45,6 +50,7 @@ export function ChatBubble({
       <View
         style={[
           styles.bubble,
+          (messageType === "image" && (hasLocalUri || hasMediaUrl)) && styles.mediaBubble,
           isGroot
             ? [
                 styles.bubbleLeft,
@@ -59,39 +65,68 @@ export function ChatBubble({
               ],
         ]}
       >
-        {messageType === "audio" && !content && (
+        {/* Image: local URI for optimistic, MediaPlayer for stored */}
+        {messageType === "image" && hasLocalUri && (
+          <Image
+            source={{ uri: localUri! }}
+            style={styles.localImage}
+            resizeMode="cover"
+          />
+        )}
+        {messageType === "image" && !hasLocalUri && hasMediaUrl && (
+          <View style={styles.mediaWrap}>
+            <MediaPlayer mediaUrl={mediaUrl!} messageType="image" />
+          </View>
+        )}
+
+        {/* Audio: MediaPlayer for stored, placeholder for optimistic */}
+        {messageType === "audio" && hasMediaUrl && (
+          <View style={styles.mediaWrap}>
+            <MediaPlayer mediaUrl={mediaUrl!} messageType="audio" />
+          </View>
+        )}
+        {messageType === "audio" && !hasMediaUrl && !content && (
           <Text
             style={[
               styles.mediaLabel,
               { color: isGroot ? colors.mutedForeground : `${colors.primaryForeground}90` },
             ]}
           >
-            🎙️ Voice note
+            Voice note (processing...)
           </Text>
         )}
-        {messageType === "image" && !content && (
+
+        {/* Text content */}
+        {content ? (
           <Text
             style={[
-              styles.mediaLabel,
-              { color: isGroot ? colors.mutedForeground : `${colors.primaryForeground}90` },
+              styles.text,
+              (messageType === "image" && (hasLocalUri || hasMediaUrl)) && styles.captionText,
+              {
+                color: isGroot ? colors.foreground : colors.primaryForeground,
+              },
             ]}
           >
-            📷 Photo
+            {content}
           </Text>
-        )}
-        <Text
-          style={[
-            styles.text,
-            {
-              color: isGroot ? colors.foreground : colors.primaryForeground,
-            },
-          ]}
-        >
-          {displayText}
-        </Text>
+        ) : isTextOnly ? (
+          <Text
+            style={[
+              styles.text,
+              {
+                color: isGroot ? colors.foreground : colors.primaryForeground,
+              },
+            ]}
+          >
+            {mediaDescription || ""}
+          </Text>
+        ) : null}
+
+        {/* Timestamp */}
         <Text
           style={[
             styles.time,
+            (messageType === "image" && (hasLocalUri || hasMediaUrl)) && styles.captionTime,
             {
               color: isGroot
                 ? colors.mutedForeground
@@ -182,6 +217,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 18,
+    overflow: "hidden",
+  },
+  mediaBubble: {
+    paddingTop: 0,
+    paddingHorizontal: 0,
   },
   bubbleLeft: {
     borderTopLeftRadius: 6,
@@ -195,10 +235,25 @@ const styles = StyleSheet.create({
     ...typography.sm,
     lineHeight: 21,
   },
+  captionText: {
+    paddingHorizontal: 14,
+    paddingTop: 8,
+  },
+  localImage: {
+    width: "100%",
+    height: 200,
+  },
+  mediaWrap: {
+    marginBottom: -6,
+  },
   mediaLabel: {
     fontFamily: "Manrope_500Medium",
     fontSize: 11,
     marginBottom: 4,
+  },
+  captionTime: {
+    paddingHorizontal: 14,
+    paddingBottom: 4,
   },
   time: {
     fontFamily: "Manrope_400Regular",

@@ -21,7 +21,7 @@ import {
   BellOff,
   BookOpen,
   Calendar,
-  Clock,
+  Lightbulb,
   User,
   LogOut,
   Mail,
@@ -32,6 +32,7 @@ import {
   Check,
 } from "lucide-react-native";
 
+import Constants from "expo-constants";
 import { useAuth } from "../lib/auth/provider";
 import { useTheme } from "../lib/theme/provider";
 import { useSettings, useCurrentUser } from "../lib/api/queries";
@@ -59,16 +60,16 @@ function useNotificationPrefs(): NotificationPref[] {
 
   return [
     {
-      key: "evening_journal",
-      label: "Evening Reflection",
-      description: "A daily prompt to close your day.",
-      icon: <BookOpen size={17} color={colors.chart1} strokeWidth={1.6} />,
-    },
-    {
       key: "morning_checkin",
       label: "Daily Check-in",
       description: "Morning nudge to start with intent.",
       icon: <Calendar size={17} color={colors.chart2} strokeWidth={1.6} />,
+    },
+    {
+      key: "evening_journal",
+      label: "Evening Reflection",
+      description: "A daily prompt to close your day.",
+      icon: <BookOpen size={17} color={colors.chart1} strokeWidth={1.6} />,
     },
     {
       key: "weekly_report",
@@ -79,8 +80,8 @@ function useNotificationPrefs(): NotificationPref[] {
     {
       key: "feature_tips",
       label: "Feature Tips",
-      description: "Occasional tips for better workflows.",
-      icon: <Clock size={17} color={colors.chart4} strokeWidth={1.6} />,
+      description: "Weekly tips to get more from Groot.",
+      icon: <Lightbulb size={17} color={colors.chart4} strokeWidth={1.6} />,
     },
   ];
 }
@@ -168,6 +169,10 @@ export default function SettingsScreen() {
       setShowWhatsAppInput(false);
       setWhatsAppNumber("");
       void refetchMe();
+      Alert.alert(
+        "WhatsApp Linked",
+        "Check your WhatsApp — Groot just said hello!",
+      );
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to link WhatsApp";
       setWhatsAppError(message);
@@ -377,7 +382,7 @@ export default function SettingsScreen() {
                         Link WhatsApp
                       </Text>
                       <Text style={[styles.prefDesc, { color: colors.mutedForeground }]}>
-                        Include country code (e.g. +91 98765 43210)
+                        Enter your phone number
                       </Text>
                     </View>
                   </View>
@@ -392,7 +397,7 @@ export default function SettingsScreen() {
                           borderColor: whatsAppError ? colors.destructive : colors.glassBorder,
                         },
                       ]}
-                      placeholder="+91 98765 43210"
+                      placeholder="98765 43210"
                       placeholderTextColor={colors.mutedForeground}
                       keyboardType="phone-pad"
                       value={whatsAppNumber}
@@ -516,7 +521,9 @@ export default function SettingsScreen() {
             </GlassCard>
           </View>
 
-          <Text style={[styles.versionText, { color: colors.mutedForeground }]}>Groot Mobile v1.0.0</Text>
+          <Text style={[styles.versionText, { color: colors.mutedForeground }]}>
+            The Garden v{Constants.expoConfig?.version ?? "1.0.0"}
+          </Text>
           <View style={styles.bottomSpacer} />
         </ScrollView>
       </GradientBackground>

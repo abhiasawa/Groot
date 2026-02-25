@@ -1,48 +1,205 @@
-import React, { useCallback } from "react";
-import { View, Text, Pressable, StyleSheet, Platform } from "react-native";
+import React, { useCallback, useMemo, useRef, useState } from "react";
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  PanResponder,
+} from "react-native";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
+  withTiming,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import { Plus } from "lucide-react-native";
+import { Plus, Type, Mic, Camera, X } from "lucide-react-native";
 
 import { useTheme } from "../../lib/theme/provider";
 import { useCompose } from "../../lib/compose-context";
 
-const TAB_ORDER = ["journal", "mood", "__fab__", "tasks", "settings"] as const;
+const TAB_ORDER = ["journal", "tasks", "__fab__", "mood", "settings"] as const;
+
+// Radial menu config: 3 items in an arc above the FAB
+const RADIAL_RADIUS = 80;
+// Angles: -135 = top-left, -90 = straight up, -45 = top-right
+const ITEM_ANGLES = [-135, -90, -45] as const;
+const ITEM_MODES = ["text", "voice", "image"] as const;
+type ComposeMode = "text" | "voice" | "image";
+
+// Hit area radius for detecting which option the thumb is over
+const HIT_RADIUS = 34;
 
 function getTabLabel(name: string, title?: string) {
   if (title) return title;
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
+/** Calculate x,y offset for a radial item */
+function radialXY(angleDeg: number, radius: number) {
+  const rad = (angleDeg * Math.PI) / 180;
+  return { x: Math.cos(rad) * radius, y: Math.sin(rad) * radius };
+}
+
+// Pre-compute positions
+const POSITIONS = ITEM_ANGLES.map((a) => radialXY(a, RADIAL_RADIUS));
+
 export function BottomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { colors } = useTheme();
   const { open: openCompose } = useCompose();
   const insets = useSafeAreaInsets();
   const bottomInset = Math.max(insets.bottom, Platform.OS === "ios" ? 8 : 6);
+  const [expanded, setExpanded] = useState(false);
+  const [hoveredMode, setHoveredMode] = useState<ComposeMode | null>(null);
 
-  const fabScale = useSharedValue(1);
+  // Track FAB center position for gesture math
+  const fabCenterRef = useRef({ x: 0, y: 0 });
+
+  const fabRotation = useSharedValue(0);
+  const menuProgress = useSharedValue(0);
+
   const fabAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: fabScale.value }],
+    transform: [{ rotate: `${fabRotation.value}deg` }],
   }));
 
-  const handleFabPress = useCallback(() => {
-    fabScale.value = withSpring(0.85, { damping: 15, stiffness: 400 }, () => {
-      fabScale.value = withSpring(1, { damping: 12, stiffness: 350 });
-    });
+  // Three separate useAnimatedStyle calls (one per radial item) — hooks at top level
+  const itemStyle0 = useAnimatedStyle(() => ({
+    opacity: menuProgress.value,
+    transform: [
+      { translateX: POSITIONS[0]!.x * menuProgress.value },
+      { translateY: POSITIONS[0]!.y * menuProgress.value },
+      { scale: 0.4 + 0.6 * menuProgress.value },
+    ],
+  }));
+  const itemStyle1 = useAnimatedStyle(() => ({
+    opacity: menuProgress.value,
+    transform: [
+      { translateX: POSITIONS[1]!.x * menuProgress.value },
+      { translateY: POSITIONS[1]!.y * menuProgress.value },
+      { scale: 0.4 + 0.6 * menuProgress.value },
+    ],
+  }));
+  const itemStyle2 = useAnimatedStyle(() => ({
+    opacity: menuProgress.value,
+    transform: [
+      { translateX: POSITIONS[2]!.x * menuProgress.value },
+      { translateY: POSITIONS[2]!.y * menuProgress.value },
+      { scale: 0.4 + 0.6 * menuProgress.value },
+    ],
+  }));
+  const itemStyles = [itemStyle0, itemStyle1, itemStyle2];
+
+  // Use refs for callbacks so PanResponder never captures stale closures
+  const openMenuRef = useRef<() => void>(() => {});
+  const findHoveredRef = useRef<(px: number, py: number) => ComposeMode | null>(() => null);
+  const selectOptionRef = useRef<(mode: ComposeMode) => void>(() => {});
+
+  const openMenu = useCallback(() => {
+    setExpanded(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    openCompose();
-  }, [fabScale, openCompose]);
+    fabRotation.value = withSpring(45, { damping: 15 });
+    menuProgress.value = withSpring(1, { damping: 14, stiffness: 200 });
+  }, [fabRotation, menuProgress]);
+
+  const closeMenu = useCallback(() => {
+    fabRotation.value = withSpring(0, { damping: 15 });
+    menuProgress.value = withTiming(0, { duration: 150 });
+    setExpanded(false);
+    setHoveredMode(null);
+  }, [fabRotation, menuProgress]);
+
+  const selectOption = useCallback(
+    (mode: ComposeMode) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      closeMenu();
+      openCompose(mode);
+    },
+    [closeMenu, openCompose],
+  );
+
+  const findHoveredItem = useCallback(
+    (pageX: number, pageY: number): ComposeMode | null => {
+      const cx = fabCenterRef.current.x;
+      const cy = fabCenterRef.current.y;
+      const dx = pageX - cx;
+      const dy = pageY - cy;
+
+      for (let i = 0; i < POSITIONS.length; i++) {
+        const pos = POSITIONS[i]!;
+        const itemDx = dx - pos.x;
+        const itemDy = dy - pos.y;
+        const dist = Math.sqrt(itemDx * itemDx + itemDy * itemDy);
+        if (dist < HIT_RADIUS) return ITEM_MODES[i]!;
+      }
+      return null;
+    },
+    [],
+  );
+
+  // Keep refs in sync
+  openMenuRef.current = openMenu;
+  findHoveredRef.current = findHoveredItem;
+  selectOptionRef.current = selectOption;
+
+  // PanResponder — uses refs to avoid stale closures
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderGrant: () => {
+          openMenuRef.current();
+        },
+        onPanResponderMove: (evt) => {
+          const hovered = findHoveredRef.current(evt.nativeEvent.pageX, evt.nativeEvent.pageY);
+          setHoveredMode((prev) => {
+            if (prev !== hovered && hovered) {
+              Haptics.selectionAsync();
+            }
+            return hovered;
+          });
+        },
+        onPanResponderRelease: (evt) => {
+          const selected = findHoveredRef.current(evt.nativeEvent.pageX, evt.nativeEvent.pageY);
+          if (selected) {
+            selectOptionRef.current(selected);
+          }
+          // If no selection, menu stays open for tap interaction
+        },
+      }),
+    [],
+  );
+
+  const getIconForMode = (mode: ComposeMode, isHovered: boolean) => {
+    const size = isHovered ? 22 : 18;
+    const sw = isHovered ? 2.4 : 2;
+    switch (mode) {
+      case "text":
+        return <Type size={size} color={isHovered ? colors.primaryForeground : colors.chart1} strokeWidth={sw} />;
+      case "voice":
+        return <Mic size={size} color={isHovered ? colors.primaryForeground : colors.chart3} strokeWidth={sw} />;
+      case "image":
+        return <Camera size={size} color={isHovered ? colors.primaryForeground : colors.primary} strokeWidth={sw} />;
+    }
+  };
+
+  const getBgForMode = (mode: ComposeMode, isHovered: boolean) => {
+    if (isHovered) {
+      switch (mode) {
+        case "text": return colors.chart1;
+        case "voice": return colors.chart3;
+        case "image": return colors.primary;
+      }
+    }
+    return colors.card;
+  };
 
   return (
     <View
       style={[
-        styles.shell,
+        st.shell,
         {
           paddingBottom: bottomInset,
           backgroundColor: colors.card,
@@ -50,34 +207,96 @@ export function BottomTabBar({ state, descriptors, navigation }: BottomTabBarPro
         },
       ]}
     >
-      <View style={styles.row}>
+      {/* Backdrop to dismiss */}
+      {expanded && (
+        <Pressable style={st.menuBackdrop} onPress={closeMenu} />
+      )}
+
+      {/* Radial menu items */}
+      {expanded && (
+        <View style={st.radialAnchor} pointerEvents="box-none">
+          {ITEM_MODES.map((mode, i) => {
+            const isHovered = hoveredMode === mode;
+            return (
+              <Animated.View key={mode} style={[st.radialItem, itemStyles[i]]}>
+                <Pressable
+                  onPress={() => selectOption(mode)}
+                  style={[
+                    st.radialCircle,
+                    {
+                      backgroundColor: getBgForMode(mode, isHovered),
+                      transform: [{ scale: isHovered ? 1.2 : 1 }],
+                      shadowColor: "#000",
+                      shadowOffset: { width: 0, height: isHovered ? 4 : 2 },
+                      shadowOpacity: isHovered ? 0.25 : 0.15,
+                      shadowRadius: isHovered ? 8 : 4,
+                      elevation: isHovered ? 8 : 4,
+                    },
+                  ]}
+                >
+                  {getIconForMode(mode, isHovered)}
+                </Pressable>
+              </Animated.View>
+            );
+          })}
+        </View>
+      )}
+
+      <View style={st.row}>
         {TAB_ORDER.map((slot) => {
           if (slot === "__fab__") {
             return (
-              <View key="fab" style={styles.fabSlot}>
+              <View
+                key="fab"
+                style={st.fabSlot}
+                onLayout={(e) => {
+                  e.target.measureInWindow((x, y, w, h) => {
+                    fabCenterRef.current = { x: x + w / 2, y: y + h / 2 - 24 };
+                  });
+                }}
+              >
                 <Animated.View style={fabAnimStyle}>
-                  <Pressable
-                    onPress={handleFabPress}
-                    style={[styles.fab, { backgroundColor: colors.primary }]}
-                  >
-                    <Plus size={26} color={colors.primaryForeground} strokeWidth={2.4} />
-                  </Pressable>
+                  <View {...panResponder.panHandlers}>
+                    <Pressable
+                      onPress={() => {
+                        if (expanded) closeMenu();
+                      }}
+                      style={[
+                        st.fab,
+                        {
+                          backgroundColor: expanded
+                            ? colors.mutedForeground
+                            : colors.primary,
+                        },
+                      ]}
+                    >
+                      {expanded ? (
+                        <X size={24} color={colors.primaryForeground} strokeWidth={2.4} />
+                      ) : (
+                        <Plus size={26} color={colors.primaryForeground} strokeWidth={2.4} />
+                      )}
+                    </Pressable>
+                  </View>
                 </Animated.View>
               </View>
             );
           }
 
           const route = state.routes.find((r) => r.name === slot);
-          if (!route) return <View key={slot} style={styles.item} />;
+          if (!route) return <View key={slot} style={st.item} />;
 
           const descriptor = descriptors[route.key];
-          if (!descriptor) return <View key={slot} style={styles.item} />;
+          if (!descriptor) return <View key={slot} style={st.item} />;
 
           const focused = state.index === state.routes.findIndex((r) => r.key === route.key);
           const label = getTabLabel(route.name, typeof descriptor.options.title === "string" ? descriptor.options.title : undefined);
           const tint = focused ? colors.primary : colors.mutedForeground;
 
           const onPress = () => {
+            if (expanded) {
+              closeMenu();
+              return;
+            }
             const event = navigation.emit({
               type: "tabPress",
               target: route.key,
@@ -102,12 +321,12 @@ export function BottomTabBar({ state, descriptors, navigation }: BottomTabBarPro
               onLongPress={() => {
                 navigation.emit({ type: "tabLongPress", target: route.key });
               }}
-              style={styles.item}
+              style={st.item}
             >
-              <View style={styles.iconWrap}>{icon}</View>
+              <View style={st.iconWrap}>{icon}</View>
               <Text
                 style={[
-                  styles.label,
+                  st.label,
                   {
                     color: tint,
                     fontFamily: focused ? "Manrope_700Bold" : "Manrope_500Medium",
@@ -125,7 +344,7 @@ export function BottomTabBar({ state, descriptors, navigation }: BottomTabBarPro
   );
 }
 
-const styles = StyleSheet.create({
+const st = StyleSheet.create({
   shell: {
     paddingTop: 8,
     paddingHorizontal: 6,
@@ -174,5 +393,30 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.18,
     shadowRadius: 6,
     elevation: 6,
+  },
+  menuBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    top: -1000,
+    zIndex: 1,
+  },
+  radialAnchor: {
+    position: "absolute",
+    bottom: 68,
+    alignSelf: "center",
+    width: 0,
+    height: 0,
+    zIndex: 2,
+  },
+  radialItem: {
+    position: "absolute",
+    marginLeft: -24,
+    marginTop: -24,
+  },
+  radialCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

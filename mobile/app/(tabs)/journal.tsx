@@ -120,7 +120,12 @@ export default function JournalScreen() {
             <View style={styles.headerRow}>
               <Text style={[styles.pageTitle, { color: colors.foreground }]}>Journal</Text>
               <PressScale
-                onPress={() => setViewMode((v) => (v === "timeline" ? "calendar" : "timeline"))}
+                onPress={() => {
+                  setViewMode((v) => {
+                    if (v === "calendar") setActiveFilter("all");
+                    return v === "timeline" ? "calendar" : "timeline";
+                  });
+                }}
                 haptic={false}
               >
                 <View
@@ -144,18 +149,22 @@ export default function JournalScreen() {
               placeholder="Search memories..."
             />
 
-            <View style={styles.filterChips}>
-              {FILTERS.map((filter) => (
-                <PressScale key={filter.key} onPress={() => setActiveFilter(filter.key)} scale={0.96}>
-                  <PillBadge
-                    label={filter.label}
-                    color={activeFilter === filter.key ? colors.secondaryForeground : colors.glassSurface}
-                    textColor={activeFilter === filter.key ? "#FFFFFF" : colors.mutedForeground}
-                    small
-                  />
-                </PressScale>
-              ))}
-            </View>
+            {viewMode === "calendar" ? (
+              <>
+                <View style={styles.filterChips}>
+                  {FILTERS.map((filter) => (
+                    <PressScale key={filter.key} onPress={() => setActiveFilter(filter.key)} scale={0.96}>
+                      <PillBadge
+                        label={filter.label}
+                        color={activeFilter === filter.key ? colors.secondaryForeground : colors.glassSurface}
+                        textColor={activeFilter === filter.key ? "#FFFFFF" : colors.mutedForeground}
+                        small
+                      />
+                    </PressScale>
+                  ))}
+                </View>
+              </>
+            ) : null}
 
             {viewMode === "calendar" ? (
               <CalendarSection

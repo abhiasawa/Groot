@@ -98,23 +98,58 @@ export async function POST(request: NextRequest) {
 
     // If still no user, create a new one
     if (!resolvedUser) {
-      const { data: newUser, error: createError } = await supabase
+      // Try without whatsapp_number first (requires migration 015 DROP NOT NULL)
+      let createResult = await supabase
         .from("users")
         .insert({
           email: googleUser.email.toLowerCase(),
           google_id: googleUser.sub,
           display_name: googleUser.name ?? null,
           avatar_url: googleUser.picture ?? null,
+          whatsapp_number: null,
           onboarding_step: 0,
           timezone: "Asia/Kolkata",
         })
         .select("id, display_name, email")
         .single();
 
+      // If it failed (likely NOT NULL constraint on whatsapp_number), retry with placeholder
+      if (createResult.error) {
+        logger.warn(
+          { code: createResult.error.code, message: createResult.error.message },
+          "First insert attempt failed, retrying with placeholder whatsapp_number",
+        );
+        createResult = await supabase
+          .from("users")
+          .insert({
+            email: googleUser.email.toLowerCase(),
+            google_id: googleUser.sub,
+            display_name: googleUser.name ?? null,
+            avatar_url: googleUser.picture ?? null,
+            whatsapp_number: `google_${googleUser.sub}`,
+            onboarding_step: 0,
+            timezone: "Asia/Kolkata",
+          })
+          .select("id, display_name, email")
+          .single();
+      }
+
+      const { data: newUser, error: createError } = createResult;
+
       if (createError || !newUser) {
-        logger.error({ error: createError, email: googleUser.email }, "Failed to create user");
+        logger.error(
+          {
+            error: createError,
+            code: createError?.code,
+            message: createError?.message,
+            details: createError?.details,
+            hint: createError?.hint,
+            email: googleUser.email,
+          },
+          "Failed to create user",
+        );
         return NextResponse.json(
-          { error: "Failed to create account" },
+          { error: "Failed to create account", details: createError?.message ?? "Unknown error" },
           { status: 500 },
         );
       }
@@ -171,19 +206,31 @@ async function verifyGoogleToken(
   idToken: string,
 ): Promise<GoogleTokenPayload | null> {
   try {
+    const tokenPreview = idToken.substring(0, 20) + "...";
+    logger.info({ tokenPreview, tokenLength: idToken.length }, "Verifying Google token");
+
     const res = await fetch(
       `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`,
     );
 
     if (!res.ok) {
-      logger.warn({ status: res.status }, "Google token verification failed");
+      const errorBody = await res.text();
+      logger.warn(
+        { status: res.status, errorBody },
+        "Google tokeninfo endpoint rejected token",
+      );
       return null;
     }
 
     const payload = (await res.json()) as Record<string, unknown>;
+    logger.info(
+      { aud: payload.aud, email: payload.email, iss: payload.iss },
+      "Google token payload received",
+    );
 
     // Verify audience matches our client ID
-    const expectedClientId = process.env.GOOGLE_CLIENT_ID;
+    // The native Android SDK signs tokens with the Web client ID (webClientId)
+    const expectedClientId = process.env.GOOGLE_CLIENT_ID?.trim();
     if (expectedClientId && payload.aud !== expectedClientId) {
       logger.warn(
         { aud: payload.aud, expected: expectedClientId },
