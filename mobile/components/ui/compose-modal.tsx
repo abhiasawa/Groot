@@ -467,26 +467,27 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
                   </Pressable>
                 ) : (
                   <>
+                    {/* Voice is primary action — larger, emphasised */}
                     <Pressable
                       onPress={startRecording}
-                      style={[s.actionBtn, { backgroundColor: `${colors.chart3}12` }]}
+                      style={[s.actionBtn, s.voiceBtn, { backgroundColor: `${colors.primary}15`, borderColor: `${colors.primary}30` }]}
                     >
-                      <Mic size={18} color={colors.chart3} strokeWidth={2} />
-                      <Text style={[s.actionLabel, { color: colors.chart3 }]}>Voice</Text>
+                      <Mic size={22} color={colors.primary} strokeWidth={2.2} />
+                      <Text style={[s.actionLabel, s.voiceBtnLabel, { color: colors.primary }]}>Voice</Text>
                     </Pressable>
                     <Pressable
                       onPress={pickImage}
-                      style={[s.actionBtn, { backgroundColor: `${colors.accent}12` }]}
+                      style={[s.actionBtn, s.secondaryBtn, { backgroundColor: `${colors.accent}08` }]}
                     >
-                      <ImageIcon size={18} color={colors.accent} strokeWidth={2} />
+                      <ImageIcon size={16} color={colors.accent} strokeWidth={1.8} />
                       <Text style={[s.actionLabel, { color: colors.accent }]}>Gallery</Text>
                     </Pressable>
                     <Pressable
                       onPress={takePhoto}
-                      style={[s.actionBtn, { backgroundColor: `${colors.primary}12` }]}
+                      style={[s.actionBtn, s.secondaryBtn, { backgroundColor: `${colors.muted}` }]}
                     >
-                      <Camera size={18} color={colors.primary} strokeWidth={2} />
-                      <Text style={[s.actionLabel, { color: colors.primary }]}>Camera</Text>
+                      <Camera size={16} color={colors.mutedForeground} strokeWidth={1.8} />
+                      <Text style={[s.actionLabel, { color: colors.mutedForeground }]}>Camera</Text>
                     </Pressable>
                   </>
                 )}
@@ -659,6 +660,19 @@ const s = StyleSheet.create({
   },
   actionBtnWide: {
     flex: 1,
+  },
+  voiceBtn: {
+    flex: 1.4,
+    borderWidth: 1,
+    paddingVertical: 14,
+  },
+  voiceBtnLabel: {
+    fontFamily: "Sora_600SemiBold",
+    ...typography.sm,
+  },
+  secondaryBtn: {
+    flex: 0.8,
+    paddingVertical: 10,
   },
   actionLabel: {
     fontFamily: "Manrope_600SemiBold",

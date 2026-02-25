@@ -30,6 +30,7 @@ import {
   Link2,
   Unlink,
   Check,
+  Mic,
 } from "lucide-react-native";
 
 import Constants from "expo-constants";
@@ -82,6 +83,12 @@ function useNotificationPrefs(): NotificationPref[] {
       label: "Feature Tips",
       description: "Weekly tips to get more from Groot.",
       icon: <Lightbulb size={17} color={colors.chart4} strokeWidth={1.6} />,
+    },
+    {
+      key: "voice_checkins",
+      label: "Voice Check-ins",
+      description: "Morning check-ins via voice note.",
+      icon: <Mic size={17} color={colors.chart5} strokeWidth={1.6} />,
     },
   ];
 }
