@@ -4,12 +4,20 @@ import { qk } from "./queries";
 
 import type {
   ToggleTaskPayload,
+  UpdateTaskPayload,
   UpdatePreferencePayload,
   DeleteProfileFactPayload,
   RecordMoodPayload,
   RecordMoodResponse,
+  CreateHabitPayload,
+  CreateHabitResponse,
+  UpdateHabitPayload,
+  DeleteHabitPayload,
+  HabitCheckinPayload,
+  HabitCheckinResponse,
   OkResponse,
   TasksResponse,
+  HabitsResponse,
   SettingsResponse,
   ProfileData,
   ProfileFact,
@@ -27,6 +35,10 @@ interface SettingsMutationContext {
 
 interface ProfileMutationContext {
   previous: ProfileData | undefined;
+}
+
+interface HabitsMutationContext {
+  previous: HabitsResponse | undefined;
 }
 
 // ── useToggleTask ────────────────────────────
@@ -221,9 +233,172 @@ export function useRecordMood() {
       }),
 
     onSettled: () => {
-      // Refresh mood data for the current year
       void queryClient.invalidateQueries({ queryKey: ["mood"] });
-      // Home screen also shows recent mood
+      void queryClient.invalidateQueries({ queryKey: qk.home });
+    },
+  });
+}
+
+// ── useUpdateTask ────────────────────────────
+
+/**
+ * PUT /api/tasks — update a task's content, due_date, or category.
+ */
+export function useUpdateTask() {
+  const queryClient = useQueryClient();
+
+  return useMutation<OkResponse, Error, UpdateTaskPayload, TaskMutationContext>({
+    mutationFn: (payload) =>
+      apiFetch<OkResponse>("/api/tasks", {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }),
+
+    onMutate: async (payload): Promise<TaskMutationContext> => {
+      await queryClient.cancelQueries({ queryKey: qk.tasks });
+      const previous = queryClient.getQueryData<TasksResponse>(qk.tasks);
+
+      queryClient.setQueryData<TasksResponse>(
+        qk.tasks,
+        (old: TasksResponse | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            tasks: old.tasks.map((t) =>
+              t.id === payload.taskId
+                ? {
+                    ...t,
+                    ...(payload.content !== undefined && { content: payload.content }),
+                    ...(payload.due_date !== undefined && { due_date: payload.due_date }),
+                    ...(payload.category !== undefined && { category: payload.category }),
+                  }
+                : t,
+            ),
+          };
+        },
+      );
+
+      return { previous };
+    },
+
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(qk.tasks, context.previous);
+      }
+    },
+
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: qk.tasks });
+    },
+  });
+}
+
+// ── useCreateHabit ───────────────────────────
+
+/**
+ * POST /api/habits — create a new habit.
+ */
+export function useCreateHabit() {
+  const queryClient = useQueryClient();
+
+  return useMutation<CreateHabitResponse, Error, CreateHabitPayload>({
+    mutationFn: (payload) =>
+      apiFetch<CreateHabitResponse>("/api/habits", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: qk.habits });
+      void queryClient.invalidateQueries({ queryKey: qk.home });
+    },
+  });
+}
+
+// ── useUpdateHabit ───────────────────────────
+
+/**
+ * PUT /api/habits — update a habit.
+ */
+export function useUpdateHabit() {
+  const queryClient = useQueryClient();
+
+  return useMutation<OkResponse, Error, UpdateHabitPayload>({
+    mutationFn: (payload) =>
+      apiFetch<OkResponse>("/api/habits", {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }),
+
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: qk.habits });
+    },
+  });
+}
+
+// ── useDeleteHabit ───────────────────────────
+
+/**
+ * DELETE /api/habits — soft-delete a habit.
+ */
+export function useDeleteHabit() {
+  const queryClient = useQueryClient();
+
+  return useMutation<OkResponse, Error, DeleteHabitPayload, HabitsMutationContext>({
+    mutationFn: (payload) =>
+      apiFetch<OkResponse>("/api/habits", {
+        method: "DELETE",
+        body: JSON.stringify(payload),
+      }),
+
+    onMutate: async (payload): Promise<HabitsMutationContext> => {
+      await queryClient.cancelQueries({ queryKey: qk.habits });
+      const previous = queryClient.getQueryData<HabitsResponse>(qk.habits);
+
+      queryClient.setQueryData<HabitsResponse>(
+        qk.habits,
+        (old: HabitsResponse | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            habits: old.habits.filter((h) => h.id !== payload.habitId),
+          };
+        },
+      );
+
+      return { previous };
+    },
+
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(qk.habits, context.previous);
+      }
+    },
+
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: qk.habits });
+      void queryClient.invalidateQueries({ queryKey: qk.home });
+    },
+  });
+}
+
+// ── useHabitCheckin ──────────────────────────
+
+/**
+ * POST /api/habits/checkin — record a habit check-in.
+ */
+export function useHabitCheckin() {
+  const queryClient = useQueryClient();
+
+  return useMutation<HabitCheckinResponse, Error, HabitCheckinPayload>({
+    mutationFn: (payload) =>
+      apiFetch<HabitCheckinResponse>("/api/habits/checkin", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: qk.habits });
       void queryClient.invalidateQueries({ queryKey: qk.home });
     },
   });

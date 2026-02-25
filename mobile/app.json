@@ -23,7 +23,8 @@
         "backgroundColor": "#F5F2EB"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.groot.thegarden"
+      "package": "com.groot.thegarden",
+      "permissions": ["android.permission.ACTIVITY_RECOGNITION"]
     },
     "web": {
       "bundler": "metro",
@@ -33,7 +34,30 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#F5F2EB",
+          "defaultChannel": "groot-reminders",
+          "sounds": []
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Attach photos to your messages",
+          "cameraPermission": "Take photos to send to Groot"
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Record voice messages for Groot"
+        }
+      ],
+      "expo-sensors"
     ],
     "experiments": {
       "typedRoutes": true

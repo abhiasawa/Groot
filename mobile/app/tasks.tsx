@@ -8,14 +8,20 @@ import {
   ActivityIndicator,
   Modal,
   Pressable,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useSegments } from "expo-router";
 import { Calendar, CheckSquare, ListTodo, Sparkles, Square, Tag, X } from "lucide-react-native";
 
+import { TextInput } from "react-native";
+import * as Haptics from "expo-haptics";
+import { Pencil } from "lucide-react-native";
+
 import { useTheme } from "../lib/theme/provider";
 import { useTasks } from "../lib/api/queries";
-import { useToggleTask } from "../lib/api/mutations";
+import { useToggleTask, useUpdateTask } from "../lib/api/mutations";
 import { typography } from "../constants/typography";
 import { GlassCard } from "../components/ui/glass-card";
 import { GradientBackground } from "../components/ui/gradient-background";
@@ -76,6 +82,7 @@ export default function TasksScreen() {
   const segments = useSegments();
   const { data, isLoading, refetch } = useTasks();
   const toggleTask = useToggleTask();
+  const updateTask = useUpdateTask();
   const [filter, setFilter] = useState<TaskFilter>("all");
   const [isPullRefreshing, setIsPullRefreshing] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -122,6 +129,22 @@ export default function TasksScreen() {
       });
     },
     [toggleTask],
+  );
+
+  const handleUpdateTask = useCallback(
+    (taskId: string, updates: { content?: string; due_date?: string | null }) => {
+      updateTask.mutate({ taskId, ...updates });
+      // Update the selected task locally so modal reflects the change
+      setSelectedTask((prev) => {
+        if (!prev || prev.id !== taskId) return prev;
+        return {
+          ...prev,
+          ...(updates.content !== undefined ? { content: updates.content } : {}),
+          ...(updates.due_date !== undefined ? { due_date: updates.due_date } : {}),
+        };
+      });
+    },
+    [updateTask],
   );
 
   if (isLoading) {
@@ -281,6 +304,7 @@ export default function TasksScreen() {
           task={selectedTask}
           onClose={() => setSelectedTask(null)}
           onToggle={handleToggle}
+          onUpdate={handleUpdateTask}
         />
       </GradientBackground>
     </SafeAreaView>
@@ -365,12 +389,26 @@ function TaskDetailModal({
   task,
   onClose,
   onToggle,
+  onUpdate,
 }: {
   task: Task | null;
   onClose: () => void;
   onToggle: (task: Task) => void;
+  onUpdate: (taskId: string, updates: { content?: string; due_date?: string | null }) => void;
 }) {
   const { colors } = useTheme();
+  const [editing, setEditing] = React.useState(false);
+  const [editContent, setEditContent] = React.useState("");
+  const [editDueDate, setEditDueDate] = React.useState("");
+
+  React.useEffect(() => {
+    if (task) {
+      setEditContent(task.content);
+      setEditDueDate(task.due_date ? task.due_date.split("T")[0] ?? "" : "");
+      setEditing(false);
+    }
+  }, [task]);
+
   if (!task) return null;
 
   const done = task.is_completed;
@@ -378,20 +416,77 @@ function TaskDetailModal({
 
   return (
     <Modal transparent animationType="fade" visible={!!task} onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
       <View style={styles.modalOverlay}>
         <Pressable style={styles.modalBackdrop} onPress={onClose} />
         <View style={styles.modalWrap}>
           <GlassCard padding={20}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.foreground }]}>Task Details</Text>
-              <PressScale onPress={onClose} haptic={false}>
-                <View style={styles.modalCloseBtn}>
-                  <X size={18} color={colors.mutedForeground} strokeWidth={2} />
-                </View>
-              </PressScale>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                {!editing && (
+                  <PressScale onPress={() => setEditing(true)} haptic={false}>
+                    <View style={styles.modalCloseBtn}>
+                      <Pencil size={16} color={colors.primary} strokeWidth={2} />
+                    </View>
+                  </PressScale>
+                )}
+                <PressScale onPress={onClose} haptic={false}>
+                  <View style={styles.modalCloseBtn}>
+                    <X size={18} color={colors.mutedForeground} strokeWidth={2} />
+                  </View>
+                </PressScale>
+              </View>
             </View>
 
-            <Text style={[styles.modalContent, { color: colors.foreground }]}>{task.content}</Text>
+            {editing ? (
+              <>
+                <TextInput
+                  style={[
+                    styles.editInput,
+                    {
+                      color: colors.foreground,
+                      borderColor: colors.glassBorder,
+                      backgroundColor: colors.secondary,
+                    },
+                  ]}
+                  value={editContent}
+                  onChangeText={setEditContent}
+                  multiline
+                  autoFocus
+                  textAlignVertical="top"
+                />
+                <View style={styles.editDateRow}>
+                  <Calendar size={15} color={colors.mutedForeground} strokeWidth={1.6} />
+                  <Text style={[styles.editDateLabel, { color: colors.mutedForeground }]}>Due date</Text>
+                  <TextInput
+                    style={[
+                      styles.editDateInput,
+                      {
+                        color: colors.foreground,
+                        borderColor: colors.glassBorder,
+                        backgroundColor: colors.secondary,
+                      },
+                    ]}
+                    value={editDueDate}
+                    onChangeText={setEditDueDate}
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor={colors.mutedForeground}
+                    maxLength={10}
+                  />
+                  {editDueDate.length > 0 && (
+                    <Pressable onPress={() => setEditDueDate("")} hitSlop={8}>
+                      <X size={14} color={colors.mutedForeground} />
+                    </Pressable>
+                  )}
+                </View>
+              </>
+            ) : (
+              <Text style={[styles.modalContent, { color: colors.foreground }]}>{task.content}</Text>
+            )}
 
             <View style={styles.modalMetaList}>
               <View style={styles.modalMetaItem}>
@@ -450,32 +545,70 @@ function TaskDetailModal({
               </View>
             </View>
 
-            <PressScale
-              onPress={() => {
-                onToggle(task);
-                onClose();
-              }}
-              scale={0.97}
-            >
-              <View
-                style={[
-                  styles.modalActionBtn,
-                  { backgroundColor: done ? colors.secondary : colors.primary },
-                ]}
+            {editing ? (
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <PressScale
+                  onPress={() => setEditing(false)}
+                  scale={0.97}
+                  style={{ flex: 1 }}
+                >
+                  <View style={[styles.modalActionBtn, { backgroundColor: colors.secondary }]}>
+                    <Text style={[styles.modalActionText, { color: colors.foreground }]}>Cancel</Text>
+                  </View>
+                </PressScale>
+                <PressScale
+                  onPress={() => {
+                    const updates: { content?: string; due_date?: string | null } = {};
+                    if (editContent.trim() && editContent.trim() !== task.content) {
+                      updates.content = editContent.trim();
+                    }
+                    const origDate = task.due_date ? (task.due_date.split("T")[0] ?? "") : "";
+                    if (editDueDate !== origDate) {
+                      updates.due_date = editDueDate || null;
+                    }
+                    if (Object.keys(updates).length > 0) {
+                      onUpdate(task.id, updates);
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
+                    setEditing(false);
+                  }}
+                  scale={0.97}
+                  style={{ flex: 1 }}
+                >
+                  <View style={[styles.modalActionBtn, { backgroundColor: colors.primary }]}>
+                    <Text style={[styles.modalActionText, { color: colors.primaryForeground }]}>Save</Text>
+                  </View>
+                </PressScale>
+              </View>
+            ) : (
+              <PressScale
+                onPress={() => {
+                  onToggle(task);
+                  onClose();
+                }}
+                scale={0.97}
               >
-                <Text
+                <View
                   style={[
-                    styles.modalActionText,
-                    { color: done ? colors.foreground : colors.primaryForeground },
+                    styles.modalActionBtn,
+                    { backgroundColor: done ? colors.secondary : colors.primary },
                   ]}
                 >
-                  {done ? "Mark as Pending" : "Mark as Complete"}
-                </Text>
-              </View>
-            </PressScale>
+                  <Text
+                    style={[
+                      styles.modalActionText,
+                      { color: done ? colors.foreground : colors.primaryForeground },
+                    ]}
+                  >
+                    {done ? "Mark as Pending" : "Mark as Complete"}
+                  </Text>
+                </View>
+              </PressScale>
+            )}
           </GlassCard>
         </View>
       </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -677,6 +810,36 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: "Manrope_600SemiBold",
     ...typography.sm,
+  },
+  editInput: {
+    fontFamily: "Manrope_400Regular",
+    ...typography.base,
+    lineHeight: 24,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    minHeight: 80,
+  },
+  editDateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 18,
+  },
+  editDateLabel: {
+    fontFamily: "Manrope_500Medium",
+    ...typography.xs,
+  },
+  editDateInput: {
+    flex: 1,
+    fontFamily: "Manrope_500Medium",
+    ...typography.sm,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   modalActionBtn: {
     paddingVertical: 14,

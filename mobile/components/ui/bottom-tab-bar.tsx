@@ -11,6 +11,7 @@ import * as Haptics from "expo-haptics";
 import { Plus } from "lucide-react-native";
 
 import { useTheme } from "../../lib/theme/provider";
+import { useCompose } from "../../lib/compose-context";
 
 const TAB_ORDER = ["journal", "mood", "__fab__", "tasks", "settings"] as const;
 
@@ -21,6 +22,7 @@ function getTabLabel(name: string, title?: string) {
 
 export function BottomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { colors } = useTheme();
+  const { open: openCompose } = useCompose();
   const insets = useSafeAreaInsets();
   const bottomInset = Math.max(insets.bottom, Platform.OS === "ios" ? 8 : 6);
 
@@ -34,8 +36,8 @@ export function BottomTabBar({ state, descriptors, navigation }: BottomTabBarPro
       fabScale.value = withSpring(1, { damping: 12, stiffness: 350 });
     });
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    navigation.navigate("journal");
-  }, [navigation, fabScale]);
+    openCompose();
+  }, [fabScale, openCompose]);
 
   return (
     <View

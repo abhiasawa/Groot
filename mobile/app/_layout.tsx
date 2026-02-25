@@ -18,6 +18,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthProvider, useAuth } from "../lib/auth/provider";
 import { ThemeProvider } from "../lib/theme/provider";
+import { useNotifications } from "../lib/notifications";
 
 export { ErrorBoundary } from "expo-router";
 
@@ -119,6 +120,25 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/**
+ * Initialises local notifications once the user is authenticated.
+ * Must be rendered inside both AuthProvider and QueryClientProvider.
+ */
+function NotificationBootstrap({ children }: { children: React.ReactNode }) {
+  const { token } = useAuth();
+
+  // Only activate notifications when signed in
+  if (token) {
+    return <NotificationRunner>{children}</NotificationRunner>;
+  }
+  return <>{children}</>;
+}
+
+function NotificationRunner({ children }: { children: React.ReactNode }) {
+  useNotifications();
+  return <>{children}</>;
+}
+
 // ---------------------------------------------------------------------------
 // Root layout
 // ---------------------------------------------------------------------------
@@ -167,15 +187,17 @@ export default function RootLayout() {
             persistOptions={{ persister: asyncStoragePersister }}
           >
             <AuthGate>
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="(auth)" />
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="tasks" />
-                <Stack.Screen name="insights" />
-                <Stack.Screen name="topics" />
-                <Stack.Screen name="profile" />
-                <Stack.Screen name="settings" />
-              </Stack>
+              <NotificationBootstrap>
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="(auth)" />
+                  <Stack.Screen name="(tabs)" />
+                  <Stack.Screen name="tasks" />
+                  <Stack.Screen name="insights" />
+                  <Stack.Screen name="topics" />
+                  <Stack.Screen name="profile" />
+                  <Stack.Screen name="settings" />
+                </Stack>
+              </NotificationBootstrap>
             </AuthGate>
           </PersistQueryClientProvider>
         </AuthProvider>

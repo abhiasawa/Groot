@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,11 +10,13 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useSegments } from "expo-router";
+import * as Notifications from "expo-notifications";
 import {
   Sun,
   Moon,
   Monitor,
   Bell,
+  BellOff,
   BookOpen,
   Calendar,
   Clock,
@@ -27,6 +29,7 @@ import { useAuth } from "../lib/auth/provider";
 import { useTheme } from "../lib/theme/provider";
 import { useSettings, useCurrentUser } from "../lib/api/queries";
 import { useUpdatePreference } from "../lib/api/mutations";
+import { requestPermissions } from "../lib/notifications";
 import { typography } from "../constants/typography";
 import { GlassCard } from "../components/ui/glass-card";
 import { GradientBackground } from "../components/ui/gradient-background";
@@ -87,8 +90,23 @@ export default function SettingsScreen() {
   } = useCurrentUser();
   const updatePref = useUpdatePreference();
   const [isPullRefreshing, setIsPullRefreshing] = React.useState(false);
+  const [notifPermission, setNotifPermission] = useState<"granted" | "denied" | "undetermined">(
+    "undetermined",
+  );
 
   const notificationPrefs = useNotificationPrefs();
+
+  // Check notification permission status
+  useEffect(() => {
+    Notifications.getPermissionsAsync().then(({ status }) => {
+      setNotifPermission(status === "granted" ? "granted" : status === "denied" ? "denied" : "undetermined");
+    });
+  }, []);
+
+  const handleRequestPermission = useCallback(async () => {
+    const granted = await requestPermissions();
+    setNotifPermission(granted ? "granted" : "denied");
+  }, []);
 
   const enabledCount = useMemo(() => {
     return notificationPrefs.filter((pref) => data?.preferences?.[pref.key] ?? true).length;
@@ -197,6 +215,23 @@ export default function SettingsScreen() {
 
           <View style={styles.sectionWrap}>
             <SectionHeader title="Notifications" />
+            {notifPermission !== "granted" && (
+              <PressScale onPress={handleRequestPermission}>
+                <View
+                  style={[
+                    styles.permBanner,
+                    { backgroundColor: `${colors.accent}20`, borderColor: `${colors.accent}40` },
+                  ]}
+                >
+                  <BellOff size={16} color={colors.accent} strokeWidth={1.6} />
+                  <Text style={[styles.permBannerText, { color: colors.foreground }]}>
+                    {notifPermission === "denied"
+                      ? "Notifications are blocked. Tap to open settings."
+                      : "Tap to enable notifications"}
+                  </Text>
+                </View>
+              </PressScale>
+            )}
             <GlassCard padding={0}>
               {notificationPrefs.map((pref, index) => {
                 const enabled = data?.preferences?.[pref.key] ?? true;
@@ -412,6 +447,20 @@ const styles = StyleSheet.create({
     marginTop: 1,
     fontFamily: "Manrope_400Regular",
     ...typography.xs,
+  },
+  permBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 10,
+  },
+  permBannerText: {
+    flex: 1,
+    fontFamily: "Manrope_500Medium",
+    ...typography.sm,
   },
   signOutRow: {
     flexDirection: "row",

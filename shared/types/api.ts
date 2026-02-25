@@ -258,6 +258,62 @@ export interface RecordMoodResponse {
   score: number;
 }
 
+/** POST /api/habits body */
+export interface CreateHabitPayload {
+  name: string;
+  category?: string;
+  target_value?: number;
+  target_unit?: string;
+  frequency?: string;
+}
+
+/** POST /api/habits response */
+export interface CreateHabitResponse {
+  ok: true;
+  habit: Habit;
+}
+
+/** PUT /api/habits body */
+export interface UpdateHabitPayload {
+  habitId: string;
+  name?: string;
+  target_value?: number;
+  target_unit?: string;
+  frequency?: string;
+  category?: string;
+}
+
+/** DELETE /api/habits body */
+export interface DeleteHabitPayload {
+  habitId: string;
+}
+
+/** POST /api/habits/checkin body */
+export interface HabitCheckinPayload {
+  habitId: string;
+  value?: number;
+  note?: string;
+}
+
+/** POST /api/habits/checkin response */
+export interface HabitCheckinResponse {
+  ok: true;
+  streak: {
+    current_streak: number;
+    longest_streak: number;
+    last_checkin_date: string | null;
+  };
+  isMilestone: boolean;
+}
+
+/** PUT /api/tasks body */
+export interface UpdateTaskPayload {
+  taskId: string;
+  content?: string;
+  due_date?: string | null;
+  category?: string | null;
+}
+
 /** Generic success response from mutations */
 export interface OkResponse {
   ok: true;

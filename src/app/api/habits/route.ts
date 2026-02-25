@@ -156,3 +156,161 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({ habits: habitsWithStreaks }, { headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=60" } });
 }
+
+/**
+ * POST /api/habits — Create a new habit.
+ *
+ * Body: { name: string, category?: string, target_value?: number, target_unit?: string, frequency?: string }
+ */
+export async function POST(request: NextRequest) {
+  let userId: string;
+  try {
+    const user = await getAuthenticatedPortalUser(request);
+    userId = user.id;
+  } catch (error) {
+    if (error instanceof PortalAuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
+
+  const body = await request.json();
+  const { name, category, target_value, target_unit, frequency } = body as {
+    name?: string;
+    category?: string;
+    target_value?: number;
+    target_unit?: string;
+    frequency?: string;
+  };
+
+  if (!name || typeof name !== "string" || name.trim().length === 0) {
+    return NextResponse.json({ error: "name is required" }, { status: 400 });
+  }
+
+  const supabase = getSupabaseAdmin();
+
+  const { data: newHabit, error: insertError } = await supabase
+    .from("habits")
+    .insert({
+      user_id: userId,
+      name: name.trim(),
+      category: category || "general",
+      target_value: target_value ?? null,
+      target_unit: target_unit ?? null,
+      frequency: frequency || "daily",
+      is_active: true,
+    })
+    .select()
+    .single();
+
+  if (insertError || !newHabit) {
+    return NextResponse.json({ error: "Failed to create habit" }, { status: 500 });
+  }
+
+  // Initialize streak row for the new habit
+  await supabase.from("habit_streaks").insert({
+    habit_id: newHabit.id,
+    user_id: userId,
+    current_streak: 0,
+    longest_streak: 0,
+  });
+
+  return NextResponse.json({ ok: true, habit: newHabit }, { status: 201 });
+}
+
+/**
+ * PUT /api/habits — Update an existing habit.
+ *
+ * Body: { habitId: string, name?: string, target_value?: number, target_unit?: string, frequency?: string, category?: string }
+ */
+export async function PUT(request: NextRequest) {
+  let userId: string;
+  try {
+    const user = await getAuthenticatedPortalUser(request);
+    userId = user.id;
+  } catch (error) {
+    if (error instanceof PortalAuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
+
+  const body = await request.json();
+  const { habitId, name, target_value, target_unit, frequency, category } = body as {
+    habitId?: string;
+    name?: string;
+    target_value?: number;
+    target_unit?: string;
+    frequency?: string;
+    category?: string;
+  };
+
+  if (!habitId || typeof habitId !== "string") {
+    return NextResponse.json({ error: "habitId is required" }, { status: 400 });
+  }
+
+  // Build update object from provided fields only
+  const updates: Record<string, unknown> = {};
+  if (name !== undefined) updates.name = name;
+  if (target_value !== undefined) updates.target_value = target_value;
+  if (target_unit !== undefined) updates.target_unit = target_unit;
+  if (frequency !== undefined) updates.frequency = frequency;
+  if (category !== undefined) updates.category = category;
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: "No fields to update" }, { status: 400 });
+  }
+
+  const supabase = getSupabaseAdmin();
+
+  const { error: updateError } = await supabase
+    .from("habits")
+    .update(updates)
+    .eq("id", habitId)
+    .eq("user_id", userId);
+
+  if (updateError) {
+    return NextResponse.json({ error: "Failed to update habit" }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
+}
+
+/**
+ * DELETE /api/habits — Soft-delete a habit (set is_active = false).
+ *
+ * Body: { habitId: string }
+ */
+export async function DELETE(request: NextRequest) {
+  let userId: string;
+  try {
+    const user = await getAuthenticatedPortalUser(request);
+    userId = user.id;
+  } catch (error) {
+    if (error instanceof PortalAuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
+
+  const body = await request.json();
+  const { habitId } = body as { habitId?: string };
+
+  if (!habitId || typeof habitId !== "string") {
+    return NextResponse.json({ error: "habitId is required" }, { status: 400 });
+  }
+
+  const supabase = getSupabaseAdmin();
+
+  const { error: deleteError } = await supabase
+    .from("habits")
+    .update({ is_active: false })
+    .eq("id", habitId)
+    .eq("user_id", userId);
+
+  if (deleteError) {
+    return NextResponse.json({ error: "Failed to delete habit" }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
+}
