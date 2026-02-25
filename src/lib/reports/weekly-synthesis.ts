@@ -4,17 +4,15 @@ import { getUserProfileSummary } from "@/lib/memory/profile-builder";
 import { logger } from "@/lib/logger";
 
 /**
- * Weekly Groot Report synthesis.
+ * Weekly Groot Report — "Your Week in 3 Moments"
  *
- * Structure:
- * 1. Opening greeting
- * 2. This Week in Numbers
- * 3. Key Themes
- * 4. Habit Scorecard
- * 5. Mood Pulse
- * 6. Groot's Insight
- * 7. Looking Ahead
- * 8. "Did you know?" feature discovery
+ * New format:
+ * 1. Highlight — the standout moment of the week
+ * 2. Pattern  — a recurring theme or behavior noticed
+ * 3. Question — a reflective question for next week
+ * + Stats sidebar: messages, memories, streaks, mood trend
+ *
+ * WhatsApp format: max 15 lines, structured.
  */
 
 interface WeeklyData {
@@ -28,10 +26,27 @@ interface WeeklyData {
   }>;
   keyTopics: string[];
   moodTrend: string[];
+  moodScores: number[];
+  topMemories: string[];
+}
+
+/** Structured report for mobile display */
+export interface WeeklyReportStructured {
+  highlight: string;
+  pattern: string;
+  question: string;
+  stats: {
+    messages: number;
+    memories: number;
+    avgMood: number | null;
+    topHabit: string | null;
+    topStreak: number;
+  };
 }
 
 /**
  * Generate a weekly report for a user.
+ * Returns the WhatsApp-formatted text and stores the structured version.
  */
 export async function generateWeeklyReport(
   userId: string,
@@ -44,17 +59,30 @@ export async function generateWeeklyReport(
   const weekStart = getWeekStartDate();
   const weekEnd = new Date().toISOString().split("T")[0]!;
 
-  // Use LLM to generate the report
   try {
     const provider = getLLMProvider();
+
+    // Generate structured 3-moments report
     const response = await provider.generateResponse(
-      `You are Groot, generating a personalized weekly report for ${name}.
-Use WhatsApp formatting (*bold*, _italic_). Keep it warm and insightful.
-Max 15 lines. Use data provided — don't make up stats.`,
+      `You are Groot, generating a "Your Week in 3 Moments" report for ${name}.
+Use WhatsApp formatting (*bold*, _italic_). Max 15 lines total.
+Output EXACTLY this structure — no extra sections:
+
+*Your Week in 3 Moments*
+
+1. *Highlight* — [the standout positive moment or achievement from their week, based on their messages/memories. Be specific to their actual data.]
+
+2. *Pattern* — [a recurring theme, behavior, or emotional trend you noticed across multiple entries this week. Be insightful, not generic.]
+
+3. *Question* — [a thoughtful reflective question for the coming week, grounded in what you observed. Something that invites growth.]
+
+_${weekData.messageCount} messages · ${weekData.memoriesCount} memories${weekData.moodScores.length > 0 ? ` · Mood avg: ${(weekData.moodScores.reduce((a, b) => a + b, 0) / weekData.moodScores.length).toFixed(1)}/5` : ""}_
+
+Use ONLY the data provided. Don't invent facts. Be warm, concise, and personal.`,
       [
         {
           role: "user",
-          content: `Generate the Groot Weekly Report based on this data:
+          content: `Generate the "Your Week in 3 Moments" report:
 
 User: ${name}
 Profile: ${profileSummary || "Still getting to know them"}
@@ -63,31 +91,74 @@ Week: ${weekStart} to ${weekEnd}
 Stats:
 - Messages exchanged: ${weekData.messageCount}
 - Memories stored: ${weekData.memoriesCount}
+- Mood scores this week: ${weekData.moodScores.length > 0 ? weekData.moodScores.join(", ") : "none recorded"}
 ${weekData.habitCheckins.map((h) => `- ${h.habitName}: ${h.checkinCount} check-ins, ${h.currentStreak}-day streak${h.values.length > 0 ? `, avg: ${(h.values.reduce((a, b) => a + b, 0) / h.values.length).toFixed(1)}` : ""}`).join("\n")}
 
-Include:
-1. Greeting
-2. This Week in Numbers (2-3 key stats)
-3. Habit Scorecard (if any habits tracked)
-4. One personal insight based on their data
-5. A "Did you know?" tip about a Groot feature they haven't used
+Recent memories (for context):
+${weekData.topMemories.slice(0, 5).map((m) => `• ${m}`).join("\n") || "No memories this week"}
 
-End with an encouraging note.`,
+Also output a JSON block at the very end (after the report), wrapped in \`\`\`json ... \`\`\`:
+{
+  "highlight": "one-sentence highlight",
+  "pattern": "one-sentence pattern",
+  "question": "the reflective question"
+}`,
         },
       ],
-      { maxTokens: 16384, temperature: 0.8 },
+      { maxTokens: 16384, temperature: 0.7 },
     );
 
-    // Store the report
-    await storeWeeklyReport(userId, weekStart, weekEnd, response.text, weekData);
+    // Parse structured data from JSON block if present
+    const structured = parseStructuredReport(response.text, weekData);
 
-    return response.text;
+    // Store the report
+    await storeWeeklyReport(userId, weekStart, weekEnd, response.text, weekData, structured);
+
+    // Return clean WhatsApp text (strip JSON block)
+    return response.text.replace(/```json[\s\S]*?```/g, "").trim();
   } catch (error) {
     logger.error({ error, userId }, "Failed to generate weekly report via LLM");
-
-    // Fallback: manual report
     return generateFallbackReport(name, weekData);
   }
+}
+
+function parseStructuredReport(
+  text: string,
+  weekData: WeeklyData,
+): WeeklyReportStructured {
+  const defaults: WeeklyReportStructured = {
+    highlight: "",
+    pattern: "",
+    question: "",
+    stats: {
+      messages: weekData.messageCount,
+      memories: weekData.memoriesCount,
+      avgMood:
+        weekData.moodScores.length > 0
+          ? weekData.moodScores.reduce((a, b) => a + b, 0) / weekData.moodScores.length
+          : null,
+      topHabit: weekData.habitCheckins.length > 0
+        ? weekData.habitCheckins.sort((a, b) => b.currentStreak - a.currentStreak)[0]!.habitName
+        : null,
+      topStreak: weekData.habitCheckins.length > 0
+        ? Math.max(...weekData.habitCheckins.map((h) => h.currentStreak))
+        : 0,
+    },
+  };
+
+  try {
+    const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
+    if (jsonMatch?.[1]) {
+      const parsed = JSON.parse(jsonMatch[1]) as Record<string, string>;
+      defaults.highlight = parsed.highlight ?? "";
+      defaults.pattern = parsed.pattern ?? "";
+      defaults.question = parsed.question ?? "";
+    }
+  } catch {
+    // Parsing failed, keep defaults
+  }
+
+  return defaults;
 }
 
 async function gatherWeeklyData(userId: string): Promise<WeeklyData> {
@@ -108,6 +179,31 @@ async function gatherWeeklyData(userId: string): Promise<WeeklyData> {
     .eq("user_id", userId)
     .eq("synced_to_supermemory", true)
     .gte("created_at", weekAgo);
+
+  // Top memories for context
+  const { data: recentMessages } = await supabase
+    .from("messages")
+    .select("content")
+    .eq("user_id", userId)
+    .eq("direction", "incoming")
+    .gte("created_at", weekAgo)
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  const topMemories = (recentMessages ?? [])
+    .map((m) => (m.content as string).slice(0, 200))
+    .filter((c) => c.length > 10);
+
+  // Gather mood data
+  const { data: moods } = await supabase
+    .from("mood_entries")
+    .select("score")
+    .eq("user_id", userId)
+    .gte("recorded_at", weekAgo);
+
+  const moodScores = (moods ?? [])
+    .map((m) => m.score as number)
+    .filter((s) => s >= 1 && s <= 5);
 
   // Gather habit data
   const { data: habits } = await supabase
@@ -147,6 +243,8 @@ async function gatherWeeklyData(userId: string): Promise<WeeklyData> {
     habitCheckins,
     keyTopics: [],
     moodTrend: [],
+    moodScores,
+    topMemories,
   };
 }
 
@@ -156,6 +254,7 @@ async function storeWeeklyReport(
   weekEnd: string,
   summary: string,
   data: WeeklyData,
+  structured: WeeklyReportStructured,
 ): Promise<void> {
   const supabase = getSupabaseAdmin();
   await supabase.from("weekly_reports").upsert(
@@ -168,29 +267,39 @@ async function storeWeeklyReport(
       memories_count: data.memoriesCount,
       habit_summary: data.habitCheckins,
       key_topics: data.keyTopics,
-      mood_trend: data.moodTrend,
+      mood_trend: data.moodScores,
+      insights: structured,
     },
     { onConflict: "user_id,week_start" },
   );
 }
 
 function generateFallbackReport(name: string, data: WeeklyData): string {
-  const lines = [`Hey *${name}*, here's your weekly Groot Report 🌱\n`];
-  lines.push(`*This Week in Numbers*`);
-  lines.push(`• ${data.messageCount} messages exchanged`);
-  lines.push(`• ${data.memoriesCount} memories stored\n`);
+  const avgMood =
+    data.moodScores.length > 0
+      ? (data.moodScores.reduce((a, b) => a + b, 0) / data.moodScores.length).toFixed(1)
+      : null;
+
+  const lines = [`*Your Week in 3 Moments*\n`];
+  lines.push(
+    `1. *Highlight* — You exchanged ${data.messageCount} messages and stored ${data.memoriesCount} memories this week.`,
+  );
 
   if (data.habitCheckins.length > 0) {
-    lines.push(`*Habit Scorecard*`);
-    for (const habit of data.habitCheckins) {
-      lines.push(
-        `• *${habit.habitName}*: ${habit.checkinCount}/7 days, ${habit.currentStreak}-day streak`,
-      );
-    }
-    lines.push("");
+    const best = data.habitCheckins.sort((a, b) => b.currentStreak - a.currentStreak)[0]!;
+    lines.push(
+      `2. *Pattern* — Your ${best.habitName} habit is building momentum with a ${best.currentStreak}-day streak.`,
+    );
+  } else {
+    lines.push(`2. *Pattern* — You're building a consistent journaling practice.`);
   }
 
-  lines.push(`Keep growing. See you next week! 🌿`);
+  lines.push(`3. *Question* — What one thing this week made you feel most like yourself?\n`);
+
+  const statsLine = [`_${data.messageCount} messages`, `${data.memoriesCount} memories`];
+  if (avgMood) statsLine.push(`Mood avg: ${avgMood}/5`);
+  lines.push(statsLine.join(" · ") + "_");
+
   return lines.join("\n");
 }
 
