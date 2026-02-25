@@ -111,11 +111,11 @@ export async function GET(request: NextRequest) {
     .lte("created_at", endDate)
     .order("created_at", { ascending: true });
 
-  // Extract daily moods
+  // Extract daily moods (using IST / Asia/Kolkata for day boundaries)
   const dailyMoodMap = new Map<string, string[]>();
   const activeDays = new Set<string>();
   for (const msg of messages ?? []) {
-    const dateKey = (msg.created_at as string).split("T")[0]!;
+    const dateKey = new Date(msg.created_at as string).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
     activeDays.add(dateKey);
 
     const meta = msg.metadata as Record<string, unknown> | null;
@@ -177,8 +177,10 @@ export async function GET(request: NextRequest) {
     avgScore: Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10,
   })).sort((a, b) => a.weekStart.localeCompare(b.weekStart));
 
-  // Recent mood (last entry)
-  const recentMood = dailyMoods.length > 0 ? dailyMoods[dailyMoods.length - 1]!.mood : null;
+  // Recent mood — only return if it's from today (IST / Asia/Kolkata)
+  const todayIST = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }); // YYYY-MM-DD
+  const todayEntry = dailyMoods.find((dm) => dm.date === todayIST);
+  const recentMood = todayEntry?.mood ?? null;
 
   logger.info({ userId, year, totalDays: dailyMoods.length, weeks: weeklyTrend.length }, "Mood data loaded");
 
