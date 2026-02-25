@@ -74,6 +74,17 @@ npx tsc --noEmit     # Type check
 - Zod env var validation at startup
 - AI provider circuit breaker with automatic fallback
 
+## Mobile App (The Garden)
+
+- **Framework:** React Native / Expo SDK 54 with Expo Router
+- **Target Device:** Oppo X9 Pro (Android, arm64-v8a)
+- **ABI Filter:** `arm64-v8a` only in `android/app/build.gradle` — keeps APK ~50MB instead of ~82MB
+- **Build command:** `cd mobile/android && ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew assembleRelease`
+- **APK output:** `mobile/android/app/build/outputs/apk/release/app-release.apk`
+- **Install:** `adb uninstall com.groot.thegarden && adb install <path-to-apk>`
+- **After changing `app.json` plugins:** Must run `npx expo prebuild --platform android --clean` before Gradle build
+- **Tabs:** Journal, Mood, Tasks, Settings (4 tabs + hidden FAB spacer)
+
 ## Conventions
 
 - TypeScript strict mode with `noUncheckedIndexedAccess`
