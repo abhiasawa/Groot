@@ -9,7 +9,6 @@ import { logger } from "@/lib/logger";
 export interface UserProactiveState {
   id: string;
   whatsapp_number: string | null;
-  telegram_chat_id: number | null;
   display_name: string | null;
   proactive_preference: string;
   last_responded_at: string | null;
@@ -38,7 +37,7 @@ export async function getEligibleUsers(
   const { data: users } = await supabase
     .from("users")
     .select(
-      "id, whatsapp_number, telegram_chat_id, display_name, proactive_preference, last_responded_at, timezone",
+      "id, whatsapp_number, display_name, proactive_preference, last_responded_at, timezone",
     )
     .not("onboarding_completed_at", "is", null)
     .neq("proactive_preference", "paused");

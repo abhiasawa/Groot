@@ -6,13 +6,10 @@ import {
   Home,
   BookOpen,
   BarChart3,
-  CheckSquare,
-  Users,
   Settings,
-  Lightbulb,
   Heart,
+  Lightbulb,
   Sparkles,
-  Tag,
   Sprout,
 } from "lucide-react";
 
@@ -20,8 +17,6 @@ const PRIMARY_NAV_ITEMS = [
   { href: "/garden", label: "Home", icon: Home },
   { href: "/garden/journal", label: "Journal", icon: BookOpen },
   { href: "/garden/habits", label: "Habits", icon: BarChart3 },
-  { href: "/garden/tasks", label: "Tasks", icon: CheckSquare },
-  { href: "/garden/people", label: "People", icon: Users },
   { href: "/garden/settings", label: "Settings", icon: Settings },
 ] as const;
 
@@ -29,7 +24,6 @@ const DEEP_DIVE_ITEMS = [
   { href: "/garden/insights", label: "Insights", icon: Lightbulb },
   { href: "/garden/mood", label: "Mood", icon: Heart },
   { href: "/garden/stories", label: "Stories", icon: Sparkles },
-  { href: "/garden/topics", label: "Topics", icon: Tag },
 ] as const;
 
 export default function Sidebar() {
@@ -38,10 +32,10 @@ export default function Sidebar() {
   return (
     <aside className="fixed left-0 top-0 z-40 hidden h-screen w-64 border-r border-border bg-card md:flex md:flex-col">
       <div className="border-b border-border px-4 py-5">
-        <div className="flex items-center gap-2">
+        <a href="/garden" className="flex items-center gap-2">
           <Sprout className="h-5 w-5 text-primary" />
-          <span className="text-sm font-semibold tracking-tight">The Garden</span>
-        </div>
+          <span className="text-lg tracking-tight" style={{ fontFamily: "var(--font-instrument-serif), Georgia, serif" }}>The Garden</span>
+        </a>
       </div>
 
       <nav className="flex-1 overflow-y-auto p-3">

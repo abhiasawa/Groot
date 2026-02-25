@@ -19,7 +19,24 @@ import type {
 
 // ── Query key factory ────────────────────────
 
+/** Today screen API response */
+export interface TodayData {
+  greeting: string;
+  todayPrompt: string | null;
+  observation: string | null;
+  yesterdayMoment: string | null;
+  yesterdayMood: string | null;
+  recentMood: string | null;
+  habits: Array<{
+    name: string;
+    currentStreak: number;
+    checkedInToday: boolean;
+    targetUnit: string | null;
+  }>;
+}
+
 export const qk = {
+  today: ["today"] as const,
   home: ["home"] as const,
   memories: (params?: MemoriesParams) => ["memories", params] as const,
   calendarDots: (yearMonth: string) => ["calendarDots", yearMonth] as const,
@@ -46,6 +63,15 @@ export interface MemoriesParams {
 }
 
 // ── Hooks ────────────────────────────────────
+
+/** GET /api/mobile/today */
+export function useToday() {
+  return useQuery<TodayData>({
+    queryKey: qk.today,
+    queryFn: () => apiFetch<TodayData>("/api/mobile/today"),
+    staleTime: 30_000,
+  });
+}
 
 /** GET /api/garden/home */
 export function useHome() {

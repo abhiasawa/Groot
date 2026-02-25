@@ -12,12 +12,11 @@ import { Pedometer } from "expo-sensors";
 import {
   initialize,
   readRecords,
-  requestPermission,
   getSdkStatus,
   SdkAvailabilityStatus,
 } from "react-native-health-connect";
 import { Footprints, MapPin, Flame, Target } from "lucide-react-native";
-import Svg, { Rect } from "react-native-svg";
+import Svg, { Rect, Text as SvgText } from "react-native-svg";
 
 import { useTheme } from "../../lib/theme/provider";
 import { typography } from "../../constants/typography";
@@ -82,7 +81,9 @@ function MiniWeekChart({
   const chartWidth = screenWidth - 80; // card padding
   const barGap = 8;
   const barWidth = (chartWidth - barGap * 6) / 7;
-  const chartHeight = 64;
+  const labelHeight = 14; // space for count labels above bars
+  const barAreaHeight = 64;
+  const chartHeight = barAreaHeight + labelHeight;
 
   // Smart scale: use data max so bars are always proportionally visible
   // Only include goal in scale if any day actually approached it (>30%)
@@ -99,9 +100,9 @@ function MiniWeekChart({
         {weekData.map((day, i) => {
           const ratio = maxSteps > 0 ? day.steps / maxSteps : 0;
           // Min bar height of 4px for any non-zero day so it's always visible
-          const barH = day.steps > 0 ? Math.max(ratio * chartHeight, 4) : 0;
+          const barH = day.steps > 0 ? Math.max(ratio * barAreaHeight, 4) : 0;
           const x = i * (barWidth + barGap);
-          const y = chartHeight - barH;
+          const barY = chartHeight - barH;
           const metGoal = day.steps >= goal;
           const barColor = day.isToday
             ? colors.primary
@@ -109,18 +110,38 @@ function MiniWeekChart({
               ? colors.moodGood
               : `${colors.primary}55`;
 
+          // Format count: 1234 → "1.2k", 0 → ""
+          const countLabel = day.steps >= 1000
+            ? `${(day.steps / 1000).toFixed(1)}k`
+            : day.steps > 0
+              ? String(day.steps)
+              : "";
+
           return (
-            <Rect
-              key={day.date}
-              x={x}
-              y={y}
-              width={barWidth}
-              height={barH || 2}
-              rx={4}
-              ry={4}
-              fill={barColor}
-              opacity={barH === 0 ? 0.15 : 1}
-            />
+            <React.Fragment key={day.date}>
+              {countLabel !== "" && (
+                <SvgText
+                  x={x + barWidth / 2}
+                  y={barY - 3}
+                  fontSize={9}
+                  fill={day.isToday ? colors.primary : colors.mutedForeground}
+                  fontWeight={day.isToday ? "700" : "400"}
+                  textAnchor="middle"
+                >
+                  {countLabel}
+                </SvgText>
+              )}
+              <Rect
+                x={x}
+                y={barY}
+                width={barWidth}
+                height={barH || 2}
+                rx={4}
+                ry={4}
+                fill={barColor}
+                opacity={barH === 0 ? 0.15 : 1}
+              />
+            </React.Fragment>
           );
         })}
       </Svg>
@@ -183,9 +204,6 @@ export function StepsCard({ goal = DEFAULT_GOAL }: { goal?: number }) {
 
       const ok = await initialize();
       if (!ok) return 0;
-
-      // Request Health Connect permission for Steps read access
-      await requestPermission([{ accessType: "read", recordType: "Steps" }]);
 
       const startTime = getStartOfDayISO();
       const endTime = new Date().toISOString();

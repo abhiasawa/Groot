@@ -16,7 +16,6 @@ import type { ParsedMessage } from "@/types/whatsapp";
 
 /**
  * Platform-specific media download function.
- * WhatsApp passes downloadWhatsAppMedia, Telegram passes downloadTelegramMedia.
  */
 export type DownloadMediaFn = (
   mediaId: string,
@@ -42,7 +41,7 @@ export async function claimMessageForProcessing(messageId: string): Promise<bool
 }
 
 /**
- * Full message processing pipeline — shared between WhatsApp and Telegram.
+ * Full message processing pipeline.
  * Everything flows through Groot AI — no regex routing.
  */
 export async function processMessage(
@@ -96,6 +95,7 @@ export async function processMessage(
 
   // Non-critical (fire-and-forget)
   markUserResponded(user.id).catch(() => {});
+  markProactiveReplyIfApplicable(user.id).catch(() => {});
 
   // Media processing (audio/image)
   if (parsed.mediaId && parsed.mediaMimeType) {
@@ -600,6 +600,36 @@ async function createRemindersFromDetectedDates(
       ),
     );
   }
+}
+
+/**
+ * Check if this inbound message is a reply to a recent proactive message.
+ * If so, mark the proactive_history entry with replied_at.
+ * Window: 2 hours after the proactive message was sent.
+ */
+async function markProactiveReplyIfApplicable(userId: string): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+
+  // Find the most recent un-replied proactive message within the window
+  const { data: unreplied } = await supabase
+    .from("proactive_history")
+    .select("id")
+    .eq("user_id", userId)
+    .is("replied_at", null)
+    .gte("sent_at", twoHoursAgo)
+    .order("sent_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!unreplied) return;
+
+  await supabase
+    .from("proactive_history")
+    .update({ replied_at: new Date().toISOString() })
+    .eq("id", unreplied.id);
+
+  logger.info({ userId, proactiveId: unreplied.id }, "Proactive message marked as replied");
 }
 
 async function createTasksFromDetectedTasks(

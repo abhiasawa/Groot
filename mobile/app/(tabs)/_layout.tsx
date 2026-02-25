@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { BookOpen, Activity, CheckSquare, Settings } from "lucide-react-native";
+import { Sun, BookOpen, Activity, Sprout, Settings } from "lucide-react-native";
 
 import { BottomTabBar } from "../../components/ui/bottom-tab-bar";
 import { ComposeModal } from "../../components/ui/compose-modal";
@@ -14,7 +14,7 @@ function TabsInner() {
   return (
     <>
       <Tabs
-        initialRouteName="journal"
+        initialRouteName="today"
         tabBar={(props) => <BottomTabBar {...props} />}
         screenOptions={{
           headerShown: false,
@@ -27,7 +27,12 @@ function TabsInner() {
         />
         <Tabs.Screen
           name="today"
-          options={{ href: null }}
+          options={{
+            title: "Today",
+            tabBarIcon: ({ color, size, focused }) => (
+              <Sun size={size} color={color} strokeWidth={focused ? 2.2 : 1.7} />
+            ),
+          }}
         />
         <Tabs.Screen
           name="journal"
@@ -40,12 +45,7 @@ function TabsInner() {
         />
         <Tabs.Screen
           name="tasks"
-          options={{
-            title: "Tasks",
-            tabBarIcon: ({ color, size, focused }) => (
-              <CheckSquare size={size} color={color} strokeWidth={focused ? 2.2 : 1.7} />
-            ),
-          }}
+          options={{ href: null }}
         />
         <Tabs.Screen
           name="mood"
@@ -53,6 +53,15 @@ function TabsInner() {
             title: "Pulse",
             tabBarIcon: ({ color, size, focused }) => (
               <Activity size={size} color={color} strokeWidth={focused ? 2.2 : 1.7} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="garden"
+          options={{
+            title: "Garden",
+            tabBarIcon: ({ color, size, focused }) => (
+              <Sprout size={size} color={color} strokeWidth={focused ? 2.2 : 1.7} />
             ),
           }}
         />

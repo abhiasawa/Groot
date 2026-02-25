@@ -4,19 +4,16 @@ import {
   generateReflectionPrompt,
   recordProactiveMessage,
 } from "@/lib/journal/prompt-generator";
-import { sendMessage, getUserPlatform } from "@/lib/messaging/dispatcher";
 import { logger } from "@/lib/logger";
 
 /**
- * Evening reflection cron — 9 PM IST (3:30 PM UTC)
- * Protected by CRON_SECRET Bearer token.
+ * Prepare evening reflection cron — 6 PM IST (12:30 PM UTC)
+ * Pre-generates tonight's evening question so the Today screen can show it
+ * before 9 PM, giving users time to think about it during the day.
  *
- * Flow:
- * 1. Get eligible users (respects de-escalation + timezone)
- * 2. Build rich day context (mood, habits, profile, patterns)
- * 3. Generate a highly personal question (AI-powered, deduplication-aware)
- * 4. Send via WhatsApp
- * 5. Log to proactive_history for deduplication + engagement tracking
+ * Stores with message_type = 'evening_prepared'.
+ * At 9 PM, the evening-reflection cron sends the actual message
+ * (regenerating if new messages arrived since 6 PM).
  */
 export async function GET(request: NextRequest) {
   if (!process.env.CRON_SECRET) {
@@ -31,41 +28,35 @@ export async function GET(request: NextRequest) {
 
   try {
     const users = await getEligibleUsers("evening_reflection");
-    let sent = 0;
+    let prepared = 0;
 
     for (const user of users) {
       try {
-        const { platform, platformId } = getUserPlatform(user);
         const prompt = await generateReflectionPrompt(
           user.id,
           user.display_name,
         );
-        await sendMessage(platform, platformId, prompt);
 
-        // Log to proactive_history for deduplication + engagement tracking
+        // Store as 'evening_prepared' — the Today screen reads this
         await recordProactiveMessage(
           user.id,
-          "evening_reflection",
+          "evening_prepared",
           prompt,
         );
 
-        sent++;
-        logger.info(
-          { userId: user.id },
-          "Evening reflection sent",
-        );
+        prepared++;
       } catch (error) {
         logger.error(
           { error, userId: user.id },
-          "Failed to send evening reflection",
+          "Failed to prepare evening prompt",
         );
       }
     }
 
-    logger.info({ sent, total: users.length }, "Evening reflection complete");
-    return NextResponse.json({ sent, total: users.length });
+    logger.info({ prepared, total: users.length }, "Evening preparation complete");
+    return NextResponse.json({ prepared, total: users.length });
   } catch (error) {
-    logger.error({ error }, "Evening reflection cron failed");
+    logger.error({ error }, "Prepare evening cron failed");
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }

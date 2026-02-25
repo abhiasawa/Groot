@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { View, Text, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Hash, User, Settings, Sparkles, HeartPulse, ArrowUpRight } from "lucide-react-native";
+import { User, Settings, Sparkles, HeartPulse, ArrowUpRight } from "lucide-react-native";
 
 import { useTheme } from "../../lib/theme/provider";
 import { typography } from "../../constants/typography";
@@ -42,14 +42,6 @@ function useMenuItems(): MenuItem[] {
       route: "/(tabs)/mood",
       group: "discover",
       icon: <HeartPulse size={18} color={colors.primary} strokeWidth={1.7} />,
-    },
-    {
-      key: "topics",
-      label: "Topics",
-      description: "Conversation themes and tags",
-      route: "/(tabs)/topics",
-      group: "discover",
-      icon: <Hash size={18} color={colors.primary} strokeWidth={1.7} />,
     },
     {
       key: "profile",

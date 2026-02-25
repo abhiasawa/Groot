@@ -48,7 +48,7 @@ export async function createReminder(
  * Get upcoming reminders that are due (within the next hour).
  */
 export async function getDueReminders(): Promise<
-  Array<Reminder & { whatsapp_number: string | null; telegram_chat_id: number | null; display_name: string | null }>
+  Array<Reminder & { whatsapp_number: string | null; display_name: string | null }>
 > {
   const supabase = getSupabaseAdmin();
   const now = new Date().toISOString();
@@ -57,7 +57,7 @@ export async function getDueReminders(): Promise<
     .from("reminders")
     .select(`
       id, user_id, content, remind_at, context, is_sent,
-      users!inner(whatsapp_number, telegram_chat_id, display_name)
+      users!inner(whatsapp_number, display_name)
     `)
     .eq("is_sent", false)
     .lte("remind_at", now);
@@ -67,7 +67,6 @@ export async function getDueReminders(): Promise<
   return data.map((r) => {
     const users = r.users as unknown as {
       whatsapp_number: string | null;
-      telegram_chat_id: number | null;
       display_name: string | null;
     };
     return {
@@ -78,7 +77,6 @@ export async function getDueReminders(): Promise<
       context: r.context as string | null,
       is_sent: r.is_sent as boolean,
       whatsapp_number: users.whatsapp_number,
-      telegram_chat_id: users.telegram_chat_id,
       display_name: users.display_name,
     };
   });

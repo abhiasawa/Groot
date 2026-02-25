@@ -8,7 +8,6 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
   Animated as RNAnimated,
   Keyboard,
 } from "react-native";
@@ -30,6 +29,7 @@ import {
 import { useTheme } from "../../lib/theme/provider";
 import { typography } from "../../constants/typography";
 import { apiFetch } from "../../lib/api/client";
+import { SeedLoader } from "./seed-loader";
 
 // ── Helpers ──
 
@@ -350,7 +350,7 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
               <View style={s.headerLeft}>
                 <Sparkles size={18} color={colors.primary} strokeWidth={2} />
                 <Text style={[s.headerTitle, { color: colors.foreground }]}>
-                  Talk to Groot
+                  Capture a Moment
                 </Text>
               </View>
               <Pressable onPress={handleClose} hitSlop={12}>
@@ -415,10 +415,7 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
             {/* ── Loading ── */}
             {sending && (
               <View style={s.sendingWrap}>
-                <ActivityIndicator size="small" color={colors.primary} />
-                <Text style={[s.sendingText, { color: colors.mutedForeground }]}>
-                  Groot is thinking...
-                </Text>
+                <SeedLoader size={40} label="Groot is thinking..." />
               </View>
             )}
 

@@ -6,7 +6,6 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
-  Dimensions,
   Modal,
   Pressable,
   TextInput,
@@ -21,105 +20,32 @@ import {
   Flame,
   Trophy,
   Check,
-  Pencil,
-  Trash2,
   Footprints,
+  Trash2,
 } from "lucide-react-native";
 import Svg, { Circle } from "react-native-svg";
 
 import { useTheme } from "../../lib/theme/provider";
 import { useMood, useHabits } from "../../lib/api/queries";
 import {
-  useRecordMood,
   useHabitCheckin,
   useCreateHabit,
   useUpdateHabit,
   useDeleteHabit,
 } from "../../lib/api/mutations";
-import {
-  getMoodColor,
-  getMoodColorFromName,
-  MOOD_LABELS,
-  MOOD_FACE_LABELS,
-} from "../../constants/mood";
 import { typography } from "../../constants/typography";
 import { GlassCard } from "../../components/ui/glass-card";
 import { GradientBackground } from "../../components/ui/gradient-background";
 import { SectionHeader } from "../../components/ui/section-header";
 import { PressScale } from "../../components/ui/press-scale";
-import { MoodFace } from "../../components/illustrations/mood-faces";
 import { TabSwipeView } from "../../components/ui/tab-swipe-view";
 import { StepsCard } from "../../components/ui/steps-card";
-import type { DailyMood, Habit } from "../../../shared/types/api";
+import { MoodMeadow } from "../../components/garden/mood-meadow";
+import type { Habit } from "../../../shared/types/api";
 
 // ── Constants ────────────────────────────────
 
-const SCREEN_WIDTH = Dimensions.get("window").width;
 const GRID_PADDING = 20;
-const DOT_GAP = 3;
-const COLS = 14; // dots per row — larger for readability
-const DOT_SIZE = Math.floor(
-  (SCREEN_WIDTH - GRID_PADDING * 2 - DOT_GAP * (COLS - 1)) / COLS,
-);
-
-// ── Helpers ──────────────────────────────────
-
-function buildYearGrid(
-  year: number,
-  dailyMoods: DailyMood[],
-): { date: string; score: number | null }[] {
-  const moodMap = new Map<string, number>();
-  for (const dm of dailyMoods) {
-    moodMap.set(dm.date, dm.score);
-  }
-
-  const start = new Date(year, 0, 1);
-  const end = new Date(year, 11, 31);
-  const grid: { date: string; score: number | null }[] = [];
-
-  const current = new Date(start);
-  const today = new Date();
-  while (current <= end && current <= today) {
-    const dateStr = current.toISOString().slice(0, 10);
-    grid.push({
-      date: dateStr,
-      score: moodMap.get(dateStr) ?? null,
-    });
-    current.setDate(current.getDate() + 1);
-  }
-
-  return grid;
-}
-
-function getMoodDistribution(
-  dailyMoods: DailyMood[],
-): { score: number; label: string; count: number; pct: number }[] {
-  const counts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-  for (const dm of dailyMoods) {
-    if (dm.score >= 1 && dm.score <= 5) {
-      counts[dm.score] = (counts[dm.score] ?? 0) + 1;
-    }
-  }
-
-  const total = dailyMoods.length || 1;
-  return [5, 4, 3, 2, 1].map((score) => ({
-    score,
-    label: MOOD_LABELS[score] ?? "Unknown",
-    count: counts[score] ?? 0,
-    pct: Math.round(((counts[score] ?? 0) / total) * 100),
-  }));
-}
-
-// ── Component ────────────────────────────────
-
-// Score → mood name used for the check-in
-const CHECKIN_MOODS: Record<number, string> = {
-  1: "bad",
-  2: "low",
-  3: "okay",
-  4: "good",
-  5: "great",
-};
 
 // ── Habit Ring Component ──────────────────────
 
@@ -379,7 +305,6 @@ function HabitModal({
             </View>
           </View>
 
-          {/* Streak stats for existing habits */}
           {!isNew && habit?.current_streak != null && (
             <View style={[modalStyles.statsRow, { borderTopColor: colors.glassBorder }]}>
               <View style={modalStyles.stat}>
@@ -526,44 +451,18 @@ export default function PulseScreen() {
   const [year] = useState(currentYear);
   const { data, isLoading, refetch } = useMood(year);
   const { data: habitsData, refetch: refetchHabits } = useHabits();
-  const recordMood = useRecordMood();
   const habitCheckin = useHabitCheckin();
   const createHabit = useCreateHabit();
   const updateHabit = useUpdateHabit();
   const deleteHabit = useDeleteHabit();
   const [isPullRefreshing, setIsPullRefreshing] = useState(false);
-  const [justRecorded, setJustRecorded] = useState<string | null>(null);
   const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
   const [showNewHabit, setShowNewHabit] = useState(false);
 
   const onRefresh = useCallback(() => {
     setIsPullRefreshing(true);
-    setJustRecorded(null);
     Promise.all([refetch(), refetchHabits()]).finally(() => setIsPullRefreshing(false));
   }, [refetch, refetchHabits]);
-
-  const handleCheckin = useCallback(
-    (score: number) => {
-      const moodName = CHECKIN_MOODS[score] ?? "okay";
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      setJustRecorded(moodName);
-      recordMood.mutate({ mood: moodName });
-    },
-    [recordMood],
-  );
-
-  // If user just recorded or server has a recent mood, show it
-  const activeMood = justRecorded ?? data?.recentMood ?? null;
-
-  const yearGrid = useMemo(
-    () => buildYearGrid(year, data?.dailyMoods ?? []),
-    [year, data?.dailyMoods],
-  );
-
-  const distribution = useMemo(
-    () => getMoodDistribution(data?.dailyMoods ?? []),
-    [data?.dailyMoods],
-  );
 
   const s = useMemo(() => styles(colors), [colors]);
 
@@ -599,63 +498,14 @@ export default function PulseScreen() {
             <Text style={s.pageTitle}>Pulse</Text>
           </View>
 
-          {/* Mood check-in — collapses to compact after recording */}
-          {activeMood ? (
-            <GlassCard
-              accentColor={getMoodColorFromName(activeMood, colors)}
-              delay={0}
-              padding={14}
-            >
-              <View style={s.moodCompactRow}>
-                <MoodFace
-                  score={Object.entries(CHECKIN_MOODS).find(([, v]) => v === activeMood)?.[0] ? Number(Object.entries(CHECKIN_MOODS).find(([, v]) => v === activeMood)![0]) : 3}
-                  size={28}
-                  color={getMoodColorFromName(activeMood, colors)}
-                />
-                <Text style={s.moodCompactLabel}>
-                  Feeling{" "}
-                  <Text style={{ color: getMoodColorFromName(activeMood, colors), fontFamily: "Sora_700Bold", textTransform: "capitalize" }}>
-                    {activeMood}
-                  </Text>
-                  {" "}today
-                </Text>
-              </View>
-            </GlassCard>
-          ) : (
-            <GlassCard delay={0} padding={20}>
-              <Text style={s.checkinTitle}>How are you feeling?</Text>
-              <View style={s.checkinRow}>
-                {[1, 2, 3, 4, 5].map((score) => {
-                  const moodName = CHECKIN_MOODS[score] ?? "okay";
-                  return (
-                    <PressScale key={score} onPress={() => handleCheckin(score)} scale={0.9}>
-                      <View style={s.checkinItem}>
-                        <MoodFace
-                          score={score}
-                          size={36}
-                          color={getMoodColor(score, colors)}
-                        />
-                        <Text style={[s.checkinLabel, { color: colors.mutedForeground }]}>
-                          {MOOD_FACE_LABELS[score]}
-                        </Text>
-                      </View>
-                    </PressScale>
-                  );
-                })}
-              </View>
-            </GlassCard>
-          )}
+          {/* ── Steps ── */}
+          <StepsCard />
 
-          {/* ── Steps (top position) ── */}
-          <View style={s.sectionGap}>
-            <StepsCard />
-          </View>
-
-          {/* Year in Pixels */}
+          {/* Mood Meadow */}
           <GlassCard delay={100} style={s.sectionGap}>
-            <SectionHeader title={`${year} in Pixels`} />
+            <SectionHeader title="Mood Meadow" />
 
-            {yearGrid.length === 0 ? (
+            {(data?.dailyMoods?.length ?? 0) === 0 ? (
               <View style={s.emptyPixels}>
                 <Text style={s.emptySubtitle}>
                   No mood data for {year} yet. Keep chatting with Groot to track
@@ -663,71 +513,11 @@ export default function PulseScreen() {
                 </Text>
               </View>
             ) : (
-              <View style={s.pixelGrid}>
-                {yearGrid.map((day) => (
-                  <View
-                    key={day.date}
-                    style={[
-                      s.pixel,
-                      {
-                        backgroundColor:
-                          day.score !== null
-                            ? getMoodColor(day.score, colors)
-                            : colors.moodNone,
-                        opacity: day.score !== null ? 1 : 0.35,
-                      },
-                    ]}
-                  />
-                ))}
-              </View>
+              <MoodMeadow dailyMoods={data!.dailyMoods} year={year} />
             )}
-
-            {/* Legend */}
-            <View style={s.legend}>
-              {[
-                { score: 1, label: "Bad" },
-                { score: 2, label: "Low" },
-                { score: 3, label: "Okay" },
-                { score: 4, label: "Good" },
-                { score: 5, label: "Great" },
-              ].map((item) => (
-                <View key={item.score} style={s.legendItem}>
-                  <View style={[s.legendDot, { backgroundColor: getMoodColor(item.score, colors) }]} />
-                  <Text style={s.legendLabel}>{item.label}</Text>
-                </View>
-              ))}
-            </View>
           </GlassCard>
 
-          {/* Distribution */}
-          <GlassCard delay={150} style={s.sectionGap}>
-            <SectionHeader title="Distribution" />
-
-            <View style={s.distributionList}>
-              {distribution.map((item) => (
-                <View key={item.score} style={s.distRow}>
-                  <View style={s.distLabelRow}>
-                    <MoodFace score={item.score} size={16} color={getMoodColor(item.score, colors)} />
-                    <Text style={s.distLabel}>{item.label}</Text>
-                  </View>
-                  <View style={s.distBarContainer}>
-                    <View
-                      style={[
-                        s.distBar,
-                        {
-                          width: `${Math.max(item.pct, 2)}%`,
-                          backgroundColor: getMoodColor(item.score, colors),
-                        },
-                      ]}
-                    />
-                  </View>
-                  <Text style={s.distPct}>{item.pct}%</Text>
-                </View>
-              ))}
-            </View>
-          </GlassCard>
-
-          {/* ── Habits section (bottom) ── */}
+          {/* ── Habits section ── */}
           {(habitsData?.habits?.length ?? 0) > 0 && (
             <View style={s.sectionGap}>
               <View style={s.habitsHeader}>
@@ -757,7 +547,7 @@ export default function PulseScreen() {
 
           {(habitsData?.habits?.length ?? 0) === 0 && (
             <GlassCard delay={200} style={s.sectionGap} padding={20}>
-              <Text style={s.checkinTitle}>Track Your Habits</Text>
+              <Text style={s.sectionTitle}>Track Your Habits</Text>
               <Text style={[s.emptySubtitle, { marginBottom: 14 }]}>
                 Build streaks, track progress, and stay consistent.
               </Text>
@@ -845,6 +635,12 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
     sectionGap: {
       marginTop: 20,
     },
+    sectionTitle: {
+      fontFamily: "Sora_600SemiBold",
+      ...typography.base,
+      color: c.foreground,
+      marginBottom: 16,
+    },
 
     // ── Habits ──
     habitsHeader: {
@@ -872,69 +668,7 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       ...typography.sm,
     },
 
-    // ── Hero (current mood) ──
-    heroLabel: {
-      fontFamily: "Manrope_400Regular",
-      ...typography.sm,
-      color: c.mutedForeground,
-      marginBottom: 8,
-    },
-    heroRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 10,
-    },
-    heroMoodName: {
-      fontFamily: "Sora_700Bold",
-      ...typography.xl,
-      textTransform: "capitalize",
-    },
-    // ── Check-in ──
-    checkinTitle: {
-      fontFamily: "Sora_600SemiBold",
-      ...typography.base,
-      color: c.foreground,
-      marginBottom: 16,
-    },
-    checkinRow: {
-      flexDirection: "row",
-      justifyContent: "space-around",
-    },
-    checkinItem: {
-      alignItems: "center",
-      gap: 6,
-      minWidth: 52,
-    },
-    checkinLabel: {
-      fontFamily: "Manrope_500Medium",
-      fontSize: 11,
-    },
-    checkinItemActive: {
-      transform: [{ scale: 1.1 }],
-    },
-    // ── Compact mood (after recording) ──
-    moodCompactRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 10,
-    },
-    moodCompactLabel: {
-      fontFamily: "Manrope_400Regular",
-      ...typography.sm,
-      color: c.mutedForeground,
-    },
-
-    // ── Year in Pixels ──
-    pixelGrid: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: DOT_GAP,
-    },
-    pixel: {
-      width: DOT_SIZE,
-      height: DOT_SIZE,
-      borderRadius: DOT_SIZE / 4,
-    },
+    // ── Mood Meadow ──
     emptyPixels: {
       alignItems: "center",
       paddingVertical: 24,
@@ -945,66 +679,5 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       color: c.mutedForeground,
       textAlign: "center",
       lineHeight: 22,
-    },
-    legend: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 12,
-      marginTop: 14,
-    },
-    legendItem: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 4,
-    },
-    legendDot: {
-      width: 10,
-      height: 10,
-      borderRadius: 3,
-    },
-    legendLabel: {
-      fontFamily: "Manrope_400Regular",
-      ...typography.xs,
-      color: c.mutedForeground,
-    },
-
-    // ── Distribution ──
-    distributionList: {
-      gap: 12,
-    },
-    distRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 10,
-    },
-    distLabelRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      width: 60,
-      gap: 6,
-    },
-    distLabel: {
-      fontFamily: "Manrope_500Medium",
-      ...typography.xs,
-      color: c.foreground,
-    },
-    distBarContainer: {
-      flex: 1,
-      height: 10,
-      backgroundColor: c.secondary,
-      borderRadius: 6,
-      overflow: "hidden",
-    },
-    distBar: {
-      height: "100%",
-      borderRadius: 6,
-    },
-    distPct: {
-      fontFamily: "Manrope_500Medium",
-      ...typography.xs,
-      color: c.mutedForeground,
-      width: 34,
-      textAlign: "right",
     },
   });

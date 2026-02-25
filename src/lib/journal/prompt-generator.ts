@@ -1,50 +1,37 @@
-import { getRecentMessages } from "@/lib/memory/short-term";
+import { buildDayContext, type DayContext } from "@/lib/journal/rich-context";
 import { getLLMProvider } from "@/lib/providers/llm";
+import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 
 /**
- * Journal prompt generator — creates context-aware evening reflection prompts.
+ * Journal prompt generator — creates deeply personal evening reflection prompts.
  *
- * Rules:
- * - Never ask the same question two nights in a row
- * - Use context from the day's conversations when available
- * - Keep prompts warm and inviting, never clinical
+ * Uses rich day context (mood, habits, profile, patterns) to generate
+ * one highly specific question. Falls back to curated Storyworthy defaults.
+ *
+ * Deduplication: queries last 3 evening prompts and asks AI to avoid overlap.
  */
 
-/**
- * Storyworthy-inspired prompts — blended with Groot's natural voice.
- *
- * Based on Matthew Dicks' "Homework for Life" practice:
- * - Every day has a five-second moment when something shifts
- * - Small moments > dramatic events
- * - Transformation is what makes a moment storyworthy
- * - The goal is to build a storytelling lens over time
- */
 const DEFAULT_PROMPTS = [
-  // Homework for Life — direct
   "What's one moment from today you'd actually tell someone about?",
   "If you had to pick one scene from today — just one — what would it be?",
-  // Five-second moment probes
   "Was there a moment today where something clicked — or shifted?",
   "Did you see anything differently today than you did yesterday?",
-  // Small > Big
   "Any small thing happen today that felt surprisingly meaningful?",
   "What's one tiny detail from today you don't want to forget?",
-  // Transformation
   "Did anything change how you see something — even a little?",
   "What caught you off guard today?",
-  // Softer rotations
   "What stuck with you today?",
   "Anything unexpected happen?",
   "If today had a title, what would it be?",
   "What's the one thing from today worth remembering?",
-  // First/Last/Best/Worst (periodic)
   "Random one — what's the best conversation you had today?",
   "What was the last thing that made you laugh today?",
 ];
 
 /**
- * Generate a context-aware reflection prompt for a user.
+ * Generate a context-aware reflection prompt using rich day context.
+ * ALWAYS uses AI when possible (even with 0 messages today).
  */
 export async function generateReflectionPrompt(
   userId: string,
@@ -52,47 +39,146 @@ export async function generateReflectionPrompt(
 ): Promise<string> {
   const name = userName ?? "there";
 
-  // Try to generate a contextual prompt using the day's messages
   try {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
+    const [dayContext, recentPrompts] = await Promise.all([
+      buildDayContext(userId, name),
+      getRecentProactivePrompts(userId, 3),
+    ]);
 
-    const recentMessages = await getRecentMessages(userId, 10);
-    const todayMessages = recentMessages.filter(
-      (m) => new Date(m.created_at) >= todayStart && m.direction === "inbound",
+    const question = await generateContextualQuestion(
+      dayContext,
+      recentPrompts,
     );
 
-    if (todayMessages.length >= 3) {
-      // Enough context — use AI to generate a personalized prompt
-      const provider = getLLMProvider();
-      const context = todayMessages
-        .map((m) => m.content)
-        .filter(Boolean)
-        .join("\n");
-
-      const response = await provider.generateResponse(
-        `Generate ONE short evening reflection question for ${name}.
-Use their day's context to make it personal. Keep it warm and inviting.
-Your goal is to surface the STORYWORTHY moment of the day — the one scene, shift, or five-second moment that made today different from any other day.
-Prefer questions about small meaningful moments over big events. Ask about what shifted, surprised, or stuck with them.
-Output only the question, nothing else.
-Use WhatsApp formatting (_italic_ for emphasis if needed).`,
-        [
-          {
-            role: "user",
-            content: `Today's conversations:\n${context}\n\nGenerate a personalized reflection question:`,
-          },
-        ],
-        { maxTokens: 16384, temperature: 0.9 },
-      );
-
-      return `Hey ${name}, time for a quick reflection 🌙\n\n${response.text}`;
+    if (question) {
+      return `Hey ${name}, time for a quick reflection 🌙\n\n${question}`;
     }
   } catch (error) {
-    logger.warn({ error, userId }, "Failed to generate contextual prompt, using default");
+    logger.warn(
+      { error, userId },
+      "Failed to generate contextual prompt, using default",
+    );
   }
 
-  // Fallback: use a random default prompt
-  const prompt = DEFAULT_PROMPTS[Math.floor(Math.random() * DEFAULT_PROMPTS.length)]!;
+  // Fallback: curated Storyworthy default
+  const prompt =
+    DEFAULT_PROMPTS[Math.floor(Math.random() * DEFAULT_PROMPTS.length)]!;
   return `Hey ${name}, time for a quick reflection 🌙\n\n${prompt}`;
+}
+
+/**
+ * Store a sent proactive message in history for deduplication + engagement tracking.
+ */
+export async function recordProactiveMessage(
+  userId: string,
+  messageType: string,
+  content: string,
+): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase.from("proactive_history").insert({
+    user_id: userId,
+    message_type: messageType,
+    content,
+  });
+
+  if (error) {
+    logger.error({ error, userId, messageType }, "Failed to record proactive message");
+  }
+}
+
+// ─── Internal ───
+
+async function getRecentProactivePrompts(
+  userId: string,
+  limit: number,
+): Promise<string[]> {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("proactive_history")
+    .select("content")
+    .eq("user_id", userId)
+    .eq("message_type", "evening_reflection")
+    .order("sent_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    logger.warn({ error, userId }, "Failed to fetch proactive history");
+    return [];
+  }
+
+  return (data ?? []).map((row) => row.content as string);
+}
+
+async function generateContextualQuestion(
+  ctx: DayContext,
+  recentPrompts: string[],
+): Promise<string | null> {
+  const provider = getLLMProvider();
+
+  // Build context sections
+  const messageSummary =
+    ctx.messageCount > 0
+      ? ctx.todayMessages
+          .map((m) => m.content)
+          .filter(Boolean)
+          .join("\n")
+      : "No messages today.";
+
+  const habitSummary =
+    ctx.activeHabits.length > 0
+      ? ctx.activeHabits
+          .map(
+            (h) =>
+              `${h.name}: ${h.currentStreak}-day streak${h.checkedInToday ? " (checked in today)" : " (not yet today)"}`,
+          )
+          .join("\n")
+      : "No active habits.";
+
+  const patternSection =
+    ctx.recentPatterns.length > 0
+      ? ctx.recentPatterns.join("\n")
+      : "No notable patterns this week.";
+
+  const avoidSection =
+    recentPrompts.length > 0
+      ? `\nAVOID asking about these topics (asked recently):\n${recentPrompts.map((p) => `- ${p}`).join("\n")}`
+      : "";
+
+  const systemPrompt = `You are Groot, generating ONE evening reflection question for ${ctx.userName}.
+
+CONTEXT ABOUT THEIR DAY:
+- Messages today: ${ctx.messageCount} messages
+${ctx.messageCount > 0 ? `- Topics discussed:\n${messageSummary}` : "- They haven't messaged today."}
+- Current mood: ${ctx.lastDetectedMood ?? "unknown"} (trend: ${ctx.currentMoodTrend} over 7 days)
+- Active habits:\n${habitSummary}
+- Key facts about them:\n${ctx.profileHighlights || "Not much known yet."}
+- Patterns this week:\n${patternSection}
+${avoidSection}
+
+RULES:
+- Ask about a SPECIFIC thing from their day if possible
+- If they mentioned a meeting/event, ask how it went
+- If mood is declining, ask about a bright spot
+- If they haven't messaged today, use what you know about them to ask something personal
+- Keep it to 1-2 sentences max
+- Sound like a close friend texting, not a therapist
+- Do NOT start with "Hey" or "Hi" — just the question
+- No emoji
+- Use WhatsApp formatting (_italic_ for emphasis if needed)
+
+Return ONLY the question text, nothing else.`;
+
+  const response = await provider.generateResponse(
+    systemPrompt,
+    [{ role: "user", content: "Generate the evening reflection question:" }],
+    { maxTokens: 256, temperature: 0.9 },
+  );
+
+  const question = response.text.trim();
+  if (question.length < 10 || question.length > 500) {
+    logger.warn({ userId: "unknown", questionLength: question.length }, "Generated question out of range");
+    return null;
+  }
+
+  return question;
 }

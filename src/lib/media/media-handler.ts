@@ -21,8 +21,7 @@ export interface MediaProcessingResult {
 }
 
 /**
- * Process media from an already-downloaded buffer (platform-agnostic).
- * Both WhatsApp and Telegram webhooks call this after downloading media.
+ * Process media from an already-downloaded buffer.
  */
 export async function processMediaFromBuffer(
   buffer: Buffer,

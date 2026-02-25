@@ -28,10 +28,6 @@ const envSchema = z.object({
   QSTASH_CURRENT_SIGNING_KEY: z.string().optional(),
   QSTASH_NEXT_SIGNING_KEY: z.string().optional(),
 
-  // Telegram Bot (optional — Telegram support disabled without these)
-  TELEGRAM_BOT_TOKEN: z.string().optional(),
-  TELEGRAM_WEBHOOK_SECRET: z.string().optional(),
-
   // App config
   CRON_SECRET: z.string().optional(),
   OWNER_WHATSAPP_NUMBER: z.string().optional(),

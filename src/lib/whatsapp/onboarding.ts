@@ -5,7 +5,6 @@ import type { Platform } from "@/types/whatsapp";
 export interface UserRecord {
   id: string;
   whatsapp_number: string | null;
-  telegram_chat_id: number | null;
   display_name: string | null;
   onboarding_step: number;
   onboarding_completed_at: string | null;
@@ -22,13 +21,13 @@ export async function getOrCreateUser(
 ): Promise<{ user: UserRecord; isNewUser: boolean }> {
   const supabase = getSupabaseAdmin();
 
-  const column = platform === "whatsapp" ? "whatsapp_number" : "telegram_chat_id";
-  const value = platform === "telegram" ? Number.parseInt(platformId, 10) : platformId;
+  const column = "whatsapp_number";
+  const value = platformId;
 
   // Try to fetch existing user
   const { data: existing } = await supabase
     .from("users")
-    .select("id, whatsapp_number, telegram_chat_id, display_name, onboarding_step, onboarding_completed_at")
+    .select("id, whatsapp_number, display_name, onboarding_step, onboarding_completed_at")
     .eq(column, value)
     .single();
 
@@ -37,11 +36,6 @@ export async function getOrCreateUser(
     return { user: existing as UserRecord, isNewUser: false };
   }
 
-  // NOTE: Cross-platform auto-linking was removed (multi-user safety).
-  // Previously, this code would find ANY user on the other platform and merge them,
-  // which would accidentally link unrelated users (e.g., wife's Telegram to husband's WhatsApp).
-  // Cross-platform linking is now handled explicitly via POST /api/auth/link-platform.
-
   // Create new user — onboarding complete from the start
   const insertData: Record<string, unknown> = {
     display_name: displayName || null,
@@ -49,16 +43,12 @@ export async function getOrCreateUser(
     onboarding_completed_at: new Date().toISOString(),
   };
 
-  if (platform === "whatsapp") {
-    insertData.whatsapp_number = platformId;
-  } else {
-    insertData.telegram_chat_id = Number.parseInt(platformId, 10);
-  }
+  insertData.whatsapp_number = platformId;
 
   const { data: newUser, error } = await supabase
     .from("users")
     .insert(insertData)
-    .select("id, whatsapp_number, telegram_chat_id, display_name, onboarding_step, onboarding_completed_at")
+    .select("id, whatsapp_number, display_name, onboarding_step, onboarding_completed_at")
     .single();
 
   if (error || !newUser) {

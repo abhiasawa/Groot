@@ -1,5 +1,13 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { View, StyleSheet, type ViewStyle } from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withSequence,
+  withTiming,
+  Easing,
+} from "react-native-reanimated";
 import { useTheme } from "../../lib/theme/provider";
 
 interface GlassCardProps {
@@ -9,6 +17,8 @@ interface GlassCardProps {
   delay?: number;
   padding?: number;
   intensity?: number;
+  /** Enable a very subtle "breathing" scale pulse. Default false. */
+  breathing?: boolean;
 }
 
 export function GlassCard({
@@ -18,12 +28,32 @@ export function GlassCard({
   delay = 0,
   padding = 20,
   intensity = 40,
+  breathing = false,
 }: GlassCardProps) {
   const { colors } = useTheme();
   void delay;
   void intensity;
 
-  return (
+  const breathScale = useSharedValue(1);
+
+  useEffect(() => {
+    if (breathing) {
+      breathScale.value = withRepeat(
+        withSequence(
+          withTiming(1.002, { duration: 3000, easing: Easing.inOut(Easing.sin) }),
+          withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.sin) }),
+        ),
+        -1,
+        false,
+      );
+    }
+  }, [breathing, breathScale]);
+
+  const breathStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: breathScale.value }],
+  }));
+
+  const cardContent = (
     <View
       style={[
         styles.card,
@@ -41,6 +71,12 @@ export function GlassCard({
       </View>
     </View>
   );
+
+  if (breathing) {
+    return <Animated.View style={breathStyle}>{cardContent}</Animated.View>;
+  }
+
+  return cardContent;
 }
 
 const styles = StyleSheet.create({

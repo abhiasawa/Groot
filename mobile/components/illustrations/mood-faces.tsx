@@ -7,7 +7,7 @@ interface MoodFaceProps {
 }
 
 /** Score 5: Big happy grin */
-export function FaceExcellent({ size = 40, color = "#5BAE7C" }: MoodFaceProps) {
+export function FaceExcellent({ size = 40, color = "#2A9D8F" }: MoodFaceProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 40 40">
       <Circle cx="20" cy="20" r="19" fill={color} opacity={0.15} />
@@ -22,7 +22,7 @@ export function FaceExcellent({ size = 40, color = "#5BAE7C" }: MoodFaceProps) {
 }
 
 /** Score 4: Gentle smile */
-export function FaceGood({ size = 40, color = "#7EC8A0" }: MoodFaceProps) {
+export function FaceGood({ size = 40, color = "#6B8F71" }: MoodFaceProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 40 40">
       <Circle cx="20" cy="20" r="19" fill={color} opacity={0.15} />
@@ -37,7 +37,7 @@ export function FaceGood({ size = 40, color = "#7EC8A0" }: MoodFaceProps) {
 }
 
 /** Score 3: Neutral flat mouth */
-export function FaceOkay({ size = 40, color = "#F0C76E" }: MoodFaceProps) {
+export function FaceOkay({ size = 40, color = "#E9C46A" }: MoodFaceProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 40 40">
       <Circle cx="20" cy="20" r="19" fill={color} opacity={0.15} />
@@ -52,7 +52,7 @@ export function FaceOkay({ size = 40, color = "#F0C76E" }: MoodFaceProps) {
 }
 
 /** Score 2: Slightly sad */
-export function FaceBad({ size = 40, color = "#E8945C" }: MoodFaceProps) {
+export function FaceBad({ size = 40, color = "#E76F51" }: MoodFaceProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 40 40">
       <Circle cx="20" cy="20" r="19" fill={color} opacity={0.15} />
@@ -67,7 +67,7 @@ export function FaceBad({ size = 40, color = "#E8945C" }: MoodFaceProps) {
 }
 
 /** Score 1: Frowning with downturned eyes */
-export function FaceTerrible({ size = 40, color = "#D47B7B" }: MoodFaceProps) {
+export function FaceTerrible({ size = 40, color = "#C1484B" }: MoodFaceProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 40 40">
       <Circle cx="20" cy="20" r="19" fill={color} opacity={0.15} />

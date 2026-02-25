@@ -1,4 +1,4 @@
-export type Platform = "whatsapp" | "telegram";
+export type Platform = "whatsapp";
 
 export interface WhatsAppWebhookPayload {
   object: string;

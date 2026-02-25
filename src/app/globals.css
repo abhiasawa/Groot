@@ -56,86 +56,93 @@ body {
   font-family: 'Inter', system-ui, sans-serif;
 }
 
-/* ─── Notion-Inspired Light Theme ─── */
+/* ─── Living Earth Light Theme ─── */
 :root {
-  --radius: 0.5rem;
-  --background: #FFFFFF;
-  --foreground: #37352F;
+  --radius: 0.625rem;
+  --background: #FAF8F3;
+  --foreground: #2C2C2A;
   --card: #FFFFFF;
-  --card-foreground: #37352F;
+  --card-foreground: #2C2C2A;
   --popover: #FFFFFF;
-  --popover-foreground: #37352F;
-  --primary: #2383E2;
+  --popover-foreground: #2C2C2A;
+  --primary: #6B8F71;
   --primary-foreground: #FFFFFF;
-  --secondary: #F7F6F3;
-  --secondary-foreground: #37352F;
-  --muted: #F7F6F3;
-  --muted-foreground: #787774;
-  --accent: #D9730D;
+  --secondary: #F0EDE6;
+  --secondary-foreground: #5A5A58;
+  --muted: #E8E4DC;
+  --muted-foreground: #8A8A86;
+  --accent: #D4A054;
   --accent-foreground: #FFFFFF;
-  --destructive: #E03E3E;
-  --border: rgba(55, 53, 47, 0.09);
-  --input: rgba(55, 53, 47, 0.09);
-  --ring: #2383E2;
-  /* Chart colors — Notion palette */
-  --chart-1: #2383E2;
-  --chart-2: #0F7B6C;
-  --chart-3: #D9730D;
-  --chart-4: #6940A5;
-  --chart-5: #448361;
+  --destructive: #C1484B;
+  --border: rgba(44, 44, 42, 0.08);
+  --input: rgba(44, 44, 42, 0.08);
+  --ring: #6B8F71;
+  /* Chart colors — Living Earth */
+  --chart-1: #6B8F71;
+  --chart-2: #2A9D8F;
+  --chart-3: #D4A054;
+  --chart-4: #8B7355;
+  --chart-5: #5B9BD5;
   /* Sidebar */
   --sidebar: #FFFFFF;
-  --sidebar-foreground: #37352F;
-  --sidebar-primary: #2383E2;
+  --sidebar-foreground: #2C2C2A;
+  --sidebar-primary: #6B8F71;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #F7F6F3;
-  --sidebar-accent-foreground: #37352F;
-  --sidebar-border: rgba(55, 53, 47, 0.09);
-  --sidebar-ring: #2383E2;
-  /* Mood colors */
-  --mood-great: #0F7B6C;
-  --mood-good: #448361;
-  --mood-okay: #CB912F;
-  --mood-low: #D9730D;
-  --mood-bad: #E03E3E;
-  --mood-none: #E3E2E0;
+  --sidebar-accent: #F0EDE6;
+  --sidebar-accent-foreground: #2C2C2A;
+  --sidebar-border: rgba(44, 44, 42, 0.08);
+  --sidebar-ring: #6B8F71;
+  /* Mood colors — Living Earth */
+  --mood-great: #2A9D8F;
+  --mood-good: #6B8F71;
+  --mood-okay: #E9C46A;
+  --mood-low: #E76F51;
+  --mood-bad: #C1484B;
+  --mood-none: #D5D3CB;
 }
 
-/* ─── Dark Theme ─── */
+/* ─── Living Earth Dark Theme ─── */
 .dark {
-  --background: #191919;
-  --foreground: rgba(255, 255, 255, 0.81);
-  --card: #202020;
-  --card-foreground: rgba(255, 255, 255, 0.81);
-  --popover: #202020;
-  --popover-foreground: rgba(255, 255, 255, 0.81);
-  --primary: #529CCA;
+  --background: #1A1C19;
+  --foreground: rgba(255, 255, 255, 0.87);
+  --card: #222420;
+  --card-foreground: rgba(255, 255, 255, 0.87);
+  --popover: #222420;
+  --popover-foreground: rgba(255, 255, 255, 0.87);
+  --primary: #8BC4A0;
   --primary-foreground: #FFFFFF;
-  --secondary: #2F2F2F;
-  --secondary-foreground: rgba(255, 255, 255, 0.81);
-  --muted: #2F2F2F;
-  --muted-foreground: rgba(255, 255, 255, 0.443);
-  --accent: #FFA344;
-  --accent-foreground: #191919;
-  --destructive: #E03E3E;
-  --border: rgba(255, 255, 255, 0.094);
-  --input: rgba(255, 255, 255, 0.15);
-  --ring: #529CCA;
-  /* Chart colors — Dark mode */
-  --chart-1: #529CCA;
-  --chart-2: #4DB8A4;
-  --chart-3: #FFA344;
-  --chart-4: #9A6DD7;
-  --chart-5: #6BAF8D;
+  --secondary: #2A2C28;
+  --secondary-foreground: rgba(255, 255, 255, 0.65);
+  --muted: #252723;
+  --muted-foreground: rgba(255, 255, 255, 0.45);
+  --accent: #E8C07A;
+  --accent-foreground: #1A1C19;
+  --destructive: #E07070;
+  --border: rgba(255, 255, 255, 0.06);
+  --input: rgba(255, 255, 255, 0.08);
+  --ring: #8BC4A0;
+  /* Chart colors — Dark */
+  --chart-1: #8BC4A0;
+  --chart-2: #3DBFAE;
+  --chart-3: #E8C07A;
+  --chart-4: #B09A78;
+  --chart-5: #7DB8E8;
   /* Sidebar */
-  --sidebar: #202020;
-  --sidebar-foreground: rgba(255, 255, 255, 0.81);
-  --sidebar-primary: #529CCA;
+  --sidebar: #222420;
+  --sidebar-foreground: rgba(255, 255, 255, 0.87);
+  --sidebar-primary: #8BC4A0;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #2F2F2F;
-  --sidebar-accent-foreground: rgba(255, 255, 255, 0.81);
-  --sidebar-border: rgba(255, 255, 255, 0.094);
-  --sidebar-ring: #529CCA;
+  --sidebar-accent: #2A2C28;
+  --sidebar-accent-foreground: rgba(255, 255, 255, 0.87);
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --sidebar-ring: #8BC4A0;
+  /* Mood colors — Dark */
+  --mood-great: #3DBFAE;
+  --mood-good: #8BC4A0;
+  --mood-okay: #F4D68C;
+  --mood-low: #F09070;
+  --mood-bad: #E07070;
+  --mood-none: #3A3C38;
 }
 
 @layer base {

@@ -5,6 +5,7 @@ import {
   Pressable,
   StyleSheet,
   PanResponder,
+  Platform,
 } from "react-native";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -20,7 +21,7 @@ import { Plus, Type, Mic, Camera, X } from "lucide-react-native";
 import { useTheme } from "../../lib/theme/provider";
 import { useCompose } from "../../lib/compose-context";
 
-const TAB_ORDER = ["journal", "tasks", "__fab__", "mood", "settings"] as const;
+const TAB_ORDER = ["today", "journal", "__fab__", "mood", "settings"] as const;
 
 // Radial menu config: 3 items in an arc above the FAB
 const RADIAL_RADIUS = 80;

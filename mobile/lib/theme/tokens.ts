@@ -1,6 +1,6 @@
 /**
  * Theme color tokens for the Groot mobile app.
- * Translated from the web portal's Notion-inspired CSS color system.
+ * "Living Earth" design language — warm, organic, nature-inspired.
  */
 
 export interface ThemeColors {
@@ -59,111 +59,111 @@ export interface ThemeColors {
 }
 
 export const lightTheme: ThemeColors = {
-  // Core
-  background: "#F5F2EB",
-  foreground: "#2D3A2E",
+  // Core — Living Earth Light
+  background: "#FAF8F3",              // Warm Linen
+  foreground: "#2C2C2A",              // Deep Charcoal
   // Card
   card: "#FFFFFF",
-  cardForeground: "#2D3A2E",
+  cardForeground: "#2C2C2A",
   // Primary
-  primary: "#4A7C59",
+  primary: "#6B8F71",                 // Sage Green
   primaryForeground: "#FFFFFF",
   // Secondary
-  secondary: "#E8EDDF",
-  secondaryForeground: "#3D6B4A",
+  secondary: "#F0EDE6",               // Light Linen
+  secondaryForeground: "#5A5A58",
   // Muted
-  muted: "#ECE9E1",
-  mutedForeground: "#7D8B7E",
+  muted: "#E8E4DC",
+  mutedForeground: "#8A8A86",
   // Accent
-  accent: "#E8845A",
+  accent: "#D4A054",                  // Warm Amber
   accentForeground: "#FFFFFF",
   // Destructive
-  destructive: "#C76A6A",
+  destructive: "#C1484B",             // Muted Crimson
   // Borders & inputs
-  border: "rgba(74, 124, 89, 0.12)",
-  input: "rgba(74, 124, 89, 0.12)",
-  ring: "#4A7C59",
-  // Mood colors
-  moodGreat: "#5BAE7C",
-  moodGood: "#7EC8A0",
-  moodOkay: "#F0C76E",
-  moodLow: "#E8945C",
-  moodBad: "#D47B7B",
+  border: "rgba(44, 44, 42, 0.08)",
+  input: "rgba(44, 44, 42, 0.08)",
+  ring: "#6B8F71",
+  // Mood colors (organic tones)
+  moodGreat: "#2A9D8F",               // Deep Teal
+  moodGood: "#6B8F71",                // Sage
+  moodOkay: "#E9C46A",                // Warm Gold
+  moodLow: "#E76F51",                 // Burnt Sienna
+  moodBad: "#C1484B",                 // Muted Crimson
   moodNone: "#D5D3CB",
   // Chart colors
-  chart1: "#4A7C59",
-  chart2: "#E8845A",
-  chart3: "#5B8FD4",
-  chart4: "#B09068",
-  chart5: "#9A7DC8",
+  chart1: "#6B8F71",                   // Sage
+  chart2: "#D4A054",                   // Amber
+  chart3: "#5B9BD5",                   // Water blue
+  chart4: "#8B7355",                   // Earth brown
+  chart5: "#2A9D8F",                   // Teal
   // Glassmorphic
   glassSurface: "#FFFFFF",
-  glassBorder: "rgba(74, 124, 89, 0.08)",
+  glassBorder: "rgba(44, 44, 42, 0.06)",
   glassHighlight: "rgba(255, 255, 255, 0.95)",
   // Gradients
   gradientStart: "#FAF8F3",
-  gradientMid: "#F5F2EB",
-  gradientEnd: "#EEF0E5",
+  gradientMid: "#F5F1EA",
+  gradientEnd: "#EDE9E0",
   // Elevated shadows
-  shadowColor: "rgba(45, 58, 46, 0.06)",
-  elevatedShadowColor: "rgba(45, 58, 46, 0.12)",
+  shadowColor: "rgba(44, 44, 42, 0.04)",
+  elevatedShadowColor: "rgba(44, 44, 42, 0.08)",
   // Ambient accent overlays
-  auraPrimary: "rgba(74, 124, 89, 0.10)",
-  auraSecondary: "rgba(232, 132, 90, 0.08)",
-  auraTertiary: "rgba(91, 143, 212, 0.08)",
+  auraPrimary: "rgba(107, 143, 113, 0.10)",
+  auraSecondary: "rgba(212, 160, 84, 0.08)",
+  auraTertiary: "rgba(91, 155, 213, 0.08)",
 };
 
 export const darkTheme: ThemeColors = {
-  // Core
-  background: "#141912",
-  foreground: "#E5E8E0",
+  // Core — Living Earth Dark
+  background: "#1A1C19",              // Deep Soil
+  foreground: "rgba(255, 255, 255, 0.87)",
   // Card
-  card: "#1C2419",
-  cardForeground: "#E5E8E0",
+  card: "#222420",
+  cardForeground: "rgba(255, 255, 255, 0.87)",
   // Primary
-  primary: "#8BC4A0",
+  primary: "#8BC4A0",                 // Light Sage
   primaryForeground: "#FFFFFF",
   // Secondary
-  secondary: "#242E22",
-  secondaryForeground: "#B8D9C4",
+  secondary: "#2A2C28",
+  secondaryForeground: "rgba(255, 255, 255, 0.65)",
   // Muted
-  muted: "#1E2620",
-  mutedForeground: "#A0AEA2",
+  muted: "#252723",
+  mutedForeground: "rgba(255, 255, 255, 0.45)",
   // Accent
-  accent: "#F0A07A",
-  accentForeground: "#2A1E18",
+  accent: "#E8C07A",                  // Light Amber
+  accentForeground: "#1A1C19",
   // Destructive
-  destructive: "#D98A8A",
+  destructive: "#E07070",
   // Borders & inputs
-  border: "rgba(139, 196, 160, 0.20)",
-  input: "rgba(139, 196, 160, 0.20)",
+  border: "rgba(255, 255, 255, 0.06)",
+  input: "rgba(255, 255, 255, 0.06)",
   ring: "#8BC4A0",
-  // Mood colors
-  moodGreat: "#6DC98F",
-  moodGood: "#96D8B6",
-  moodOkay: "#F5D88A",
-  moodLow: "#F0AC78",
-  moodBad: "#E09A9A",
-  moodNone: "#3D4A3C",
+  // Mood colors (lighter for dark backgrounds)
+  moodGreat: "#3DBFAE",               // Light Teal
+  moodGood: "#8BC4A0",                // Light Sage
+  moodOkay: "#F4D68C",                // Light Gold
+  moodLow: "#F09070",                 // Light Sienna
+  moodBad: "#E07070",                 // Light Crimson
+  moodNone: "#3A3C38",
   // Chart colors
   chart1: "#8BC4A0",
-  chart2: "#F0A07A",
-  chart3: "#7DAAE8",
-  chart4: "#C6AA82",
-  chart5: "#B49ADE",
+  chart2: "#E8C07A",
+  chart3: "#7DB8E8",
+  chart4: "#B09A78",
+  chart5: "#3DBFAE",
   // Glassmorphic
-  glassSurface: "rgba(28, 36, 25, 0.95)",
-  glassBorder: "rgba(139, 196, 160, 0.15)",
-  glassHighlight: "rgba(255, 255, 255, 0.05)",
+  glassSurface: "rgba(34, 36, 32, 0.95)",
+  glassBorder: "rgba(255, 255, 255, 0.06)",
+  glassHighlight: "rgba(255, 255, 255, 0.04)",
   // Gradients
-  gradientStart: "#111710",
-  gradientMid: "#171E15",
-  gradientEnd: "#1C251A",
+  gradientStart: "#161814",
+  gradientMid: "#1A1C19",
+  gradientEnd: "#1E201C",
   // Elevated shadows
-  shadowColor: "rgba(0, 0, 0, 0.30)",
-  elevatedShadowColor: "rgba(0, 0, 0, 0.45)",
+  shadowColor: "rgba(0, 0, 0, 0.20)",
+  elevatedShadowColor: "rgba(0, 0, 0, 0.40)",
   // Ambient accent overlays
-  auraPrimary: "rgba(139, 196, 160, 0.12)",
-  auraSecondary: "rgba(240, 160, 122, 0.08)",
-  auraTertiary: "rgba(125, 170, 232, 0.08)",
+  auraPrimary: "rgba(139, 196, 160, 0.08)",
+  auraSecondary: "rgba(232, 192, 122, 0.06)",
+  auraTertiary: "rgba(125, 184, 232, 0.06)",
 };

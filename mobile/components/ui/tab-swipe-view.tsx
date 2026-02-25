@@ -2,12 +2,14 @@ import React, { useRef, useCallback } from "react";
 import { View, StyleSheet, PanResponder } from "react-native";
 import { useRouter } from "expo-router";
 
-type MainTab = "journal" | "mood" | "tasks" | "settings";
+type MainTab = "today" | "journal" | "mood" | "garden" | "tasks" | "settings";
 
-const TAB_ORDER: MainTab[] = ["journal", "mood", "tasks", "settings"];
+const TAB_ORDER: MainTab[] = ["today", "journal", "mood", "garden", "settings"];
 const TAB_ROUTE: Record<MainTab, string> = {
+  today: "/(tabs)/today",
   journal: "/(tabs)/journal",
   mood: "/(tabs)/mood",
+  garden: "/(tabs)/garden",
   tasks: "/(tabs)/tasks",
   settings: "/(tabs)/settings",
 };

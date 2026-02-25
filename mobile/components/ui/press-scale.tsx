@@ -35,20 +35,20 @@ export function PressScale({
     transform: [
       {
         scale: withSpring(pressed.value ? scale : 1, {
-          damping: 26,
-          stiffness: 320,
-          mass: 0.25,
+          damping: 20,
+          stiffness: 180,
+          mass: 0.3,
           overshootClamping: true,
         }),
       },
       {
-        translateY: withSpring(pressed.value ? 1.2 : 0, {
-          damping: 22,
-          stiffness: 260,
+        translateY: withSpring(pressed.value ? 1 : 0, {
+          damping: 18,
+          stiffness: 160,
         }),
       },
     ],
-    opacity: withTiming(pressed.value ? 0.96 : 1, { duration: 120 }),
+    opacity: withTiming(pressed.value ? 0.97 : 1, { duration: 200 }),
   }));
 
   return (

@@ -6,7 +6,7 @@ export async function proxy(request: NextRequest) {
 
   // Never rate-limit messaging webhooks. A 429 causes platform retries,
   // which shows up as delayed bot responses to end users.
-  if (pathname === "/api/webhook/whatsapp" || pathname === "/api/webhook/telegram") {
+  if (pathname === "/api/webhook/whatsapp") {
     return NextResponse.next();
   }
 
