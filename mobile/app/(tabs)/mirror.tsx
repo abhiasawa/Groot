@@ -88,7 +88,7 @@ export default function MirrorScreen() {
   const profileFacts = data?.profileFacts ?? [];
 
   return (
-    <TabSwipeView currentTab="garden">
+    <TabSwipeView currentTab="mirror">
       <SafeAreaView style={s.safe}>
         <GradientBackground>
           <ScrollView

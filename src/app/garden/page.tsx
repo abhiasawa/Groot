@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Search, Sprout, Users, BarChart3, Settings, CheckSquare, CheckCircle2, Bell } from "lucide-react";
+import { Search, Sprout, BarChart3, Settings, User, Bell } from "lucide-react";
 import { cachedFetch } from "@/lib/garden/fetch-cache";
 import MarkdownContent from "@/components/garden/markdown-content";
 import { Card, CardContent } from "@/components/ui/card";
@@ -42,7 +42,7 @@ const MOOD_BG_TW: Record<string, string> = {
   stressed: "bg-mood-low", bad: "bg-mood-bad", sad: "bg-mood-bad",
 };
 
-const STAT_COLORS = ["text-primary", "text-accent", "text-muted-foreground", "text-muted-foreground"] as const;
+const STAT_COLORS = ["text-primary", "text-accent", "text-muted-foreground"] as const;
 
 export default function GardenHome() {
   const [data, setData] = useState<HomeData | null>(null);
@@ -90,15 +90,14 @@ export default function GardenHome() {
 
   const stats = [
     { value: data.memoriesCount, label: "memories", href: "/garden/journal" },
-    { value: data.pendingTasks, label: "tasks pending", href: "/garden/tasks" },
-    { value: data.peopleCount, label: "people", href: "/garden/people" },
+    { value: data.habitsCount, label: "habits tracked", href: "/garden/habits" },
     { value: memberDays, label: "days together" },
   ] as const;
 
   const quickLinks = [
-    { href: "/garden/habits", icon: <BarChart3 className="size-5 text-primary" />, label: "Habits", description: "Routines and streaks" },
-    { href: "/garden/tasks", icon: <CheckSquare className="size-5 text-accent" />, label: "Tasks", description: "What needs attention today" },
-    { href: "/garden/people", icon: <Users className="size-5 text-mood-okay" />, label: "People", description: "Important relationships" },
+    { href: "/garden/garden", icon: <Sprout className="size-5 text-primary" />, label: "Garden", description: "Your mood meadow and journal" },
+    { href: "/garden/mirror", icon: <User className="size-5 text-accent" />, label: "Mirror", description: "How Groot sees you" },
+    { href: "/garden/habits", icon: <BarChart3 className="size-5 text-mood-okay" />, label: "Habits", description: "Routines and streaks" },
     { href: "/garden/settings", icon: <Settings className="size-5 text-muted-foreground" />, label: "Settings", description: "Notifications and profile" },
   ] as const;
 
@@ -140,7 +139,7 @@ export default function GardenHome() {
       {/* Life at a Glance */}
       <section>
         <SectionLabel text="Life at a Glance" />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           {stats.map((s, i) => {
             const colorClass = STAT_COLORS[i] ?? "text-muted-foreground";
             return (
@@ -152,32 +151,20 @@ export default function GardenHome() {
         </div>
       </section>
 
-      {/* Today's Focus */}
-      {(data.pendingTasks > 0 || data.upcomingReminders > 0) && (
+      {/* Upcoming Reminders */}
+      {data.upcomingReminders > 0 && (
         <section>
-          <SectionLabel text="Today's Focus" />
+          <SectionLabel text="Coming Up" />
           <Card className="border-l-4 border-l-accent">
-            <CardContent className="space-y-2">
-              {data.pendingTasks > 0 && (
-                <a href="/garden/tasks" className="flex items-center gap-3 group">
-                  <span className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center">
-                    <CheckCircle2 className="size-3 text-accent" />
-                  </span>
-                  <span className="text-sm text-foreground group-hover:underline">
-                    {data.pendingTasks} task{data.pendingTasks !== 1 ? "s" : ""} waiting for you
-                  </span>
-                </a>
-              )}
-              {data.upcomingReminders > 0 && (
-                <div className="flex items-center gap-3">
-                  <span className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center">
-                    <Bell className="size-3 text-primary" />
-                  </span>
-                  <span className="text-sm text-foreground">
-                    {data.upcomingReminders} reminder{data.upcomingReminders !== 1 ? "s" : ""} coming up
-                  </span>
-                </div>
-              )}
+            <CardContent>
+              <div className="flex items-center gap-3">
+                <span className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center">
+                  <Bell className="size-3 text-primary" />
+                </span>
+                <span className="text-sm text-foreground">
+                  {data.upcomingReminders} reminder{data.upcomingReminders !== 1 ? "s" : ""} coming up
+                </span>
+              </div>
             </CardContent>
           </Card>
         </section>
@@ -296,8 +283,8 @@ function LoadingSkeleton() {
         <Skeleton className="h-10 w-64" />
       </div>
       <Skeleton className="h-10 w-full rounded-md" />
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {Array.from({ length: 4 }, (_, i) => (
+      <div className="grid grid-cols-3 gap-3">
+        {Array.from({ length: 3 }, (_, i) => (
           <Skeleton key={i} className="h-20 rounded-xl" />
         ))}
       </div>

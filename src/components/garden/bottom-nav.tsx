@@ -2,13 +2,12 @@
 
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Home, BookOpen, BarChart3, CheckSquare, Settings } from "lucide-react";
+import { Sun, Sprout, User, Settings } from "lucide-react";
 
 const NAV_ITEMS = [
-  { href: "/garden", label: "Home", icon: Home },
-  { href: "/garden/journal", label: "Journal", icon: BookOpen },
-  { href: "/garden/habits", label: "Habits", icon: BarChart3 },
-  { href: "/garden/tasks", label: "Tasks", icon: CheckSquare },
+  { href: "/garden", label: "Today", icon: Sun },
+  { href: "/garden/garden", label: "Garden", icon: Sprout },
+  { href: "/garden/mirror", label: "Mirror", icon: User },
   { href: "/garden/settings", label: "Settings", icon: Settings },
 ] as const;
 
@@ -20,7 +19,7 @@ export default function BottomNav() {
       className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <ul className="grid grid-cols-5">
+      <ul className="grid grid-cols-4">
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.href || (item.href !== "/garden" && pathname.startsWith(item.href));
           const Icon = item.icon;
