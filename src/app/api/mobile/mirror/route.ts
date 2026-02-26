@@ -4,6 +4,7 @@ import { getAuthenticatedPortalUser, PortalAuthError } from "@/lib/auth/portal-u
 import { calculateMilestones } from "@/lib/milestones/engine";
 import { detectPatterns } from "@/lib/patterns/detector";
 import { getUserProfileSummary } from "@/lib/memory/profile-builder";
+import { getLLMProvider } from "@/lib/providers/llm";
 import { logger } from "@/lib/logger";
 
 /**
@@ -99,8 +100,29 @@ export async function GET(request: NextRequest) {
       created_at: r.created_at as string,
     }));
 
+    // Generate a human-readable narrative bio from the raw profile facts
+    let narrativeBio: string | null = null;
+    if (profileSummary) {
+      try {
+        const provider = getLLMProvider();
+        const bioResponse = await provider.generateResponse(
+          `You are writing a brief, warm, third-person profile bio (2-3 sentences max) for someone based on their profile data. Write naturally and conversationally — no bullet points, no labels, no brackets. If data is sparse, write a shorter bio. Never include raw numbers like "weight: 93.5" — instead weave facts naturally.`,
+          [
+            {
+              role: "user",
+              content: `Write a short narrative bio based on this profile:\n\n${profileSummary}\n\nDisplay name: ${(userResult.data?.display_name as string | null) ?? "this person"}`,
+            },
+          ],
+          { maxTokens: 256, temperature: 0.7 },
+        );
+        narrativeBio = bioResponse.text.trim() || null;
+      } catch (err) {
+        logger.warn({ err, userId }, "Failed to generate narrative bio, skipping");
+      }
+    }
+
     return NextResponse.json({
-      narrativeBio: profileSummary || null,
+      narrativeBio,
       patterns,
       milestones,
       weeklyReports,

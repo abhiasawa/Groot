@@ -207,40 +207,32 @@ export function BottomTabBar({ state, descriptors, navigation }: BottomTabBarPro
         },
       ]}
     >
-      {/* Backdrop to dismiss */}
-      {expanded && (
-        <Pressable style={st.menuBackdrop} onPress={closeMenu} />
-      )}
-
-      {/* Radial menu items */}
-      {expanded && (
-        <View style={st.radialAnchor} pointerEvents="box-none">
-          {ITEM_MODES.map((mode, i) => {
-            const isHovered = hoveredMode === mode;
-            return (
-              <Animated.View key={mode} style={[st.radialItem, itemStyles[i]]}>
-                <Pressable
-                  onPress={() => selectOption(mode)}
-                  style={[
-                    st.radialCircle,
-                    {
-                      backgroundColor: getBgForMode(mode, isHovered),
-                      transform: [{ scale: isHovered ? 1.2 : 1 }],
-                      shadowColor: "#000",
-                      shadowOffset: { width: 0, height: isHovered ? 4 : 2 },
-                      shadowOpacity: isHovered ? 0.25 : 0.15,
-                      shadowRadius: isHovered ? 8 : 4,
-                      elevation: isHovered ? 8 : 4,
-                    },
-                  ]}
-                >
-                  {getIconForMode(mode, isHovered)}
-                </Pressable>
-              </Animated.View>
-            );
-          })}
-        </View>
-      )}
+      {/* Radial menu items — rendered in a Portal-like position above the tab bar */}
+      {expanded && ITEM_MODES.map((mode, i) => {
+        const isHovered = hoveredMode === mode;
+        return (
+          <Animated.View key={mode} style={[st.radialItemAbsolute, itemStyles[i]]}>
+            <Pressable
+              onPress={() => selectOption(mode)}
+              hitSlop={12}
+              style={({ pressed }) => [
+                st.radialCircle,
+                {
+                  backgroundColor: getBgForMode(mode, isHovered),
+                  transform: [{ scale: pressed ? 0.9 : isHovered ? 1.2 : 1 }],
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 3 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 6,
+                  elevation: 12,
+                },
+              ]}
+            >
+              {getIconForMode(mode, isHovered)}
+            </Pressable>
+          </Animated.View>
+        );
+      })}
 
       <View style={st.row}>
         {TAB_ORDER.map((slot) => {
@@ -398,23 +390,12 @@ const st = StyleSheet.create({
     shadowRadius: 6,
     elevation: 6,
   },
-  menuBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    top: -1000,
-    zIndex: 1,
-  },
-  radialAnchor: {
+  radialItemAbsolute: {
     position: "absolute",
     bottom: 68,
     alignSelf: "center",
-    width: 0,
-    height: 0,
-    zIndex: 2,
-  },
-  radialItem: {
-    position: "absolute",
-    marginLeft: -24,
-    marginTop: -24,
+    zIndex: 20,
+    elevation: 20,
   },
   radialCircle: {
     width: 48,

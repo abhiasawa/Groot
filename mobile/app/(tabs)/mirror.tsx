@@ -123,8 +123,8 @@ export default function MirrorScreen() {
               </Animated.View>
             )}
 
-            {/* Stats Row */}
-            {stats && (
+            {/* Stats Row — only show when there's meaningful data */}
+            {stats && (stats.totalMessages > 0 || stats.totalMemories > 0 || stats.daysActive > 0) && (
               <Animated.View entering={FadeInDown.duration(400).delay(200)}>
                 <View style={s.statsRow}>
                   <StatBox
@@ -256,6 +256,23 @@ export default function MirrorScreen() {
               <View style={s.sectionGap}>
                 <ProfileFacts facts={profileFacts} />
               </View>
+            )}
+
+            {/* Empty state when no meaningful data yet */}
+            {!data?.narrativeBio && patterns.length === 0 && milestones.length === 0 && profileFacts.length === 0 && (
+              <Animated.View entering={FadeInDown.duration(400).delay(100)}>
+                <GlassCard padding={24}>
+                  <Text style={[s.emptyIcon]}>🪞</Text>
+                  <Text style={[s.emptyTitle, { color: colors.foreground }]}>
+                    Your mirror is forming
+                  </Text>
+                  <Text style={[s.emptyDesc, { color: colors.mutedForeground }]}>
+                    As you chat with Groot, this screen will reflect your patterns,
+                    milestones, and personal insights. Start a conversation to see
+                    your story unfold.
+                  </Text>
+                </GlassCard>
+              </Animated.View>
             )}
           </ScrollView>
         </GradientBackground>
@@ -424,5 +441,22 @@ const styles = (c: ReturnType<typeof useTheme>["colors"]) =>
       fontSize: 10,
       textAlign: "center",
       lineHeight: 14,
+    },
+    emptyIcon: {
+      fontSize: 40,
+      textAlign: "center",
+      marginBottom: 12,
+    },
+    emptyTitle: {
+      fontFamily: "Sora_600SemiBold",
+      ...typography.base,
+      textAlign: "center",
+      marginBottom: 8,
+    },
+    emptyDesc: {
+      fontFamily: "Manrope_400Regular",
+      ...typography.sm,
+      textAlign: "center",
+      lineHeight: 22,
     },
   });
