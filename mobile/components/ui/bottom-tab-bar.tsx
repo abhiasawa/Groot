@@ -20,7 +20,7 @@ import { Plus, Type, Mic, Camera, X } from "lucide-react-native";
 import { useTheme } from "../../lib/theme/provider";
 import { useCompose } from "../../lib/compose-context";
 
-const TAB_ORDER = ["today", "garden", "__fab__", "mirror", "settings"] as const;
+const TAB_ORDER = ["today", "journal", "__fab__", "mirror", "settings"] as const;
 
 // Radial menu config: 3 items in an arc above the FAB
 const RADIAL_RADIUS = 80;

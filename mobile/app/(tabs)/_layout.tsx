@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Sun, Sprout, User, Settings } from "lucide-react-native";
+import { Sun, BookOpen, User, Settings } from "lucide-react-native";
 
 import { BottomTabBar } from "../../components/ui/bottom-tab-bar";
 import { ComposeModal } from "../../components/ui/compose-modal";
@@ -35,11 +35,11 @@ function TabsInner() {
           }}
         />
         <Tabs.Screen
-          name="garden"
+          name="journal"
           options={{
-            title: "Garden",
+            title: "Journal",
             tabBarIcon: ({ color, size, focused }) => (
-              <Sprout size={size} color={color} strokeWidth={focused ? 2.2 : 1.7} />
+              <BookOpen size={size} color={color} strokeWidth={focused ? 2.2 : 1.7} />
             ),
           }}
         />
@@ -62,7 +62,7 @@ function TabsInner() {
           }}
         />
         {/* Hidden routes accessible via navigation but not in tab bar */}
-        <Tabs.Screen name="journal" options={{ href: null }} />
+        <Tabs.Screen name="garden" options={{ href: null }} />
         <Tabs.Screen name="tasks" options={{ href: null }} />
         <Tabs.Screen name="mood" options={{ href: null }} />
         <Tabs.Screen name="stories" options={{ href: null }} />
