@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
       "Google auth successful — JWT issued",
     );
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       ok: true,
       token,
       user: {
@@ -189,6 +189,17 @@ export async function POST(request: NextRequest) {
         email: googleUser.email,
       },
     });
+
+    // Set cookie for web portal (same as verify-otp)
+    response.cookies.set("groot-token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 30 * 24 * 60 * 60, // 30 days
+    });
+
+    return response;
   } catch (error) {
     logger.error({ error }, "Google auth failed");
     return NextResponse.json(

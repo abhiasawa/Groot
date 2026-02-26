@@ -53,11 +53,9 @@ export async function proxy(request: NextRequest) {
 
   // Auth guard for The Garden portal
   if (pathname.startsWith("/garden")) {
-    const hasSupabaseSessionCookie = request.cookies
-      .getAll()
-      .some((cookie) => cookie.name.includes("-auth-token"));
+    const hasAuthCookie = request.cookies.has("groot-token");
 
-    if (!hasSupabaseSessionCookie) {
+    if (!hasAuthCookie) {
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = "/login";
       loginUrl.searchParams.set("next", pathname);

@@ -19,6 +19,7 @@ import { Footprints, MapPin, Flame, Target } from "lucide-react-native";
 import Svg, { Rect, Text as SvgText } from "react-native-svg";
 
 import { useTheme } from "../../lib/theme/provider";
+import type { ThemeColors } from "../../lib/theme/tokens";
 import { typography } from "../../constants/typography";
 import { GlassCard } from "./glass-card";
 
@@ -75,7 +76,7 @@ function MiniWeekChart({
 }: {
   weekData: DaySteps[];
   goal: number;
-  colors: Record<string, string>;
+  colors: ThemeColors;
 }) {
   const screenWidth = Dimensions.get("window").width;
   const chartWidth = screenWidth - 80; // card padding

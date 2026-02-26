@@ -12,7 +12,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
   withTiming,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
@@ -21,7 +20,7 @@ import { Plus, Type, Mic, Camera, X } from "lucide-react-native";
 import { useTheme } from "../../lib/theme/provider";
 import { useCompose } from "../../lib/compose-context";
 
-const TAB_ORDER = ["today", "journal", "__fab__", "mood", "settings"] as const;
+const TAB_ORDER = ["today", "garden", "__fab__", "mirror", "settings"] as const;
 
 // Radial menu config: 3 items in an arc above the FAB
 const RADIAL_RADIUS = 80;
@@ -100,12 +99,12 @@ export function BottomTabBar({ state, descriptors, navigation }: BottomTabBarPro
   const openMenu = useCallback(() => {
     setExpanded(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    fabRotation.value = withSpring(45, { damping: 15 });
-    menuProgress.value = withSpring(1, { damping: 14, stiffness: 200 });
+    fabRotation.value = withTiming(45, { duration: 200 });
+    menuProgress.value = withTiming(1, { duration: 250 });
   }, [fabRotation, menuProgress]);
 
   const closeMenu = useCallback(() => {
-    fabRotation.value = withSpring(0, { damping: 15 });
+    fabRotation.value = withTiming(0, { duration: 200 });
     menuProgress.value = withTiming(0, { duration: 150 });
     setExpanded(false);
     setHoveredMode(null);
@@ -257,10 +256,14 @@ export function BottomTabBar({ state, descriptors, navigation }: BottomTabBarPro
                 }}
               >
                 <Animated.View style={fabAnimStyle}>
-                  <View {...panResponder.panHandlers}>
+                  <View {...(expanded ? {} : panResponder.panHandlers)}>
                     <Pressable
                       onPress={() => {
-                        if (expanded) closeMenu();
+                        if (expanded) {
+                          closeMenu();
+                        } else {
+                          openMenu();
+                        }
                       }}
                       style={[
                         st.fab,

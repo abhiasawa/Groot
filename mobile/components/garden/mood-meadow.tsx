@@ -433,12 +433,17 @@ export function MoodMeadow({ dailyMoods, year }: MoodMeadowProps) {
     return sections;
   }, [year, dailyMoods]);
 
-  // Flatten to renderable items for FlatList
+  // Flatten to renderable items for FlatList — skip months with no data
   const flatItems = useMemo(() => {
-    const items: { type: "month"; month: string; key: string }[] | { type: "week"; days: DayCell[]; key: string }[] = [];
     const result: ({ type: "month"; month: string; key: string } | { type: "week"; days: DayCell[]; key: string })[] = [];
 
     for (const section of meadowData) {
+      // Only show months that have at least one mood entry
+      const hasData = section.weeks.some((week) =>
+        week.some((day) => day.score !== null),
+      );
+      if (!hasData) continue;
+
       result.push({ type: "month", month: section.month, key: `m-${section.month}` });
       section.weeks.forEach((week, i) => {
         result.push({ type: "week", days: week, key: `w-${section.month}-${i}` });

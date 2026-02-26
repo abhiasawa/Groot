@@ -76,8 +76,8 @@ export default function TodayScreen() {
         >
           {/* Header */}
           <View style={s.headerRow}>
-            <View>
-              <Text style={[s.greeting, { color: colors.foreground }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.greeting, { color: colors.foreground }]} numberOfLines={1}>
                 {data?.greeting ?? "Good evening"}
               </Text>
               {moodScore > 0 && moodName && (

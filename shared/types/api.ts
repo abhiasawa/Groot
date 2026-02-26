@@ -99,6 +99,7 @@ export interface CurrentUser {
   id: string;
   whatsapp_number: string;
   display_name: string | null;
+  email: string | null;
   onboarding_step: string | null;
   onboarding_completed_at: string | null;
   created_at: string;
