@@ -110,11 +110,8 @@ export default function StoriesPage() {
 
   const grouped = useMemo(() => groupByWeek(stories), [stories]);
 
-  // Random prompt for empty today state
-  const todayPrompt = useMemo(
-    () => TODAY_PROMPTS[Math.floor(Math.random() * TODAY_PROMPTS.length)]!,
-    [],
-  );
+  // Stable prompt — pick first item (deterministic, avoids impure functions in render)
+  const todayPrompt = TODAY_PROMPTS[0]!;
 
   if (loading && loadingStats) {
     return <LoadingSkeleton />;

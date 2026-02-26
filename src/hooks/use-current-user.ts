@@ -39,14 +39,20 @@ export function useCurrentUser() {
 
   useEffect(() => {
     if (cachedUser) {
-      setUser(cachedUser);
-      setLoading(false);
+      // Already cached — sync state without re-fetching
+      if (!user) setUser(cachedUser);
+      if (loading) setLoading(false);
       return;
     }
+    let cancelled = false;
     fetchUser().then((u) => {
-      setUser(u);
-      setLoading(false);
+      if (!cancelled) {
+        setUser(u);
+        setLoading(false);
+      }
     });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return { user, loading };

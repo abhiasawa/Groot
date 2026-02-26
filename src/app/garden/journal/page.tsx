@@ -104,18 +104,21 @@ function JournalContent() {
 
   // Fetch calendar dots + mood data when month changes
   useEffect(() => {
+    let cancelled = false;
     const year = calendarMonth.getFullYear();
     const month = String(calendarMonth.getMonth() + 1).padStart(2, "0");
     cachedFetch<{ dates?: string[] }>(`/api/memories?month=${year}-${month}`)
-      .then((data) => setCalendarDots(new Set(data.dates ?? [])))
-      .catch(() => setCalendarDots(new Set()));
+      .then((data) => { if (!cancelled) setCalendarDots(new Set(data.dates ?? [])); })
+      .catch(() => { if (!cancelled) setCalendarDots(new Set()); });
     cachedFetch<{ dailyMoods?: Array<{ date: string; score: number }> }>(`/api/mood?year=${year}`)
       .then((data) => {
+        if (cancelled) return;
         const map = new Map<string, number>();
         for (const d of data.dailyMoods ?? []) map.set(d.date, d.score);
         setMoodMap(map);
       })
-      .catch(() => setMoodMap(new Map()));
+      .catch(() => { if (!cancelled) setMoodMap(new Map()); });
+    return () => { cancelled = true; };
   }, [calendarMonth]);
 
   useEffect(() => { fetchMemories(); }, [fetchMemories]);
@@ -506,6 +509,7 @@ function MediaPlayer({ mediaUrl, messageType }: { mediaUrl: string; messageType:
   const [error, setError] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     if (mediaUrl.startsWith("storage:")) {
       // Convert storage:userId/type/file.ext → /api/media/userId/type/file.ext
       const storagePath = mediaUrl.replace("storage:", "");
@@ -518,11 +522,13 @@ function MediaPlayer({ mediaUrl, messageType }: { mediaUrl: string; messageType:
       })
         .then((res) => res.json())
         .then((data: { url?: string }) => {
+          if (cancelled) return;
           if (data.url) setResolvedSrc(data.url);
           else setError(true);
         })
-        .catch(() => setError(true));
+        .catch(() => { if (!cancelled) setError(true); });
     }
+    return () => { cancelled = true; };
   }, [mediaUrl, messageType]);
 
   if (error) {

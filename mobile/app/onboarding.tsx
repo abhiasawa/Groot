@@ -363,7 +363,7 @@ function FirstQuestionScreen({
           Ready, {name || "friend"}?
         </Text>
         <Text style={[s.body, { color: colors.mutedForeground }]}>
-          Your garden is planted. Let's start growing together. I'll ask you a
+          Your garden is planted. Let&apos;s start growing together. I&apos;ll ask you a
           question to get us started.
         </Text>
       </Animated.View>

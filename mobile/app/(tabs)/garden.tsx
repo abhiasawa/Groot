@@ -230,7 +230,7 @@ const searchS = StyleSheet.create({
 
 export default function GardenScreen() {
   const { colors } = useTheme();
-  const now = new Date();
+  const now = useMemo(() => new Date(), []);
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
   const { data: moodData, isLoading, refetch } = useMood(year);
@@ -241,16 +241,16 @@ export default function GardenScreen() {
     refetch().finally(() => setIsPullRefreshing(false));
   }, [refetch]);
 
-  const prevMonth = useCallback(() => {
+  const prevMonth = () => {
     if (month === 0) {
       setMonth(11);
       setYear((y) => y - 1);
     } else {
       setMonth((m) => m - 1);
     }
-  }, [month]);
+  };
 
-  const nextMonth = useCallback(() => {
+  const nextMonth = () => {
     const isCurrentMonth =
       month === now.getMonth() && year === now.getFullYear();
     if (isCurrentMonth) return;
@@ -260,7 +260,7 @@ export default function GardenScreen() {
     } else {
       setMonth((m) => m + 1);
     }
-  }, [month, year, now]);
+  };
 
   const s = useMemo(() => styles(colors), [colors]);
 

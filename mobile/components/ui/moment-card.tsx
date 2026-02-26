@@ -29,7 +29,7 @@ export function MomentCard({ prompt }: MomentCardProps) {
           <View style={styles.header}>
             <Flower2 size={16} color={colors.accent} strokeWidth={1.8} />
             <Text style={[styles.label, { color: colors.accent }]}>
-              Today's Moment
+              Today&apos;s Moment
             </Text>
           </View>
 

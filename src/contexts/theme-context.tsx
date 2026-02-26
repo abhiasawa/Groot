@@ -33,18 +33,24 @@ function applyThemeToDOM(resolved: "light" | "dark") {
   }
 }
 
+function getInitialTheme(): Theme {
+  if (typeof window === "undefined") return "system";
+  return (localStorage.getItem(STORAGE_KEY) as Theme | null) ?? "system";
+}
+
+function getInitialResolved(): "light" | "dark" {
+  if (typeof window === "undefined") return "light";
+  const stored = (localStorage.getItem(STORAGE_KEY) as Theme | null) ?? "system";
+  return resolveTheme(stored);
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("system");
-  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
+  const [theme, setThemeState] = useState<Theme>(getInitialTheme);
+  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(getInitialResolved);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
-    const initial = stored ?? "system";
-    setThemeState(initial);
-    const resolved = resolveTheme(initial);
-    setResolvedTheme(resolved);
-    applyThemeToDOM(resolved);
-  }, []);
+    applyThemeToDOM(resolvedTheme);
+  }, [resolvedTheme]);
 
   useEffect(() => {
     if (theme !== "system") return;

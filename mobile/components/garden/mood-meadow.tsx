@@ -121,6 +121,7 @@ function TodayGlow({ size }: { size: number }) {
   const scale = useSharedValue(1);
 
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/purity
     scale.value = withRepeat(
       withSequence(
         withTiming(1.15, { duration: 1500, easing: Easing.inOut(Easing.sin) }),

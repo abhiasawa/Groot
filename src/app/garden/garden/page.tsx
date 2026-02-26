@@ -43,9 +43,11 @@ export default function GardenPage() {
   const year = new Date().getFullYear();
 
   useEffect(() => {
+    let cancelled = false;
     cachedFetch<{ dailyMoods: DailyMood[] }>(`/api/mood?year=${year}`)
-      .then((data) => setMoods(data.dailyMoods ?? []))
-      .finally(() => setLoading(false));
+      .then((data) => { if (!cancelled) setMoods(data.dailyMoods ?? []); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [year]);
 
   useEffect(() => {
@@ -53,13 +55,14 @@ export default function GardenPage() {
       setSearchResults([]);
       return;
     }
+    let cancelled = false;
     const timeout = setTimeout(() => {
       setIsSearching(true);
       cachedFetch<{ memories: Memory[] }>(`/api/memories?q=${encodeURIComponent(searchQuery)}&limit=10`)
-        .then((data) => setSearchResults(data.memories ?? []))
-        .finally(() => setIsSearching(false));
+        .then((data) => { if (!cancelled) setSearchResults(data.memories ?? []); })
+        .finally(() => { if (!cancelled) setIsSearching(false); });
     }, 300);
-    return () => clearTimeout(timeout);
+    return () => { cancelled = true; clearTimeout(timeout); };
   }, [searchQuery]);
 
   // Group moods by month
