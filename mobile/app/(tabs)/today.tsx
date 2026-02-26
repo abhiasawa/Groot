@@ -76,8 +76,8 @@ export default function TodayScreen() {
         >
           {/* Header */}
           <View style={s.headerRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={[s.greeting, { color: colors.foreground }]} numberOfLines={1}>
+            <View style={s.greetingWrap}>
+              <Text style={[s.greeting, { color: colors.foreground }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.7}>
                 {data?.greeting ?? "Good evening"}
               </Text>
               {moodScore > 0 && moodName && (
@@ -164,9 +164,13 @@ const s = StyleSheet.create({
     alignItems: "flex-start",
     marginBottom: 4,
   },
+  greetingWrap: {
+    flex: 1,
+    marginRight: 12,
+  },
   greeting: {
     fontFamily: "Sora_700Bold",
-    ...typography.title,
+    ...typography.xl,
     letterSpacing: -0.3,
   },
   moodRow: {

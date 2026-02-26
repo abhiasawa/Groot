@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Search, Sprout, BarChart3, Settings, User, Bell } from "lucide-react";
+import { Search, BookOpen, BarChart3, Settings, Bell } from "lucide-react";
 import { cachedFetch } from "@/lib/garden/fetch-cache";
 import MarkdownContent from "@/components/garden/markdown-content";
 import { Card, CardContent } from "@/components/ui/card";
@@ -95,8 +95,7 @@ export default function GardenHome() {
   ] as const;
 
   const quickLinks = [
-    { href: "/garden/garden", icon: <Sprout className="size-5 text-primary" />, label: "Garden", description: "Your mood meadow and journal" },
-    { href: "/garden/mirror", icon: <User className="size-5 text-accent" />, label: "Mirror", description: "How Groot sees you" },
+    { href: "/garden/journal", icon: <BookOpen className="size-5 text-primary" />, label: "Journal", description: "Your conversation memories" },
     { href: "/garden/habits", icon: <BarChart3 className="size-5 text-mood-okay" />, label: "Habits", description: "Routines and streaks" },
     { href: "/garden/settings", icon: <Settings className="size-5 text-muted-foreground" />, label: "Settings", description: "Notifications and profile" },
   ] as const;
@@ -191,7 +190,7 @@ export default function GardenHome() {
           <Card className="hover:shadow-md transition-shadow">
             <CardContent className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Sprout className="size-5 text-primary" />
+                <BookOpen className="size-5 text-primary" />
                 <div>
                   <p className="text-sm font-semibold text-foreground group-hover:underline">
                     {data.memoriesCount > 0
