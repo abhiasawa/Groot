@@ -64,30 +64,18 @@ export function BottomTabBar({ state, descriptors, navigation }: BottomTabBarPro
     transform: [{ rotate: `${fabRotation.value}deg` }],
   }));
 
-  // Three separate useAnimatedStyle calls (one per radial item) — hooks at top level
+  // Animate scale + opacity only (NO translateX/Y — breaks touch targets on Android)
   const itemStyle0 = useAnimatedStyle(() => ({
     opacity: menuProgress.value,
-    transform: [
-      { translateX: POSITIONS[0]!.x * menuProgress.value },
-      { translateY: POSITIONS[0]!.y * menuProgress.value },
-      { scale: 0.4 + 0.6 * menuProgress.value },
-    ],
+    transform: [{ scale: 0.3 + 0.7 * menuProgress.value }],
   }));
   const itemStyle1 = useAnimatedStyle(() => ({
     opacity: menuProgress.value,
-    transform: [
-      { translateX: POSITIONS[1]!.x * menuProgress.value },
-      { translateY: POSITIONS[1]!.y * menuProgress.value },
-      { scale: 0.4 + 0.6 * menuProgress.value },
-    ],
+    transform: [{ scale: 0.3 + 0.7 * menuProgress.value }],
   }));
   const itemStyle2 = useAnimatedStyle(() => ({
     opacity: menuProgress.value,
-    transform: [
-      { translateX: POSITIONS[2]!.x * menuProgress.value },
-      { translateY: POSITIONS[2]!.y * menuProgress.value },
-      { scale: 0.4 + 0.6 * menuProgress.value },
-    ],
+    transform: [{ scale: 0.3 + 0.7 * menuProgress.value }],
   }));
   const itemStyles = [itemStyle0, itemStyle1, itemStyle2];
 
@@ -207,19 +195,33 @@ export function BottomTabBar({ state, descriptors, navigation }: BottomTabBarPro
         },
       ]}
     >
-      {/* Radial menu items — rendered in a Portal-like position above the tab bar */}
+      {/* Radial menu items — positioned at final locations, animate scale/opacity only */}
       {expanded && ITEM_MODES.map((mode, i) => {
         const isHovered = hoveredMode === mode;
+        const pos = POSITIONS[i]!;
         return (
-          <Animated.View key={mode} style={[st.radialItemAbsolute, itemStyles[i]]}>
+          <Animated.View
+            key={mode}
+            style={[
+              st.radialItemFinal,
+              {
+                // Position relative to center of tab bar, shifted to center of FAB
+                left: "50%",
+                bottom: 68,
+                marginLeft: pos.x - 24, // 24 = half of circle width (48)
+                marginBottom: -pos.y - 24, // negate because y is negative (upward)
+              },
+              itemStyles[i],
+            ]}
+          >
             <Pressable
               onPress={() => selectOption(mode)}
-              hitSlop={12}
+              hitSlop={16}
               style={({ pressed }) => [
                 st.radialCircle,
                 {
                   backgroundColor: getBgForMode(mode, isHovered),
-                  transform: [{ scale: pressed ? 0.9 : isHovered ? 1.2 : 1 }],
+                  transform: [{ scale: pressed ? 0.85 : 1 }],
                   shadowColor: "#000",
                   shadowOffset: { width: 0, height: 3 },
                   shadowOpacity: 0.2,
@@ -390,10 +392,8 @@ const st = StyleSheet.create({
     shadowRadius: 6,
     elevation: 6,
   },
-  radialItemAbsolute: {
+  radialItemFinal: {
     position: "absolute",
-    bottom: 68,
-    alignSelf: "center",
     zIndex: 20,
     elevation: 20,
   },
