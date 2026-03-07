@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Sun, BookOpen, Settings } from "lucide-react-native";
+import { Leaf, BookOpen, Settings } from "lucide-react-native";
 
 import { BottomTabBar } from "../../components/ui/bottom-tab-bar";
 import { ComposeModal } from "../../components/ui/compose-modal";
@@ -28,16 +28,16 @@ function TabsInner() {
         <Tabs.Screen
           name="today"
           options={{
-            title: "Today",
+            title: "Forest",
             tabBarIcon: ({ color, size, focused }) => (
-              <Sun size={size} color={color} strokeWidth={focused ? 2.2 : 1.7} />
+              <Leaf size={size} color={color} strokeWidth={focused ? 2.2 : 1.7} />
             ),
           }}
         />
         <Tabs.Screen
           name="journal"
           options={{
-            title: "Journal",
+            title: "Vault",
             tabBarIcon: ({ color, size, focused }) => (
               <BookOpen size={size} color={color} strokeWidth={focused ? 2.2 : 1.7} />
             ),
@@ -46,7 +46,7 @@ function TabsInner() {
         <Tabs.Screen
           name="settings"
           options={{
-            title: "Settings",
+            title: "Soil",
             tabBarIcon: ({ color, size, focused }) => (
               <Settings size={size} color={color} strokeWidth={focused ? 2.2 : 1.7} />
             ),

@@ -21,10 +21,14 @@ export function GradientBackground({ children, colors: overrideColors }: Gradien
   return (
     <LinearGradient
       colors={gradientColors}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
+      start={{ x: 0.1, y: 0 }}
+      end={{ x: 0.9, y: 1 }}
       style={styles.gradient}
     >
+      <View
+        pointerEvents="none"
+        style={[styles.veil, { backgroundColor: `${colors.background}CC` }]}
+      />
       <View
         pointerEvents="none"
         style={[styles.aura, styles.auraPrimary, { backgroundColor: colors.auraPrimary }]}
@@ -42,22 +46,25 @@ const styles = StyleSheet.create({
   gradient: {
     flex: 1,
   },
+  veil: {
+    ...StyleSheet.absoluteFillObject,
+  },
   aura: {
     position: "absolute",
     borderRadius: 999,
   },
   auraPrimary: {
-    width: 280,
-    height: 280,
-    top: -180,
-    right: -120,
-    opacity: 0.5,
+    width: 340,
+    height: 340,
+    top: -150,
+    right: -90,
+    opacity: 0.7,
   },
   auraSecondary: {
-    width: 240,
-    height: 240,
-    bottom: -160,
-    left: -100,
-    opacity: 0.4,
+    width: 280,
+    height: 280,
+    bottom: -120,
+    left: -90,
+    opacity: 0.55,
   },
 });

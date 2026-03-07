@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/immutability */
 import React, { useEffect } from "react";
 import { View, StyleSheet, type ViewStyle } from "react-native";
 import Animated, {
@@ -60,7 +61,9 @@ export function GlassCard({
         {
           backgroundColor: colors.glassSurface,
           shadowColor: colors.elevatedShadowColor,
-          borderLeftWidth: accentColor ? 3 : 0,
+          borderWidth: 1,
+          borderColor: colors.glassBorder,
+          borderLeftWidth: accentColor ? 2 : 1,
           borderLeftColor: accentColor ?? "transparent",
         },
         style,
@@ -81,11 +84,11 @@ export function GlassCard({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 16,
+    borderRadius: 24,
     overflow: "hidden",
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowRadius: 24,
+    elevation: 8,
   },
 });

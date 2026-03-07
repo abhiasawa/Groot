@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/immutability */
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   View,
@@ -15,7 +16,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import { Plus, Type, Mic, Camera, X } from "lucide-react-native";
+import { Type, Mic, Camera, X } from "lucide-react-native";
 
 import { useTheme } from "../../lib/theme/provider";
 import { useCompose } from "../../lib/compose-context";
@@ -189,8 +190,7 @@ export function BottomTabBar({ state, descriptors, navigation }: BottomTabBarPro
       style={[
         st.shell,
         {
-          paddingBottom: bottomInset,
-          backgroundColor: colors.card,
+          paddingBottom: bottomInset + 6,
           shadowColor: colors.shadowColor,
         },
       ]}
@@ -236,7 +236,15 @@ export function BottomTabBar({ state, descriptors, navigation }: BottomTabBarPro
         );
       })}
 
-      <View style={st.row}>
+      <View
+        style={[
+          st.row,
+          {
+            backgroundColor: colors.glassSurface,
+            borderColor: colors.glassBorder,
+          },
+        ]}
+      >
         {TAB_ORDER.map((slot) => {
           if (slot === "__fab__") {
             return (
@@ -262,16 +270,15 @@ export function BottomTabBar({ state, descriptors, navigation }: BottomTabBarPro
                       style={[
                         st.fab,
                         {
-                          backgroundColor: expanded
-                            ? colors.mutedForeground
-                            : colors.primary,
+                          backgroundColor: expanded ? colors.accent : colors.primary,
+                          borderColor: `${colors.background}F2`,
                         },
                       ]}
                     >
                       {expanded ? (
                         <X size={24} color={colors.primaryForeground} strokeWidth={2.4} />
                       ) : (
-                        <Plus size={26} color={colors.primaryForeground} strokeWidth={2.4} />
+                        <Mic size={26} color={colors.primaryForeground} strokeWidth={2.4} />
                       )}
                     </Pressable>
                   </View>
@@ -344,23 +351,27 @@ export function BottomTabBar({ state, descriptors, navigation }: BottomTabBarPro
 
 const st = StyleSheet.create({
   shell: {
+    paddingHorizontal: 14,
     paddingTop: 8,
-    paddingHorizontal: 6,
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 18,
   },
   row: {
     flexDirection: "row",
     alignItems: "flex-end",
+    borderRadius: 30,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingTop: 10,
   },
   item: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 6,
-    height: 52,
+    paddingVertical: 8,
+    height: 60,
   },
   iconWrap: {
     height: 24,
@@ -371,6 +382,8 @@ const st = StyleSheet.create({
     marginTop: 4,
     fontSize: 10,
     lineHeight: 13,
+    textTransform: "uppercase",
+    letterSpacing: 0.7,
     includeFontPadding: false,
   },
   fabSlot: {
@@ -380,17 +393,18 @@ const st = StyleSheet.create({
     paddingBottom: 4,
   },
   fab: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: -24,
+    marginTop: -34,
+    borderWidth: 5,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.18,
-    shadowRadius: 6,
-    elevation: 6,
+    shadowRadius: 18,
+    elevation: 12,
   },
   radialItemFinal: {
     position: "absolute",

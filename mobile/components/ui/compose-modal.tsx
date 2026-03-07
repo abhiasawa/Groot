@@ -102,6 +102,8 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
     if (!visible) {
       triggeredModeRef.current = null;
     }
+  // Auto trigger depends on stable modal opening state; callback deps are intentionally omitted here.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, initialMode]);
 
   // Cleanup on close
@@ -124,7 +126,7 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
       pulseAnim.setValue(1);
     }
     onClose();
-  }, [onClose]);
+  }, [onClose, pulseAnim]);
 
   // ── Send Text ──
   const handleSend = useCallback(async () => {
@@ -285,7 +287,7 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
       setSending(false);
       setRecordingDuration(0);
     }
-  }, []);
+  }, [pulseAnim]);
 
   // ── Image Picker ──
   const pickImage = useCallback(async () => {
@@ -349,9 +351,12 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
             <View style={s.header}>
               <View style={s.headerLeft}>
                 <Sparkles size={18} color={colors.primary} strokeWidth={2} />
-                <Text style={[s.headerTitle, { color: colors.foreground }]}>
-                  Capture a Moment
-                </Text>
+                <View>
+                  <Text style={[s.headerEyebrow, { color: colors.primary }]}>Seed capture</Text>
+                  <Text style={[s.headerTitle, { color: colors.foreground }]}>
+                    Plant a whisper
+                  </Text>
+                </View>
               </View>
               <Pressable onPress={handleClose} hitSlop={12}>
                 <X size={20} color={colors.mutedForeground} />
@@ -393,7 +398,29 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
 
             {/* ── Recording state ── */}
             {recording && (
-              <View style={s.recordingWrap}>
+              <View style={[s.recordingWrap, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+                <View style={s.recordingVisual}>
+                  {[0.3, 0.52, 0.82, 1, 0.74, 0.46].map((scale, index) => (
+                    <RNAnimated.View
+                      key={index}
+                      style={[
+                        s.recordingBar,
+                        {
+                          backgroundColor: index >= 2 ? colors.primary : `${colors.primary}55`,
+                          transform: [{ scaleY: index === 3 ? pulseAnim : scale }],
+                        },
+                      ]}
+                    />
+                  ))}
+                </View>
+                <View style={s.recordingCopy}>
+                  <Text style={[s.recordingTime, { color: colors.foreground }]}>
+                    {formatTime(recordingDuration)}
+                  </Text>
+                  <Text style={[s.recordingLabel, { color: colors.mutedForeground }]}>
+                    Listening to the seed...
+                  </Text>
+                </View>
                 <RNAnimated.View
                   style={[
                     s.recordingDot,
@@ -403,12 +430,6 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
                     },
                   ]}
                 />
-                <Text style={[s.recordingTime, { color: colors.foreground }]}>
-                  {formatTime(recordingDuration)}
-                </Text>
-                <Text style={[s.recordingLabel, { color: colors.mutedForeground }]}>
-                  Recording...
-                </Text>
               </View>
             )}
 
@@ -425,7 +446,7 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
                 <TextInput
                   ref={inputRef}
                   style={[s.input, { color: colors.foreground }]}
-                  placeholder={imagePreview ? "Add a caption..." : "What's on your mind?"}
+                  placeholder={imagePreview ? "Add context to this capture..." : "How was your day?"}
                   placeholderTextColor={colors.mutedForeground}
                   value={text}
                   onChangeText={setText}
@@ -473,21 +494,21 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
                       style={[s.actionBtn, s.voiceBtn, { backgroundColor: `${colors.primary}15`, borderColor: `${colors.primary}30` }]}
                     >
                       <Mic size={22} color={colors.primary} strokeWidth={2.2} />
-                      <Text style={[s.actionLabel, s.voiceBtnLabel, { color: colors.primary }]}>Voice</Text>
+                      <Text style={[s.actionLabel, s.voiceBtnLabel, { color: colors.primary }]}>Whisper</Text>
                     </Pressable>
                     <Pressable
                       onPress={pickImage}
                       style={[s.actionBtn, s.secondaryBtn, { backgroundColor: `${colors.accent}08` }]}
                     >
                       <ImageIcon size={16} color={colors.accent} strokeWidth={1.8} />
-                      <Text style={[s.actionLabel, { color: colors.accent }]}>Gallery</Text>
+                      <Text style={[s.actionLabel, { color: colors.accent }]}>Archive</Text>
                     </Pressable>
                     <Pressable
                       onPress={takePhoto}
                       style={[s.actionBtn, s.secondaryBtn, { backgroundColor: `${colors.muted}` }]}
                     >
                       <Camera size={16} color={colors.mutedForeground} strokeWidth={1.8} />
-                      <Text style={[s.actionLabel, { color: colors.mutedForeground }]}>Camera</Text>
+                      <Text style={[s.actionLabel, { color: colors.mutedForeground }]}>Capture</Text>
                     </Pressable>
                   </>
                 )}
@@ -509,8 +530,8 @@ const s = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.45)",
   },
   sheet: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
     padding: 20,
     minHeight: 200,
   },
@@ -524,6 +545,13 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+  },
+  headerEyebrow: {
+    fontFamily: "Manrope_700Bold",
+    ...typography.caption,
+    textTransform: "uppercase",
+    letterSpacing: 1.1,
+    marginBottom: 2,
   },
   headerTitle: {
     fontFamily: "Sora_700Bold",
@@ -583,9 +611,27 @@ const s = StyleSheet.create({
   recordingWrap: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    paddingVertical: 16,
-    justifyContent: "center",
+    gap: 14,
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderRadius: 24,
+    marginBottom: 8,
+  },
+  recordingVisual: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    height: 40,
+  },
+  recordingBar: {
+    width: 6,
+    height: 34,
+    borderRadius: 999,
+  },
+  recordingCopy: {
+    flex: 1,
   },
   recordingDot: {
     width: 12,
@@ -619,7 +665,7 @@ const s = StyleSheet.create({
   inputRow: {
     flexDirection: "row",
     alignItems: "flex-end",
-    borderRadius: 16,
+    borderRadius: 22,
     borderWidth: 1,
     paddingLeft: 16,
     paddingRight: 6,
@@ -636,9 +682,9 @@ const s = StyleSheet.create({
     paddingBottom: 8,
   },
   sendBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     justifyContent: "center",
     alignItems: "center",
     marginLeft: 6,
@@ -656,7 +702,7 @@ const s = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     paddingVertical: 12,
-    borderRadius: 14,
+    borderRadius: 18,
   },
   actionBtnWide: {
     flex: 1,

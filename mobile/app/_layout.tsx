@@ -173,7 +173,11 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) {
     return (
       <View style={fallbackStyles.container}>
-        <Text style={fallbackStyles.text}>Loading…</Text>
+        <View style={fallbackStyles.orb}>
+          <Text style={fallbackStyles.orbText}>G</Text>
+        </View>
+        <Text style={fallbackStyles.title}>Groot</Text>
+        <Text style={fallbackStyles.text}>Initializing organic systems...</Text>
       </View>
     );
   }
@@ -211,10 +215,30 @@ const fallbackStyles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#071126",
+    backgroundColor: "#171B19",
+  },
+  orb: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#2E483A",
+    marginBottom: 20,
+  },
+  orbText: {
+    color: "#FFF8EE",
+    fontFamily: "Sora_700Bold",
+    fontSize: 34,
+  },
+  title: {
+    color: "#FFF8EE",
+    fontFamily: "Sora_700Bold",
+    fontSize: 28,
+    marginBottom: 8,
   },
   text: {
-    color: "#888",
-    fontSize: 16,
+    color: "#A5B3A8",
+    fontSize: 14,
   },
 });

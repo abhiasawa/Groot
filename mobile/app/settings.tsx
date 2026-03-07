@@ -1,96 +1,85 @@
-import React, { useCallback, useMemo, useState, useEffect } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  View,
-  Text,
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
   ScrollView,
   StyleSheet,
-  RefreshControl,
-  ActivityIndicator,
   Switch,
+  Text,
   TextInput,
-  Alert,
+  View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useSegments } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import * as Notifications from "expo-notifications";
+import Constants from "expo-constants";
 import {
-  Sun,
-  Moon,
-  Monitor,
   Bell,
-  BellOff,
-  BookOpen,
-  Calendar,
-  Lightbulb,
-  User,
+  Check,
+  ChevronRight,
+  Link2,
   LogOut,
   Mail,
   MessageCircle,
-  Phone,
-  Link2,
-  Unlink,
-  Check,
   Mic,
+  Monitor,
+  Moon,
+  Phone,
+  Sun,
+  Unlink,
 } from "lucide-react-native";
 
-import Constants from "expo-constants";
-import { useAuth } from "../lib/auth/provider";
-import { useTheme } from "../lib/theme/provider";
-import { useSettings, useCurrentUser } from "../lib/api/queries";
-import { useUpdatePreference } from "../lib/api/mutations";
-import { apiFetch } from "../lib/api/client";
-import { requestPermissions } from "../lib/notifications";
-import { typography } from "../constants/typography";
 import { GlassCard } from "../components/ui/glass-card";
 import { GradientBackground } from "../components/ui/gradient-background";
 import { PressScale } from "../components/ui/press-scale";
-import { SectionHeader } from "../components/ui/section-header";
-import { DeepScreenHeader } from "../components/ui/deep-screen-header";
-import { PillBadge } from "../components/ui/pill-badge";
-import { TabSwipeView } from "../components/ui/tab-swipe-view";
+import { apiFetch } from "../lib/api/client";
+import { useUpdatePreference } from "../lib/api/mutations";
+import { useCurrentUser, useSettings } from "../lib/api/queries";
+import { useAuth } from "../lib/auth/provider";
+import { requestPermissions } from "../lib/notifications";
+import { useTheme } from "../lib/theme/provider";
+import { typography } from "../constants/typography";
 
-interface NotificationPref {
+type NotificationPref = {
   key: string;
   label: string;
   description: string;
   icon: React.ReactNode;
-}
+};
 
-function useNotificationPrefs(): NotificationPref[] {
+function useNotificationPrefs() {
   const { colors } = useTheme();
 
-  return [
-    {
-      key: "morning_checkin",
-      label: "Daily Check-in",
-      description: "Morning nudge to start with intent.",
-      icon: <Calendar size={17} color={colors.chart2} strokeWidth={1.6} />,
-    },
-    {
-      key: "evening_journal",
-      label: "Evening Reflection",
-      description: "A daily prompt to close your day.",
-      icon: <BookOpen size={17} color={colors.chart1} strokeWidth={1.6} />,
-    },
-    {
-      key: "weekly_report",
-      label: "Weekly Report",
-      description: "Summary of patterns and insights.",
-      icon: <Bell size={17} color={colors.chart3} strokeWidth={1.6} />,
-    },
-    {
-      key: "feature_tips",
-      label: "Feature Tips",
-      description: "Weekly tips to get more from Groot.",
-      icon: <Lightbulb size={17} color={colors.chart4} strokeWidth={1.6} />,
-    },
-    {
-      key: "voice_checkins",
-      label: "Voice Check-ins",
-      description: "Morning check-ins via voice note.",
-      icon: <Mic size={17} color={colors.chart5} strokeWidth={1.6} />,
-    },
-  ];
+  return useMemo<NotificationPref[]>(
+    () => [
+      {
+        key: "morning_checkin",
+        label: "Morning check-in",
+        description: "A quiet nudge to start the day with intent.",
+        icon: <Sun size={16} color={colors.chart2} strokeWidth={1.8} />,
+      },
+      {
+        key: "evening_journal",
+        label: "Evening reflection",
+        description: "A prompt to close the loop before the day ends.",
+        icon: <Moon size={16} color={colors.chart1} strokeWidth={1.8} />,
+      },
+      {
+        key: "weekly_report",
+        label: "Weekly synthesis",
+        description: "A forest-level recap of patterns, habits, and shifts.",
+        icon: <Bell size={16} color={colors.chart3} strokeWidth={1.8} />,
+      },
+      {
+        key: "feature_tips",
+        label: "Guided tips",
+        description: "Subtle suggestions for using more of Groot well.",
+        icon: <Mic size={16} color={colors.chart5} strokeWidth={1.8} />,
+      },
+    ],
+    [colors.chart1, colors.chart2, colors.chart3, colors.chart5],
+  );
 }
 
 export default function SettingsScreen() {
@@ -100,46 +89,34 @@ export default function SettingsScreen() {
   const segments = useSegments();
   const isTabRoute = segments[0] === "(tabs)";
   const { data, isLoading, refetch } = useSettings();
-  const {
-    data: meData,
-    refetch: refetchMe,
-  } = useCurrentUser();
+  const { data: meData, refetch: refetchMe } = useCurrentUser();
   const updatePref = useUpdatePreference();
-  const [isPullRefreshing, setIsPullRefreshing] = React.useState(false);
-  const [notifPermission, setNotifPermission] = useState<"granted" | "denied" | "undetermined">(
-    "undetermined",
-  );
+  const notificationPrefs = useNotificationPrefs();
 
-  // WhatsApp linking state
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [notifPermission, setNotifPermission] = useState<"granted" | "denied" | "undetermined">("undetermined");
   const [showWhatsAppInput, setShowWhatsAppInput] = useState(false);
   const [whatsAppNumber, setWhatsAppNumber] = useState("");
   const [whatsAppLinking, setWhatsAppLinking] = useState(false);
   const [whatsAppError, setWhatsAppError] = useState<string | null>(null);
 
-  const notificationPrefs = useNotificationPrefs();
-
-  // Check notification permission status
   useEffect(() => {
     Notifications.getPermissionsAsync().then(({ status }) => {
       setNotifPermission(status === "granted" ? "granted" : status === "denied" ? "denied" : "undetermined");
     });
   }, []);
 
+  const onRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    Promise.all([refetch(), refetchMe()])
+      .catch(() => {})
+      .finally(() => setIsRefreshing(false));
+  }, [refetch, refetchMe]);
+
   const handleRequestPermission = useCallback(async () => {
     const granted = await requestPermissions();
     setNotifPermission(granted ? "granted" : "denied");
   }, []);
-
-  const enabledCount = useMemo(() => {
-    return notificationPrefs.filter((pref) => data?.preferences?.[pref.key] ?? true).length;
-  }, [data?.preferences, notificationPrefs]);
-
-  const onRefresh = useCallback(() => {
-    setIsPullRefreshing(true);
-    Promise.all([refetch(), refetchMe()])
-      .catch(() => {})
-      .finally(() => setIsPullRefreshing(false));
-  }, [refetch, refetchMe]);
 
   const handleTogglePref = useCallback(
     (key: string, value: boolean) => {
@@ -152,12 +129,9 @@ export default function SettingsScreen() {
     void signOut();
   }, [signOut]);
 
-  const user = meData?.user;
-  const hasWhatsApp = !!user?.whatsapp_number;
-
   const handleLinkWhatsApp = useCallback(async () => {
     if (!whatsAppNumber.trim()) {
-      setWhatsAppError("Please enter your WhatsApp number");
+      setWhatsAppError("Enter your WhatsApp number to connect Groot.");
       return;
     }
 
@@ -165,33 +139,25 @@ export default function SettingsScreen() {
     setWhatsAppError(null);
 
     try {
-      await apiFetch<{ ok: boolean; whatsapp_number: string }>(
-        "/api/auth/link-whatsapp",
-        {
-          method: "POST",
-          body: JSON.stringify({ whatsapp_number: whatsAppNumber.trim() }),
-        },
-      );
-
+      await apiFetch<{ ok: boolean; whatsapp_number: string }>("/api/auth/link-whatsapp", {
+        method: "POST",
+        body: JSON.stringify({ whatsapp_number: whatsAppNumber.trim() }),
+      });
       setShowWhatsAppInput(false);
       setWhatsAppNumber("");
       void refetchMe();
-      Alert.alert(
-        "WhatsApp Linked",
-        "Check your WhatsApp — Groot just said hello!",
-      );
+      Alert.alert("WhatsApp linked", "Groot can now message you on WhatsApp.");
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to link WhatsApp";
-      setWhatsAppError(message);
+      setWhatsAppError(err instanceof Error ? err.message : "Failed to link WhatsApp.");
     } finally {
       setWhatsAppLinking(false);
     }
-  }, [whatsAppNumber, refetchMe]);
+  }, [refetchMe, whatsAppNumber]);
 
   const handleUnlinkWhatsApp = useCallback(() => {
     Alert.alert(
       "Unlink WhatsApp",
-      "You won't receive Groot messages on WhatsApp anymore. Continue?",
+      "Groot will stop sending messages to WhatsApp. Continue?",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -199,13 +165,10 @@ export default function SettingsScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              await apiFetch<{ ok: boolean }>(
-                "/api/auth/link-whatsapp",
-                { method: "DELETE" },
-              );
+              await apiFetch<{ ok: boolean }>("/api/auth/link-whatsapp", { method: "DELETE" });
               void refetchMe();
             } catch {
-              Alert.alert("Error", "Failed to unlink WhatsApp. Please try again.");
+              Alert.alert("Error", "Failed to unlink WhatsApp.");
             }
           },
         },
@@ -213,11 +176,18 @@ export default function SettingsScreen() {
     );
   }, [refetchMe]);
 
+  const notificationCount = notificationPrefs.filter(
+    (pref) => data?.preferences?.[pref.key] ?? true,
+  ).length;
+
+  const user = meData?.user;
+  const hasWhatsApp = Boolean(user?.whatsapp_number);
+
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.flex}>
+      <SafeAreaView style={styles.safe}>
         <GradientBackground>
-          <View style={styles.center}>
+          <View style={styles.loading}>
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
         </GradientBackground>
@@ -225,322 +195,250 @@ export default function SettingsScreen() {
     );
   }
 
-  const inner = (
-    <SafeAreaView style={styles.flex}>
+  return (
+    <SafeAreaView style={styles.safe}>
       <GradientBackground>
         <ScrollView
           contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
-              refreshing={isPullRefreshing}
+              refreshing={isRefreshing}
               onRefresh={onRefresh}
               tintColor={colors.primary}
             />
           }
-          showsVerticalScrollIndicator={false}
         >
-          {isTabRoute ? (
-            <View style={styles.tabHeader}>
-              <Text style={[styles.tabTitle, { color: colors.foreground }]}>Settings</Text>
+          <View style={styles.header}>
+            <View style={styles.headerCopy}>
+              <Text style={[styles.headerEyebrow, { color: colors.primary }]}>Deep soil</Text>
+              <Text style={[styles.headerTitle, { color: colors.foreground }]}>Settings & privacy</Text>
+              <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>
+                Tune voice, privacy, channels, and how Groot reaches you.
+              </Text>
             </View>
-          ) : (
-            <DeepScreenHeader
-              title="Settings"
-              subtitle="Tune your experience and account controls."
-              onBack={() => router.back()}
-              tags={["Preferences", "Account"]}
-            />
-          )}
-
-          <View style={styles.sectionWrap}>
-            <SectionHeader title="Appearance" />
-            <View style={styles.themeRow}>
-              <ThemeOption
-                label="Light"
-                icon={
-                  <Sun
-                    size={17}
-                    color={mode === "light" ? colors.primaryForeground : colors.mutedForeground}
-                    strokeWidth={1.6}
-                  />
-                }
-                active={mode === "light"}
-                onPress={() => setMode("light")}
-              />
-              <ThemeOption
-                label="Dark"
-                icon={
-                  <Moon
-                    size={17}
-                    color={mode === "dark" ? colors.primaryForeground : colors.mutedForeground}
-                    strokeWidth={1.6}
-                  />
-                }
-                active={mode === "dark"}
-                onPress={() => setMode("dark")}
-              />
-              <ThemeOption
-                label="System"
-                icon={
-                  <Monitor
-                    size={17}
-                    color={mode === "system" ? colors.primaryForeground : colors.mutedForeground}
-                    strokeWidth={1.6}
-                  />
-                }
-                active={mode === "system"}
-                onPress={() => setMode("system")}
-              />
-            </View>
-          </View>
-
-          <View style={styles.sectionWrap}>
-            <SectionHeader title="Notifications" />
-            {notifPermission !== "granted" && (
-              <PressScale onPress={handleRequestPermission}>
-                <View
-                  style={[
-                    styles.permBanner,
-                    { backgroundColor: `${colors.accent}20`, borderColor: `${colors.accent}40` },
-                  ]}
-                >
-                  <BellOff size={16} color={colors.accent} strokeWidth={1.6} />
-                  <Text style={[styles.permBannerText, { color: colors.foreground }]}>
-                    {notifPermission === "denied"
-                      ? "Notifications are blocked. Tap to open settings."
-                      : "Tap to enable notifications"}
-                  </Text>
+            {!isTabRoute ? (
+              <PressScale onPress={() => router.back()} haptic={false}>
+                <View style={[styles.backPill, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+                  <Text style={[styles.backText, { color: colors.foreground }]}>Back</Text>
                 </View>
               </PressScale>
-            )}
-            <GlassCard padding={0}>
-              {notificationPrefs.map((pref, index) => {
-                const enabled = data?.preferences?.[pref.key] ?? true;
-                const isLast = index === notificationPrefs.length - 1;
-
-                return (
-                  <View
-                    key={pref.key}
-                    style={[
-                      styles.prefRow,
-                      !isLast && {
-                        borderBottomWidth: StyleSheet.hairlineWidth,
-                        borderBottomColor: colors.glassBorder,
-                      },
-                    ]}
-                  >
-                    <View style={[styles.prefIconWrap, { backgroundColor: colors.glassSurface }]}>
-                      {pref.icon}
-                    </View>
-                    <View style={styles.prefCopy}>
-                      <Text style={[styles.prefLabel, { color: colors.foreground }]}>{pref.label}</Text>
-                      <Text style={[styles.prefDesc, { color: colors.mutedForeground }]}>
-                        {pref.description}
-                      </Text>
-                    </View>
-                    <Switch
-                      value={enabled}
-                      onValueChange={(value) => handleTogglePref(pref.key, value)}
-                      trackColor={{
-                        false: colors.input,
-                        true: colors.primary,
-                      }}
-                      thumbColor="#FFFFFF"
-                    />
-                  </View>
-                );
-              })}
-            </GlassCard>
+            ) : null}
           </View>
 
-          {/* WhatsApp Linking Section */}
-          <View style={styles.sectionWrap}>
-            <SectionHeader title="WhatsApp" />
-            <GlassCard padding={0}>
-              {hasWhatsApp ? (
-                /* WhatsApp is linked */
-                <View style={styles.prefRow}>
-                  <View style={[styles.prefIconWrap, { backgroundColor: `${colors.chart2}20` }]}>
-                    <MessageCircle size={17} color={colors.chart2} strokeWidth={1.6} />
-                  </View>
-                  <View style={styles.prefCopy}>
-                    <Text style={[styles.prefLabel, { color: colors.foreground }]}>
-                      +{user.whatsapp_number}
-                    </Text>
-                    <Text style={[styles.prefDesc, { color: colors.mutedForeground }]}>
-                      Groot can message you on WhatsApp
-                    </Text>
-                  </View>
-                  <PressScale onPress={handleUnlinkWhatsApp}>
-                    <View style={[styles.unlinkBtn, { backgroundColor: `${colors.destructive}15` }]}>
-                      <Unlink size={14} color={colors.destructive} strokeWidth={1.8} />
-                    </View>
-                  </PressScale>
-                </View>
-              ) : showWhatsAppInput ? (
-                /* Input form to link WhatsApp */
-                <View style={styles.linkForm}>
-                  <View style={styles.linkFormHeader}>
-                    <View style={[styles.prefIconWrap, { backgroundColor: `${colors.chart2}20` }]}>
-                      <Phone size={17} color={colors.chart2} strokeWidth={1.6} />
-                    </View>
-                    <View style={styles.prefCopy}>
-                      <Text style={[styles.prefLabel, { color: colors.foreground }]}>
-                        Link WhatsApp
-                      </Text>
-                      <Text style={[styles.prefDesc, { color: colors.mutedForeground }]}>
-                        Enter your phone number
-                      </Text>
-                    </View>
-                  </View>
+          <GlassCard style={styles.profileCard} padding={20}>
+            <Text style={[styles.sectionEyebrow, { color: colors.accent }]}>Profile root</Text>
+            <Text style={[styles.profileName, { color: colors.foreground }]}>
+              {user?.display_name ?? "Groot user"}
+            </Text>
+            <View style={styles.profileMeta}>
+              <InfoPill icon={<Mail size={14} color={colors.primary} strokeWidth={1.8} />} label={user?.email ?? "No email"} />
+              <InfoPill
+                icon={<Phone size={14} color={colors.primary} strokeWidth={1.8} />}
+                label={user?.whatsapp_number ?? "WhatsApp not linked"}
+              />
+            </View>
+          </GlassCard>
 
-                  <View style={styles.linkInputRow}>
-                    <TextInput
-                      style={[
-                        styles.linkInput,
-                        {
-                          color: colors.foreground,
-                          backgroundColor: colors.glassSurface,
-                          borderColor: whatsAppError ? colors.destructive : colors.glassBorder,
-                        },
-                      ]}
-                      placeholder="98765 43210"
-                      placeholderTextColor={colors.mutedForeground}
-                      keyboardType="phone-pad"
-                      value={whatsAppNumber}
-                      onChangeText={(text) => {
-                        setWhatsAppNumber(text);
-                        setWhatsAppError(null);
-                      }}
-                      autoFocus
-                      editable={!whatsAppLinking}
-                    />
-                    <PressScale
-                      onPress={handleLinkWhatsApp}
-                      haptic={!whatsAppLinking}
-                    >
-                      <View
-                        style={[
-                          styles.linkSubmitBtn,
-                          {
-                            backgroundColor: colors.primary,
-                            opacity: whatsAppLinking ? 0.6 : 1,
-                          },
-                        ]}
-                      >
-                        {whatsAppLinking ? (
-                          <ActivityIndicator size="small" color={colors.primaryForeground} />
-                        ) : (
-                          <Check size={18} color={colors.primaryForeground} strokeWidth={2.2} />
-                        )}
-                      </View>
-                    </PressScale>
-                  </View>
-
-                  {whatsAppError ? (
-                    <Text style={[styles.linkError, { color: colors.destructive }]}>
-                      {whatsAppError}
-                    </Text>
-                  ) : null}
-
-                  <PressScale onPress={() => { setShowWhatsAppInput(false); setWhatsAppError(null); }}>
-                    <Text style={[styles.linkCancel, { color: colors.mutedForeground }]}>
-                      Cancel
-                    </Text>
-                  </PressScale>
-                </View>
-              ) : (
-                /* CTA to link WhatsApp */
-                <PressScale onPress={() => setShowWhatsAppInput(true)}>
-                  <View style={styles.prefRow}>
-                    <View style={[styles.prefIconWrap, { backgroundColor: `${colors.chart2}20` }]}>
-                      <Link2 size={17} color={colors.chart2} strokeWidth={1.6} />
-                    </View>
-                    <View style={styles.prefCopy}>
-                      <Text style={[styles.prefLabel, { color: colors.foreground }]}>
-                        Link WhatsApp
-                      </Text>
-                      <Text style={[styles.prefDesc, { color: colors.mutedForeground }]}>
-                        Get Groot check-ins and reminders on WhatsApp
-                      </Text>
-                    </View>
-                    <PillBadge label="Optional" small />
-                  </View>
-                </PressScale>
-              )}
-            </GlassCard>
+          <SectionTitle title="Appearance" />
+          <View style={styles.modeRow}>
+            <ModeCard
+              label="Light"
+              active={mode === "light"}
+              icon={<Sun size={18} color={mode === "light" ? colors.primaryForeground : colors.primary} strokeWidth={2} />}
+              onPress={() => setMode("light")}
+            />
+            <ModeCard
+              label="Dark"
+              active={mode === "dark"}
+              icon={<Moon size={18} color={mode === "dark" ? colors.primaryForeground : colors.primary} strokeWidth={2} />}
+              onPress={() => setMode("dark")}
+            />
+            <ModeCard
+              label="System"
+              active={mode === "system"}
+              icon={<Monitor size={18} color={mode === "system" ? colors.primaryForeground : colors.primary} strokeWidth={2} />}
+              onPress={() => setMode("system")}
+            />
           </View>
 
-          <View style={styles.sectionWrap}>
-            <SectionHeader title="Account" />
-            <GlassCard padding={0}>
-              <View
-                style={[
-                  styles.prefRow,
-                  {
-                    borderBottomWidth: StyleSheet.hairlineWidth,
-                    borderBottomColor: colors.glassBorder,
-                  },
-                ]}
-              >
-                <View style={[styles.prefIconWrap, { backgroundColor: colors.glassSurface }]}>
-                  <Mail size={17} color={colors.primary} strokeWidth={1.6} />
-                </View>
-                <View style={styles.prefCopy}>
-                  <Text style={[styles.prefLabel, { color: colors.foreground }]}>
-                    {user?.display_name || "Your account"}
-                  </Text>
-                  <Text style={[styles.prefDesc, { color: colors.mutedForeground }]}>
-                    {user?.email || "Signed in with Google"}
-                  </Text>
-                </View>
-                <PillBadge label="Google" small />
-              </View>
+          <SectionTitle title="Notifications" meta={`${notificationCount}/${notificationPrefs.length} active`} />
+          <GlassCard padding={8}>
+            <SettingsRow
+              icon={<Bell size={16} color={colors.primary} strokeWidth={1.8} />}
+              title="Notification permission"
+              description={
+                notifPermission === "granted"
+                  ? "Allowed on this device."
+                  : notifPermission === "denied"
+                    ? "Disabled at system level."
+                    : "Not configured yet."
+              }
+              trailing={
+                notifPermission === "granted" ? (
+                  <View style={[styles.statusPill, { backgroundColor: `${colors.primary}18` }]}>
+                    <Check size={14} color={colors.primary} strokeWidth={2.1} />
+                    <Text style={[styles.statusPillText, { color: colors.primary }]}>Enabled</Text>
+                  </View>
+                ) : (
+                  <PressScale onPress={handleRequestPermission} haptic={false}>
+                    <View style={[styles.actionPill, { backgroundColor: colors.primary }]}>
+                      <Text style={[styles.actionPillText, { color: colors.primaryForeground }]}>Allow</Text>
+                    </View>
+                  </PressScale>
+                )
+              }
+            />
 
-              <PressScale onPress={() => router.push("/(tabs)/profile" as never)}>
-                <View
+            {notificationPrefs.map((pref, index) => (
+              <SettingsRow
+                key={pref.key}
+                icon={pref.icon}
+                title={pref.label}
+                description={pref.description}
+                bordered={index < notificationPrefs.length - 1}
+                trailing={
+                  <Switch
+                    trackColor={{ false: colors.muted, true: `${colors.primary}55` }}
+                    thumbColor={data?.preferences?.[pref.key] ?? true ? colors.primary : colors.card}
+                    ios_backgroundColor={colors.muted}
+                    value={data?.preferences?.[pref.key] ?? true}
+                    onValueChange={(value) => handleTogglePref(pref.key, value)}
+                  />
+                }
+              />
+            ))}
+          </GlassCard>
+
+          <SectionTitle title="Channels" />
+          <GlassCard padding={8}>
+            <SettingsRow
+              icon={<MessageCircle size={16} color={colors.primary} strokeWidth={1.8} />}
+              title="WhatsApp bridge"
+              description={
+                hasWhatsApp
+                  ? `Connected to ${user?.whatsapp_number}`
+                  : "Link WhatsApp so Groot can reach you outside the app."
+              }
+              trailing={
+                hasWhatsApp ? (
+                  <PressScale onPress={handleUnlinkWhatsApp} haptic={false}>
+                    <View style={[styles.secondaryPill, { backgroundColor: `${colors.destructive}18` }]}>
+                      <Unlink size={14} color={colors.destructive} strokeWidth={2} />
+                      <Text style={[styles.secondaryPillText, { color: colors.destructive }]}>Unlink</Text>
+                    </View>
+                  </PressScale>
+                ) : (
+                  <PressScale onPress={() => setShowWhatsAppInput((value) => !value)} haptic={false}>
+                    <View style={[styles.secondaryPill, { backgroundColor: `${colors.primary}18` }]}>
+                      <Link2 size={14} color={colors.primary} strokeWidth={2} />
+                      <Text style={[styles.secondaryPillText, { color: colors.primary }]}>Connect</Text>
+                    </View>
+                  </PressScale>
+                )
+              }
+            />
+
+            {showWhatsAppInput ? (
+              <View style={[styles.linkBox, { borderColor: colors.border }]}>
+                <TextInput
+                  value={whatsAppNumber}
+                  onChangeText={setWhatsAppNumber}
+                  placeholder="+91 98765 43210"
+                  placeholderTextColor={colors.mutedForeground}
                   style={[
-                    styles.prefRow,
+                    styles.linkInput,
                     {
-                      borderBottomWidth: StyleSheet.hairlineWidth,
-                      borderBottomColor: colors.glassBorder,
+                      color: colors.foreground,
+                      backgroundColor: colors.secondary,
+                      borderColor: colors.border,
                     },
                   ]}
-                >
-                  <View style={[styles.prefIconWrap, { backgroundColor: colors.glassSurface }]}>
-                    <User size={17} color={colors.accent} strokeWidth={1.6} />
+                  keyboardType="phone-pad"
+                  autoCapitalize="none"
+                />
+                {whatsAppError ? (
+                  <Text style={[styles.errorText, { color: colors.destructive }]}>{whatsAppError}</Text>
+                ) : null}
+                <PressScale onPress={handleLinkWhatsApp} haptic={false}>
+                  <View style={[styles.connectButton, { backgroundColor: colors.primary }]}>
+                    <Text style={[styles.connectButtonText, { color: colors.primaryForeground }]}>
+                      {whatsAppLinking ? "Linking..." : "Link WhatsApp"}
+                    </Text>
                   </View>
-                  <View style={styles.prefCopy}>
-                    <Text style={[styles.prefLabel, { color: colors.foreground }]}>Personal Profile</Text>
-                    <Text style={[styles.prefDesc, { color: colors.mutedForeground }]}>Review and prune memory facts.</Text>
-                  </View>
-                </View>
-              </PressScale>
+                </PressScale>
+              </View>
+            ) : null}
+          </GlassCard>
 
-              <PressScale onPress={handleSignOut}>
-                <View style={styles.signOutRow}>
-                  <View style={[styles.prefIconWrap, { backgroundColor: `${colors.destructive}1A` }]}>
-                    <LogOut size={17} color={colors.destructive} strokeWidth={1.6} />
+          <SectionTitle title="System" />
+          <GlassCard padding={8}>
+            <SettingsRow
+              icon={<Mic size={16} color={colors.primary} strokeWidth={1.8} />}
+              title="App build"
+              description={`Expo ${Constants.expoConfig?.version ?? "dev"} on ${Constants.platform?.android ? "Android" : "device"}`}
+              trailing={<ChevronRight size={16} color={colors.mutedForeground} strokeWidth={1.8} />}
+            />
+            <SettingsRow
+              icon={<LogOut size={16} color={colors.destructive} strokeWidth={1.8} />}
+              title="Sign out"
+              description="End this session on the current device."
+              trailing={
+                <PressScale onPress={handleSignOut} haptic={false}>
+                  <View style={[styles.secondaryPill, { backgroundColor: `${colors.destructive}18` }]}>
+                    <Text style={[styles.secondaryPillText, { color: colors.destructive }]}>Leave</Text>
                   </View>
-                  <Text style={[styles.signOutLabel, { color: colors.destructive }]}>Sign Out</Text>
-                </View>
-              </PressScale>
-            </GlassCard>
-          </View>
+                </PressScale>
+              }
+            />
+          </GlassCard>
 
-          <Text style={[styles.versionText, { color: colors.mutedForeground }]}>
-            The Garden v{Constants.expoConfig?.version ?? "1.0.0"}
-          </Text>
-          <View style={styles.bottomSpacer} />
+          <View style={styles.bottomGap} />
         </ScrollView>
       </GradientBackground>
     </SafeAreaView>
   );
-
-  return isTabRoute ? <TabSwipeView currentTab="settings">{inner}</TabSwipeView> : inner;
 }
 
-function ThemeOption({
+function SectionTitle({ title, meta }: { title: string; meta?: string }) {
+  const { colors } = useTheme();
+
+  return (
+    <View style={styles.sectionHeader}>
+      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{title}</Text>
+      {meta ? <Text style={[styles.sectionMeta, { color: colors.primary }]}>{meta}</Text> : null}
+    </View>
+  );
+}
+
+function SettingsRow({
+  icon,
+  title,
+  description,
+  trailing,
+  bordered = true,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  trailing: React.ReactNode;
+  bordered?: boolean;
+}) {
+  const { colors } = useTheme();
+
+  return (
+    <View style={[styles.row, bordered ? { borderBottomWidth: 1, borderBottomColor: colors.border } : null]}>
+      <View style={[styles.rowIcon, { backgroundColor: colors.secondary }]}>{icon}</View>
+      <View style={styles.rowCopy}>
+        <Text style={[styles.rowTitle, { color: colors.foreground }]}>{title}</Text>
+        <Text style={[styles.rowDescription, { color: colors.mutedForeground }]}>{description}</Text>
+      </View>
+      {trailing}
+    </View>
+  );
+}
+
+function ModeCard({
   label,
   icon,
   active,
@@ -554,180 +452,244 @@ function ThemeOption({
   const { colors } = useTheme();
 
   return (
-    <PressScale onPress={onPress} style={styles.themeOptionWrap}>
+    <PressScale onPress={onPress} haptic={false} style={styles.modeCardWrap}>
       <View
         style={[
-          styles.themeOptionBox,
+          styles.modeCard,
           {
-            backgroundColor: active ? colors.primary : colors.secondary,
-            borderRadius: 14,
+            backgroundColor: active ? colors.primary : colors.glassSurface,
+            borderColor: active ? colors.primary : colors.border,
           },
         ]}
       >
-        <View style={styles.themeOptionInner}>
-          {icon}
-          <Text
-            style={[
-              styles.themeOptionLabel,
-              {
-                color: active ? colors.primaryForeground : colors.foreground,
-                fontFamily: active ? "Sora_600SemiBold" : "Manrope_500Medium",
-              },
-            ]}
-          >
-            {label}
-          </Text>
-        </View>
+        {icon}
+        <Text style={[styles.modeLabel, { color: active ? colors.primaryForeground : colors.foreground }]}>
+          {label}
+        </Text>
       </View>
     </PressScale>
   );
 }
 
+function InfoPill({ icon, label }: { icon: React.ReactNode; label: string }) {
+  const { colors } = useTheme();
+
+  return (
+    <View style={[styles.infoPill, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+      {icon}
+      <Text style={[styles.infoPillText, { color: colors.foreground }]} numberOfLines={1}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
+  safe: { flex: 1 },
+  loading: { flex: 1, alignItems: "center", justifyContent: "center" },
   scroll: {
     paddingHorizontal: 20,
     paddingTop: 10,
-    paddingBottom: 90,
+    paddingBottom: 42,
   },
-  tabHeader: {
-    marginBottom: 16,
-  },
-  tabTitle: {
-    fontFamily: "Sora_700Bold",
-    ...typography.title,
-  },
-  sectionWrap: {
-    marginBottom: 22,
-  },
-  themeRow: {
+  header: {
     flexDirection: "row",
-    gap: 10,
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 24,
   },
-  themeOptionWrap: {
+  headerCopy: {
     flex: 1,
+    paddingRight: 12,
   },
-  themeOptionBox: {
-    padding: 13,
-  },
-  themeOptionInner: {
-    alignItems: "center",
-    gap: 5,
-  },
-  themeOptionLabel: {
-    ...typography.xs,
-  },
-  prefRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-  },
-  prefIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  prefCopy: {
-    flex: 1,
-    marginRight: 10,
-  },
-  prefLabel: {
-    fontFamily: "Manrope_600SemiBold",
-    ...typography.sm,
-  },
-  prefDesc: {
-    marginTop: 1,
-    fontFamily: "Manrope_400Regular",
-    ...typography.xs,
-  },
-  permBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
+  headerEyebrow: {
+    fontFamily: "Manrope_700Bold",
+    ...typography.caption,
+    textTransform: "uppercase",
+    letterSpacing: 1.1,
     marginBottom: 10,
   },
-  permBannerText: {
-    flex: 1,
+  headerTitle: {
+    fontFamily: "Sora_700Bold",
+    ...typography["2xl"],
+    marginBottom: 8,
+  },
+  headerSubtitle: {
     fontFamily: "Manrope_500Medium",
     ...typography.sm,
+    lineHeight: 22,
   },
-  signOutRow: {
-    flexDirection: "row",
-    alignItems: "center",
+  backPill: {
+    borderRadius: 999,
+    borderWidth: 1,
     paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingVertical: 10,
   },
-  signOutLabel: {
-    fontFamily: "Sora_600SemiBold",
-    ...typography.sm,
+  backText: {
+    fontFamily: "Manrope_700Bold",
+    ...typography.xs,
   },
-  // WhatsApp linking styles
-  unlinkBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
+  profileCard: {
+    marginBottom: 24,
   },
-  linkForm: {
-    padding: 14,
+  sectionEyebrow: {
+    fontFamily: "Manrope_700Bold",
+    ...typography.caption,
+    textTransform: "uppercase",
+    letterSpacing: 1.1,
+    marginBottom: 8,
+  },
+  profileName: {
+    fontFamily: "Sora_700Bold",
+    ...typography.xl,
+    marginBottom: 14,
+  },
+  profileMeta: {
     gap: 10,
   },
-  linkFormHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  linkInputRow: {
+  infoPill: {
+    minHeight: 42,
+    borderWidth: 1,
+    borderRadius: 18,
+    paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
-  linkInput: {
+  infoPillText: {
     flex: 1,
-    height: 44,
-    borderRadius: 12,
+    fontFamily: "Manrope_500Medium",
+    ...typography.sm,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+    marginTop: 6,
+  },
+  sectionTitle: {
+    fontFamily: "Sora_600SemiBold",
+    ...typography.lg,
+  },
+  sectionMeta: {
+    fontFamily: "Manrope_700Bold",
+    ...typography.caption,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  modeRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 24,
+  },
+  modeCardWrap: {
+    flex: 1,
+  },
+  modeCard: {
+    borderRadius: 22,
+    borderWidth: 1,
+    minHeight: 82,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  modeLabel: {
+    fontFamily: "Manrope_700Bold",
+    ...typography.sm,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 16,
+    gap: 12,
+  },
+  rowIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rowCopy: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  rowTitle: {
+    fontFamily: "Manrope_700Bold",
+    ...typography.sm,
+    marginBottom: 4,
+  },
+  rowDescription: {
+    fontFamily: "Manrope_500Medium",
+    ...typography.xs,
+    lineHeight: 18,
+  },
+  statusPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  statusPillText: {
+    fontFamily: "Manrope_700Bold",
+    ...typography.xs,
+  },
+  actionPill: {
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  actionPillText: {
+    fontFamily: "Manrope_700Bold",
+    ...typography.xs,
+  },
+  secondaryPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  secondaryPillText: {
+    fontFamily: "Manrope_700Bold",
+    ...typography.xs,
+  },
+  linkBox: {
+    borderTopWidth: 1,
+    paddingHorizontal: 12,
+    paddingTop: 14,
+    paddingBottom: 8,
+  },
+  linkInput: {
+    height: 48,
+    borderRadius: 16,
     borderWidth: 1,
     paddingHorizontal: 14,
     fontFamily: "Manrope_500Medium",
     ...typography.sm,
   },
-  linkSubmitBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  linkError: {
-    fontFamily: "Manrope_400Regular",
-    ...typography.xs,
-    paddingHorizontal: 2,
-  },
-  linkCancel: {
+  errorText: {
     fontFamily: "Manrope_500Medium",
     ...typography.xs,
-    textAlign: "center",
-    paddingVertical: 4,
+    marginTop: 8,
   },
-  versionText: {
-    marginTop: 2,
-    textAlign: "center",
-    fontFamily: "Manrope_400Regular",
-    ...typography.xs,
+  connectButton: {
+    borderRadius: 16,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 12,
   },
-  bottomSpacer: {
-    height: 20,
+  connectButtonText: {
+    fontFamily: "Manrope_700Bold",
+    ...typography.sm,
+  },
+  bottomGap: {
+    height: 110,
   },
 });

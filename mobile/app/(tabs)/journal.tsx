@@ -90,7 +90,7 @@ export default function JournalScreen() {
     refetch().finally(() => setIsPullRefreshing(false));
   }, [refetch]);
 
-  const memories = data?.memories ?? [];
+  const memories = useMemo(() => data?.memories ?? [], [data?.memories]);
   const grouped = useMemo(() => {
     const groups = new Map<string, Memory[]>();
     for (const memory of memories) {
@@ -118,48 +118,85 @@ export default function JournalScreen() {
             }
           >
             <View style={styles.headerRow}>
-              <Text style={[styles.pageTitle, { color: colors.foreground }]}>Journal</Text>
-              <PressScale
-                onPress={() => {
-                  setViewMode((v) => {
-                    if (v === "calendar") setActiveFilter("all");
-                    return v === "timeline" ? "calendar" : "timeline";
-                  });
-                }}
-                haptic={false}
-              >
-                <View
-                  style={[
-                    styles.headerIconBtn,
-                    { backgroundColor: viewMode === "calendar" ? colors.primary : colors.glassSurface },
-                  ]}
-                >
-                  <CalendarDays
-                    size={18}
-                    color={viewMode === "calendar" ? colors.primaryForeground : colors.mutedForeground}
-                    strokeWidth={1.8}
-                  />
-                </View>
-              </PressScale>
+              <View style={styles.titleWrap}>
+                <Text style={[styles.pageEyebrow, { color: colors.primary }]}>Vault</Text>
+                <Text style={[styles.pageTitle, { color: colors.foreground }]}>Your living archive</Text>
+                <Text style={[styles.pageSubtitle, { color: colors.mutedForeground }]}>
+                  Search whispers, revisit images, and map moments by day.
+                </Text>
+              </View>
             </View>
 
             <SearchInput
               value={query}
               onChangeText={setQuery}
-              placeholder="Search memories..."
+              placeholder="Search the vault..."
             />
+
+            <View style={[styles.viewToggle, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+              <PressScale
+                onPress={() => {
+                  setViewMode("timeline");
+                  setActiveFilter("all");
+                }}
+                haptic={false}
+                style={styles.viewToggleButton}
+              >
+                <View
+                  style={[
+                    styles.viewToggleButton,
+                    viewMode === "timeline" ? { backgroundColor: colors.card } : null,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.viewToggleText,
+                      { color: viewMode === "timeline" ? colors.foreground : colors.mutedForeground },
+                    ]}
+                  >
+                    Timeline
+                  </Text>
+                </View>
+              </PressScale>
+              <PressScale
+                onPress={() => setViewMode("calendar")}
+                haptic={false}
+                style={styles.viewToggleButton}
+              >
+                <View
+                  style={[
+                    styles.viewToggleButton,
+                    viewMode === "calendar" ? { backgroundColor: colors.card } : null,
+                  ]}
+                >
+                  <CalendarDays
+                    size={15}
+                    color={viewMode === "calendar" ? colors.primary : colors.mutedForeground}
+                    strokeWidth={1.9}
+                  />
+                  <Text
+                    style={[
+                      styles.viewToggleText,
+                      { color: viewMode === "calendar" ? colors.foreground : colors.mutedForeground },
+                    ]}
+                  >
+                    Calendar
+                  </Text>
+                </View>
+              </PressScale>
+            </View>
 
             {viewMode === "calendar" ? (
               <>
                 <View style={styles.filterChips}>
                   {FILTERS.map((filter) => (
                     <PressScale key={filter.key} onPress={() => setActiveFilter(filter.key)} scale={0.96}>
-                      <PillBadge
-                        label={filter.label}
-                        color={activeFilter === filter.key ? colors.secondaryForeground : colors.glassSurface}
-                        textColor={activeFilter === filter.key ? "#FFFFFF" : colors.mutedForeground}
-                        small
-                      />
+                          <PillBadge
+                            label={filter.label}
+                            color={activeFilter === filter.key ? colors.primary : colors.secondary}
+                            textColor={activeFilter === filter.key ? colors.primaryForeground : colors.mutedForeground}
+                            small
+                          />
                     </PressScale>
                   ))}
                 </View>
@@ -198,9 +235,9 @@ export default function JournalScreen() {
               <GlassCard style={styles.emptyCard} padding={26}>
                 <View style={styles.emptyInner}>
                   <BookOpen size={34} color={colors.mutedForeground} strokeWidth={1.5} />
-                  <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No entries found</Text>
+                  <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No memories surfaced</Text>
                   <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>
-                    Try another search or clear filters to view more journal memories.
+                    Try another search phrase or clear the filters to open more of your archive.
                   </Text>
                 </View>
               </GlassCard>
@@ -451,26 +488,56 @@ const styles = StyleSheet.create({
     paddingBottom: 90,
   },
   headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 14,
+    marginBottom: 18,
+  },
+  titleWrap: {
+    paddingRight: 8,
+  },
+  pageEyebrow: {
+    fontFamily: "Manrope_700Bold",
+    ...typography.caption,
+    textTransform: "uppercase",
+    letterSpacing: 1.1,
+    marginBottom: 10,
   },
   pageTitle: {
     fontFamily: "Sora_700Bold",
-    ...typography.title,
+    ...typography["2xl"],
+    marginBottom: 8,
   },
-  headerIconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+  pageSubtitle: {
+    fontFamily: "Manrope_500Medium",
+    ...typography.sm,
+    lineHeight: 22,
+  },
+  viewToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 4,
+    borderRadius: 18,
+    borderWidth: 1,
+    marginTop: 16,
+    marginBottom: 10,
+    gap: 4,
+  },
+  viewToggleButton: {
+    flex: 1,
+    minHeight: 40,
+    borderRadius: 14,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 6,
+  },
+  viewToggleText: {
+    fontFamily: "Manrope_700Bold",
+    ...typography.xs,
   },
   filterChips: {
     flexDirection: "row",
     gap: 8,
-    marginTop: 10,
+    marginTop: 8,
+    marginBottom: 6,
   },
   selectedDateRow: {
     marginTop: 14,
@@ -503,11 +570,11 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   groupTitle: {
-    fontFamily: "Manrope_600SemiBold",
-    ...typography.xs,
+    fontFamily: "Manrope_700Bold",
+    ...typography.caption,
     marginBottom: 10,
     textTransform: "uppercase",
-    letterSpacing: 0.6,
+    letterSpacing: 1,
   },
   entryGap: {
     marginBottom: 10,
