@@ -1,13 +1,17 @@
 /**
  * Noto Cloud Mascot — animated with React Native Skia + Reanimated.
  *
- * Renders a friendly, symmetrical cloud character with:
- *  - Gentle floating bob
+ * Renders a friendly, symmetrical cloud character with cycling animations:
+ *  - Idle float (gentle bob)
+ *  - Wiggle (side-to-side rotation)
+ *  - Bounce (pronounced vertical hop)
+ *  - Breathe (scale pulse)
+ *  - Happy shake (quick excited vibration)
  *  - Breathing glow pulse
- *  - Drifting rain dots
  *  - Occasional eye blink
+ *  - Drifting rain dots
  */
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { StyleSheet, View } from "react-native";
 import {
   Canvas,
@@ -28,6 +32,7 @@ import Animated, {
   withTiming,
   withSequence,
   withDelay,
+  withSpring,
   Easing,
   useDerivedValue,
 } from "react-native-reanimated";
@@ -68,41 +73,43 @@ export function NotoMascot({ size = 260, compact = false }: NotoMascotProps) {
   const canvasH = compact ? 160 * scale : 280 * scale;
 
   // ── Shared values ────────────────────────────────────────
-  const bobY = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const rotateZ = useSharedValue(0);
+  const scaleAnim = useSharedValue(1);
   const glowOpacity = useSharedValue(0.15);
   const blinkProgress = useSharedValue(0); // 0 = open, 1 = closed
   const rainProgress = RAIN_DROPS.map(() => useSharedValue(0));
+  const cycleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    // Gentle bob — 3s period, ±4px
-    bobY.value = withRepeat(
-      withTiming(-4, { duration: 3000, easing: Easing.inOut(Easing.ease) }),
+    // ── Always-on: gentle float baseline ──────────────────
+    translateY.value = withRepeat(
+      withTiming(-6, { duration: 2800, easing: Easing.inOut(Easing.ease) }),
       -1,
       true,
     );
 
-    // Glow pulse — 4s period
+    // ── Glow pulse — 3.5s period ──────────────────────────
     glowOpacity.value = withRepeat(
-      withTiming(0.28, { duration: 4000, easing: Easing.inOut(Easing.ease) }),
+      withTiming(0.35, { duration: 3500, easing: Easing.inOut(Easing.ease) }),
       -1,
       true,
     );
 
-    // Blink every ~4s — quick close/open
+    // ── Blink — random interval ───────────────────────────
     const startBlink = () => {
       blinkProgress.value = withSequence(
         withDelay(
-          3500 + Math.random() * 2000,
-          withTiming(1, { duration: 100 }),
+          2500 + Math.random() * 1500,
+          withTiming(1, { duration: 80 }),
         ),
-        withTiming(0, { duration: 150 }),
+        withTiming(0, { duration: 120 }),
       );
-      // Re-trigger
-      setTimeout(startBlink, 4000 + Math.random() * 3000);
+      setTimeout(startBlink, 3000 + Math.random() * 2500);
     };
     startBlink();
 
-    // Rain drops — continuous fall with staggered starts
+    // ── Rain drops ────────────────────────────────────────
     rainProgress.forEach((sv, i) => {
       sv.value = withDelay(
         RAIN_DROPS[i].delay,
@@ -113,11 +120,106 @@ export function NotoMascot({ size = 260, compact = false }: NotoMascotProps) {
         ),
       );
     });
+
+    // ── Cycling animation states ──────────────────────────
+    // Each cycle picks a random animation, plays it, then resets
+    const animations = [
+      // Wiggle — side-to-side rotation
+      () => {
+        rotateZ.value = withSequence(
+          withTiming(8, { duration: 150, easing: Easing.inOut(Easing.ease) }),
+          withTiming(-8, { duration: 150, easing: Easing.inOut(Easing.ease) }),
+          withTiming(6, { duration: 120, easing: Easing.inOut(Easing.ease) }),
+          withTiming(-6, { duration: 120, easing: Easing.inOut(Easing.ease) }),
+          withTiming(3, { duration: 100, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0, { duration: 100, easing: Easing.inOut(Easing.ease) }),
+        );
+      },
+      // Bounce — pronounced hop
+      () => {
+        translateY.value = withSequence(
+          withSpring(-18, { damping: 6, stiffness: 400 }),
+          withSpring(2, { damping: 8, stiffness: 300 }),
+          withSpring(-10, { damping: 8, stiffness: 350 }),
+          withSpring(0, { damping: 10, stiffness: 250 }),
+        );
+        // Resume float after bounce settles
+        setTimeout(() => {
+          translateY.value = withRepeat(
+            withTiming(-6, { duration: 2800, easing: Easing.inOut(Easing.ease) }),
+            -1,
+            true,
+          );
+        }, 800);
+      },
+      // Breathe — scale pulse
+      () => {
+        scaleAnim.value = withSequence(
+          withTiming(1.12, { duration: 600, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0.95, { duration: 400, easing: Easing.inOut(Easing.ease) }),
+          withTiming(1.05, { duration: 300, easing: Easing.inOut(Easing.ease) }),
+          withSpring(1, { damping: 12, stiffness: 200 }),
+        );
+      },
+      // Happy shake — quick excited vibration
+      () => {
+        rotateZ.value = withSequence(
+          withTiming(4, { duration: 50 }),
+          withTiming(-4, { duration: 50 }),
+          withTiming(4, { duration: 50 }),
+          withTiming(-4, { duration: 50 }),
+          withTiming(3, { duration: 50 }),
+          withTiming(-3, { duration: 50 }),
+          withTiming(2, { duration: 50 }),
+          withTiming(-2, { duration: 50 }),
+          withTiming(0, { duration: 80 }),
+        );
+        // Pair with a little squish
+        scaleAnim.value = withSequence(
+          withTiming(1.06, { duration: 200, easing: Easing.inOut(Easing.ease) }),
+          withSpring(1, { damping: 10, stiffness: 250 }),
+        );
+      },
+      // Tilt & sway — lean to one side then recover
+      () => {
+        rotateZ.value = withSequence(
+          withTiming(10, { duration: 400, easing: Easing.out(Easing.ease) }),
+          withTiming(-8, { duration: 500, easing: Easing.inOut(Easing.ease) }),
+          withTiming(4, { duration: 300, easing: Easing.inOut(Easing.ease) }),
+          withSpring(0, { damping: 12, stiffness: 200 }),
+        );
+      },
+    ];
+
+    let lastIndex = -1;
+    const runCycle = () => {
+      // Pick a different animation than last time
+      let idx = Math.floor(Math.random() * animations.length);
+      while (idx === lastIndex && animations.length > 1) {
+        idx = Math.floor(Math.random() * animations.length);
+      }
+      lastIndex = idx;
+      animations[idx]();
+
+      // Next cycle in 4–7 seconds
+      cycleTimer.current = setTimeout(runCycle, 4000 + Math.random() * 3000);
+    };
+
+    // Start first cycle after a short delay
+    cycleTimer.current = setTimeout(runCycle, 2000);
+
+    return () => {
+      if (cycleTimer.current) clearTimeout(cycleTimer.current);
+    };
   }, []);
 
-  // ── Animated container style (bob) ───────────────────────
+  // ── Animated container style ────────────────────────────
   const containerStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: bobY.value }],
+    transform: [
+      { translateY: translateY.value },
+      { rotate: `${rotateZ.value}deg` },
+      { scale: scaleAnim.value },
+    ],
   }));
 
   // ── Derived Skia values ──────────────────────────────────

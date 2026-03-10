@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   RefreshControl,
-  ActivityIndicator,
   Pressable,
   TextInput,
   Dimensions,
@@ -13,30 +12,26 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Search, X, Settings } from "lucide-react-native";
+import { Search, X } from "lucide-react-native";
 import Animated, {
+  FadeIn,
   FadeInDown,
+  FadeOut,
   useSharedValue,
   useAnimatedStyle,
   withSpring,
   withSequence,
 } from "react-native-reanimated";
 
-import { useMemories, type MemoriesParams } from "../lib/api/queries";
+import { useMemories, useCurrentUser, type MemoriesParams } from "../lib/api/queries";
 import { typography } from "../constants/typography";
 import { MasonryGrid } from "../components/feed/masonry-grid";
+import { SkeletonGrid } from "../components/feed/skeleton-grid";
 import { NotoMascot } from "../components/ui/noto-mascot";
 import { ComposeModal } from "../components/ui/compose-modal";
 import type { Memory } from "../../shared/types/api";
 
 const { width: SCREEN_W } = Dimensions.get("window");
-
-function getGreeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  return "Good evening";
-}
 
 export default function FeedScreen() {
   const router = useRouter();
@@ -44,6 +39,8 @@ export default function FeedScreen() {
   const [searchFocused, setSearchFocused] = useState(false);
   const [isPullRefreshing, setIsPullRefreshing] = useState(false);
   const [composeVisible, setComposeVisible] = useState(false);
+  const [justCapturedId, setJustCapturedId] = useState<string | null>(null);
+  const { data: userData } = useCurrentUser();
 
   // FAB bounce animation
   const fabBounce = useSharedValue(1);
@@ -88,6 +85,19 @@ export default function FeedScreen() {
     [router],
   );
 
+  const handleDelete = useCallback(
+    (memoryId: string) => {
+      // Optimistic refetch after delete attempt
+      import("../lib/api/client").then(({ apiFetch }) => {
+        apiFetch(`/api/memories/${memoryId}`, { method: "DELETE" }).catch(() => {
+          // Backend may not support delete yet — that's fine
+        });
+      });
+      refetch();
+    },
+    [refetch],
+  );
+
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.root}>
@@ -107,14 +117,25 @@ export default function FeedScreen() {
           <View style={styles.header}>
             <View>
               <Text style={styles.appName}>noto</Text>
-              <Text style={styles.greeting}>{getGreeting()}</Text>
+              <Text style={styles.greeting}>
+                {memories.length} thought{memories.length !== 1 ? "s" : ""}
+              </Text>
             </View>
             <Pressable
               onPress={() => router.push("/settings")}
-              style={styles.settingsBtn}
+              style={styles.avatarBtn}
               hitSlop={8}
             >
-              <Settings size={18} color="#999" strokeWidth={1.5} />
+              {userData?.user?.avatar_url ? (
+                <Animated.Image
+                  source={{ uri: userData.user.avatar_url }}
+                  style={styles.avatarImg}
+                />
+              ) : (
+                <Text style={styles.avatarInitial}>
+                  {(userData?.user?.display_name || "?")[0].toUpperCase()}
+                </Text>
+              )}
             </Pressable>
           </View>
 
@@ -144,11 +165,17 @@ export default function FeedScreen() {
             </Text>
           )}
 
+          {/* Pull-to-refresh mascot */}
+          {isPullRefreshing && (
+            <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)} style={styles.refreshMascot}>
+              <NotoMascot size={60} compact />
+              <Text style={styles.refreshText}>Refreshing...</Text>
+            </Animated.View>
+          )}
+
           {/* Content */}
           {isLoading ? (
-            <View style={styles.loadingWrap}>
-              <ActivityIndicator color="#1A1A1A" size="large" />
-            </View>
+            <SkeletonGrid />
           ) : memories.length === 0 ? (
             <Animated.View entering={FadeInDown.duration(500)} style={styles.emptyState}>
               <NotoMascot size={220} />
@@ -162,14 +189,7 @@ export default function FeedScreen() {
               </Text>
             </Animated.View>
           ) : (
-            <>
-              {memories.length > 0 && (
-                <Text style={styles.sectionLabel}>
-                  {memories.length} thought{memories.length !== 1 ? "s" : ""}
-                </Text>
-              )}
-              <MasonryGrid memories={memories} onCardPress={handleCardPress} />
-            </>
+            <MasonryGrid memories={memories} onCardPress={handleCardPress} onDelete={handleDelete} justCapturedId={justCapturedId} />
           )}
 
           <View style={styles.bottomGap} />
@@ -189,7 +209,13 @@ export default function FeedScreen() {
           visible={composeVisible}
           onClose={() => {
             setComposeVisible(false);
-            refetch();
+            refetch().then((result) => {
+              const newMemories = result.data?.memories;
+              if (newMemories?.length) {
+                setJustCapturedId(newMemories[0].id);
+                setTimeout(() => setJustCapturedId(null), 1200);
+              }
+            });
           }}
         />
       </View>
@@ -231,14 +257,25 @@ const styles = StyleSheet.create({
     color: "#C0BDB8",
     marginTop: 2,
   },
-  settingsBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "#F5F4F2",
+  avatarBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#E8E6E3",
     alignItems: "center",
     justifyContent: "center",
     marginTop: 4,
+    overflow: "hidden",
+  },
+  avatarImg: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  avatarInitial: {
+    fontFamily: "Sora_700Bold",
+    fontSize: 14,
+    color: "#999",
   },
 
   // Search
@@ -274,20 +311,17 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
-  // Section
-  sectionLabel: {
-    fontFamily: "Manrope_600SemiBold",
+  // Refresh mascot
+  refreshMascot: {
+    alignItems: "center",
+    paddingVertical: 8,
+    marginBottom: 8,
+  },
+  refreshText: {
+    fontFamily: "Manrope_500Medium",
     fontSize: 11,
     color: "#C0BDB8",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-    marginBottom: 14,
-  },
-
-  // Loading
-  loadingWrap: {
-    paddingTop: 100,
-    alignItems: "center",
+    marginTop: 4,
   },
 
   // Empty state

@@ -161,7 +161,9 @@ export default function RootLayout() {
                 <Stack.Screen
                   name="card-detail"
                   options={{
-                    animation: "fade",
+                    animation: "slide_from_bottom",
+                    gestureEnabled: true,
+                    gestureDirection: "vertical",
                   }}
                 />
                 <Stack.Screen name="onboarding" />

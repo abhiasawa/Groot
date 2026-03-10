@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import {
   View,
   Text,
+  Image,
   ScrollView,
   StyleSheet,
   Pressable,
@@ -65,8 +66,8 @@ export default function CardDetailScreen() {
     );
   }
 
-  const category = (memory as Record<string, unknown>).card_category as string | undefined;
-  const color = getCardColor(category, memory.id);
+  const category = (memory as unknown as Record<string, unknown>).card_category as string | undefined;
+  const color = getCardColor(category, memory.id, memory.content, memory.message_type);
   const label = categoryLabel(category);
   const isVoice = memory.message_type === "audio";
   const isImage = memory.message_type === "image";
@@ -112,6 +113,15 @@ export default function CardDetailScreen() {
               </View>
             )}
           </View>
+
+          {/* Image */}
+          {isImage && memory.media_url && (
+            <Image
+              source={{ uri: memory.media_url }}
+              style={styles.detailImage}
+              resizeMode="cover"
+            />
+          )}
 
           {/* Content */}
           {displayText ? (
@@ -203,6 +213,12 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 0.4,
     textTransform: "uppercase",
+  },
+  detailImage: {
+    width: "100%",
+    height: 200,
+    borderRadius: 16,
+    marginBottom: 16,
   },
   content: {
     fontFamily: "Manrope_400Regular",

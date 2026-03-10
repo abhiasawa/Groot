@@ -20,10 +20,13 @@ import Animated, {
   FadeInUp,
   FadeOut,
   SlideInDown,
+  ZoomIn,
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
   withTiming,
+  withSequence,
+  withSpring,
   Easing,
 } from "react-native-reanimated";
 import {
@@ -324,14 +327,22 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
                 </Pressable>
               </View>
 
-              {/* Success state */}
+              {/* Success state — card morph animation */}
               {sent && (
-                <Animated.View entering={FadeIn.duration(300)} style={s.sentWrap}>
-                  <View style={s.sentIcon}>
-                    <Check size={24} color="#FFF" strokeWidth={2.5} />
-                  </View>
-                  <Text style={s.sentTitle}>Captured</Text>
-                  <Text style={s.sentSubtitle}>Your thought is safe with me</Text>
+                <Animated.View entering={FadeIn.duration(200)} style={s.sentWrap}>
+                  {/* Mini card that "becomes" the feed card */}
+                  <Animated.View
+                    entering={ZoomIn.springify().damping(12).stiffness(200)}
+                    style={s.sentCard}
+                  >
+                    <View style={s.sentCardInner}>
+                      <View style={s.sentIcon}>
+                        <Check size={18} color="#FFF" strokeWidth={2.5} />
+                      </View>
+                      <Text style={s.sentTitle}>Captured</Text>
+                    </View>
+                    <Text style={s.sentSubtitle}>Your thought is safe with me</Text>
+                  </Animated.View>
                 </Animated.View>
               )}
 
@@ -392,7 +403,19 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
                   {/* Bottom bar: actions + send */}
                   <View style={s.bottomBar}>
                     <View style={s.modeButtons}>
-                      <Pressable onPress={startRecording} style={s.modeBtn} hitSlop={6}>
+                      <Pressable
+                        onPress={startRecording}
+                        onLongPress={startRecording}
+                        onPressOut={() => {
+                          // Auto-send when finger lifts if recording (hold-to-record)
+                          if (recordingRef.current && recording) {
+                            stopRecording();
+                          }
+                        }}
+                        delayLongPress={300}
+                        style={s.modeBtn}
+                        hitSlop={6}
+                      >
                         <Mic size={20} color="#999" strokeWidth={1.8} />
                       </Pressable>
                       <Pressable onPress={pickImage} style={s.modeBtn} hitSlop={6}>
@@ -466,30 +489,42 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
 
-  // Success
+  // Success — card morph
   sentWrap: {
     alignItems: "center",
-    paddingVertical: 32,
+    paddingVertical: 24,
+  },
+  sentCard: {
+    backgroundColor: "#E6F7ED",
+    borderRadius: 20,
+    padding: 20,
+    width: "80%",
+    alignItems: "center",
+    gap: 8,
+  },
+  sentCardInner: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
   },
   sentIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: "#49A76C",
     alignItems: "center",
     justifyContent: "center",
   },
   sentTitle: {
     fontFamily: "Sora_700Bold",
-    fontSize: 20,
-    color: "#1A1A1A",
-    marginTop: 4,
+    fontSize: 18,
+    color: "#2A2A2A",
   },
   sentSubtitle: {
     fontFamily: "Manrope_400Regular",
-    fontSize: 14,
-    color: "#C0BDB8",
+    fontSize: 13,
+    color: "#49A76C",
+    marginTop: 2,
   },
 
   // Image

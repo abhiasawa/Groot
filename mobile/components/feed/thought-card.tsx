@@ -1,6 +1,7 @@
 import React from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, Image, StyleSheet, Pressable } from "react-native";
 import { Mic, Image as ImageIcon } from "lucide-react-native";
+import * as Haptics from "expo-haptics";
 
 import { getCardColor } from "../../constants/card-colors";
 import type { Memory } from "../../../shared/types/api";
@@ -31,18 +32,28 @@ function categoryLabel(cat?: string | null): string | null {
 interface ThoughtCardProps {
   memory: Memory;
   onPress?: () => void;
+  onLongPress?: () => void;
 }
 
-export function ThoughtCard({ memory, onPress }: ThoughtCardProps) {
-  const category = (memory as Record<string, unknown>).card_category as string | undefined;
-  const color = getCardColor(category, memory.id);
+export function ThoughtCard({ memory, onPress, onLongPress }: ThoughtCardProps) {
+  const category = (memory as unknown as Record<string, unknown>).card_category as string | undefined;
+  const color = getCardColor(category, memory.id, memory.content, memory.message_type);
   const isVoice = memory.message_type === "audio";
   const isImage = memory.message_type === "image";
   const displayText = memory.content || memory.media_description;
   const label = categoryLabel(category);
+  const hasImageUrl = isImage && memory.media_url;
 
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [{ opacity: pressed ? 0.94 : 1 }]}>
+    <Pressable
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        onPress?.();
+      }}
+      onLongPress={onLongPress}
+      delayLongPress={500}
+      style={({ pressed }) => [{ opacity: pressed ? 0.94 : 1 }]}
+    >
       <View style={[styles.card, { backgroundColor: color.bg }]}>
         {/* Category pill */}
         {label && (
@@ -71,12 +82,18 @@ export function ThoughtCard({ memory, onPress }: ThoughtCardProps) {
           </View>
         )}
 
-        {/* Image placeholder */}
-        {isImage && !displayText && (
+        {/* Image thumbnail */}
+        {hasImageUrl ? (
+          <Image
+            source={{ uri: memory.media_url! }}
+            style={styles.imageThumbnail}
+            resizeMode="cover"
+          />
+        ) : isImage && !displayText ? (
           <View style={[styles.imagePlaceholder, { backgroundColor: `${color.meta}12` }]}>
             <ImageIcon size={20} color={`${color.meta}60`} strokeWidth={1.5} />
           </View>
-        )}
+        ) : null}
 
         {/* Text content */}
         {displayText ? (
@@ -140,6 +157,12 @@ const styles = StyleSheet.create({
   voiceBar: {
     width: 3,
     borderRadius: 2,
+  },
+  imageThumbnail: {
+    width: "100%",
+    height: 100,
+    borderRadius: 14,
+    marginBottom: 10,
   },
   imagePlaceholder: {
     height: 90,

@@ -1,13 +1,17 @@
-import React, { useEffect, useMemo } from "react";
-import { View, StyleSheet, Dimensions } from "react-native";
+import React, { useEffect, useMemo, useCallback } from "react";
+import { View, StyleSheet, Dimensions, Alert } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withDelay,
   withTiming,
+  withSpring,
+  withSequence,
   Easing,
   FadeIn,
+  Layout,
 } from "react-native-reanimated";
+import * as Haptics from "expo-haptics";
 
 import { ThoughtCard } from "./thought-card";
 import type { Memory } from "../../../shared/types/api";
@@ -24,6 +28,8 @@ const DURATION_MS = 400;
 interface MasonryGridProps {
   memories: Memory[];
   onCardPress?: (memory: Memory) => void;
+  onDelete?: (memoryId: string) => void;
+  justCapturedId?: string | null;
 }
 
 /** Animated wrapper for each card — fades in + slides up */
@@ -31,12 +37,18 @@ function AnimatedCard({
   memory,
   index,
   onPress,
+  onDelete,
+  isJustCaptured,
 }: {
   memory: Memory;
   index: number;
   onPress?: () => void;
+  onDelete?: (id: string) => void;
+  isJustCaptured?: boolean;
 }) {
   const progress = useSharedValue(0);
+  const captureScale = useSharedValue(isJustCaptured ? 0 : 1);
+  const captureGlow = useSharedValue(isJustCaptured ? 0 : 1);
 
   useEffect(() => {
     progress.value = 0;
@@ -49,17 +61,58 @@ function AnimatedCard({
     );
   }, [memory.id]);
 
-  const animStyle = useAnimatedStyle(() => ({
-    opacity: progress.value,
-    transform: [
-      { translateY: (1 - progress.value) * 18 },
-      { scale: 0.96 + progress.value * 0.04 },
-    ],
-  }));
+  // Special fly-in for just-captured card
+  useEffect(() => {
+    if (isJustCaptured) {
+      captureScale.value = withSequence(
+        withSpring(1.08, { damping: 8, stiffness: 300 }),
+        withSpring(1, { damping: 12, stiffness: 250 }),
+      );
+      captureGlow.value = withSequence(
+        withTiming(1, { duration: 200 }),
+        withTiming(0, { duration: 800 }),
+      );
+    }
+  }, [isJustCaptured]);
+
+  const handleLongPress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    Alert.alert(
+      "Delete thought?",
+      "This can't be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => onDelete?.(memory.id),
+        },
+      ],
+    );
+  }, [memory.id, onDelete]);
+
+  const animStyle = useAnimatedStyle(() => {
+    if (isJustCaptured) {
+      return {
+        opacity: 1,
+        transform: [{ scale: captureScale.value }],
+        shadowColor: "#818CF8",
+        shadowOpacity: captureGlow.value * 0.4,
+        shadowRadius: captureGlow.value * 16,
+      };
+    }
+    return {
+      opacity: progress.value,
+      transform: [
+        { translateY: (1 - progress.value) * 18 },
+        { scale: 0.96 + progress.value * 0.04 },
+      ],
+    };
+  });
 
   return (
-    <Animated.View style={animStyle}>
-      <ThoughtCard memory={memory} onPress={onPress} />
+    <Animated.View style={animStyle} layout={Layout.springify().damping(18).stiffness(200)}>
+      <ThoughtCard memory={memory} onPress={onPress} onLongPress={handleLongPress} />
     </Animated.View>
   );
 }
@@ -67,7 +120,7 @@ function AnimatedCard({
 /**
  * 2-column Pinterest-style masonry layout with staggered entrance animations.
  */
-export function MasonryGrid({ memories, onCardPress }: MasonryGridProps) {
+export function MasonryGrid({ memories, onCardPress, onDelete, justCapturedId }: MasonryGridProps) {
   const { leftCol, rightCol } = useMemo(() => {
     const left: { mem: Memory; idx: number }[] = [];
     const right: { mem: Memory; idx: number }[] = [];
@@ -104,6 +157,8 @@ export function MasonryGrid({ memories, onCardPress }: MasonryGridProps) {
             memory={mem}
             index={idx}
             onPress={() => onCardPress?.(mem)}
+            onDelete={onDelete}
+            isJustCaptured={mem.id === justCapturedId}
           />
         ))}
       </View>
@@ -114,6 +169,8 @@ export function MasonryGrid({ memories, onCardPress }: MasonryGridProps) {
             memory={mem}
             index={idx}
             onPress={() => onCardPress?.(mem)}
+            onDelete={onDelete}
+            isJustCaptured={mem.id === justCapturedId}
           />
         ))}
       </View>
