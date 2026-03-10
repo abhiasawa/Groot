@@ -174,10 +174,10 @@ export default function RootLayout() {
     return (
       <View style={fallbackStyles.container}>
         <View style={fallbackStyles.orb}>
-          <Text style={fallbackStyles.orbText}>G</Text>
+          <Text style={fallbackStyles.orbText}>N</Text>
         </View>
-        <Text style={fallbackStyles.title}>Groot</Text>
-        <Text style={fallbackStyles.text}>Initializing organic systems...</Text>
+        <Text style={fallbackStyles.title}>noto</Text>
+        <Text style={fallbackStyles.text}>Loading...</Text>
       </View>
     );
   }
@@ -220,7 +220,7 @@ const fallbackStyles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#171B19",
+    backgroundColor: "#FAFAFA",
   },
   orb: {
     width: 96,
@@ -228,22 +228,22 @@ const fallbackStyles = StyleSheet.create({
     borderRadius: 48,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#2E483A",
+    backgroundColor: "#A5B4FC",
     marginBottom: 20,
   },
   orbText: {
-    color: "#FFF8EE",
+    color: "#FFF",
     fontFamily: "Sora_700Bold",
     fontSize: 34,
   },
   title: {
-    color: "#FFF8EE",
+    color: "#111",
     fontFamily: "Sora_700Bold",
     fontSize: 28,
     marginBottom: 8,
   },
   text: {
-    color: "#A5B3A8",
+    color: "#999",
     fontSize: 14,
   },
 });

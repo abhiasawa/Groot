@@ -351,10 +351,10 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
             <View style={s.header}>
               <View style={s.headerCopy}>
                 <Text style={[s.headerTitle, { color: colors.foreground }]}>
-                  Talk to Groot
+                  Capture a thought
                 </Text>
                 <Text style={[s.headerSubtitle, { color: colors.mutedForeground }]}>
-                  Share a thought, photo, or voice note.
+                  Text, voice, or photo.
                 </Text>
               </View>
               <Pressable onPress={handleClose} hitSlop={12} style={s.closeButton}>
@@ -415,7 +415,7 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
                     {formatTime(recordingDuration)}
                   </Text>
                   <Text style={[s.recordingLabel, { color: colors.mutedForeground }]}>
-                    Listening to the seed...
+                    Recording...
                   </Text>
                 </View>
                 <RNAnimated.View
@@ -433,7 +433,7 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
             {/* ── Loading ── */}
             {sending && (
               <View style={s.sendingWrap}>
-                <SeedLoader size={40} label="Groot is thinking..." />
+                <SeedLoader size={40} label="Saving..." />
               </View>
             )}
 
@@ -443,7 +443,7 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
                 <TextInput
                   ref={inputRef}
                   style={[s.input, { color: colors.foreground }]}
-                  placeholder={imagePreview ? "Add a note..." : "How was your day?"}
+                  placeholder={imagePreview ? "Add a note..." : "What's on your mind?"}
                   placeholderTextColor={colors.mutedForeground}
                   value={text}
                   onChangeText={setText}

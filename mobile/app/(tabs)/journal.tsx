@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -6,703 +6,294 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
-  Modal,
   Pressable,
+  TextInput,
   Dimensions,
+  Keyboard,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  BookOpen,
-  CalendarDays,
-  ChevronLeft,
-  ChevronRight,
-  X,
-} from "lucide-react-native";
+import { useRouter } from "expo-router";
+import { Search, X, Settings } from "lucide-react-native";
 
-import { useTheme } from "../../lib/theme/provider";
-import {
-  useMemories,
-  useCalendarDots,
-  type MemoriesParams,
-} from "../../lib/api/queries";
+import { useMemories, type MemoriesParams } from "../../lib/api/queries";
 import { typography } from "../../constants/typography";
+import { MasonryGrid } from "../../components/feed/masonry-grid";
+import { NotoMascot } from "../../components/ui/noto-mascot";
+import { ComposeModal } from "../../components/ui/compose-modal";
 import type { Memory } from "../../../shared/types/api";
-import { GradientBackground } from "../../components/ui/gradient-background";
-import { GlassCard } from "../../components/ui/glass-card";
-import { PressScale } from "../../components/ui/press-scale";
-import { PillBadge } from "../../components/ui/pill-badge";
-import { MediaPlayer } from "../../components/ui/media-player";
-import { SearchInput } from "../../components/ui/search-input";
 
+const { width: SCREEN_W } = Dimensions.get("window");
 
-const FILTERS = [
-  { key: "all", label: "All" },
-  { key: "text", label: "Text" },
-  { key: "audio", label: "Voice" },
-  { key: "image", label: "Photo" },
-] as const;
-
-function formatDateHeading(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatTime(dateStr: string) {
-  return new Date(dateStr).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-}
-
-function monthKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-}
-
-export default function JournalScreen() {
-  const { colors } = useTheme();
+export default function FeedScreen() {
+  const router = useRouter();
   const [query, setQuery] = useState("");
-  const [activeFilter, setActiveFilter] = useState<(typeof FILTERS)[number]["key"]>("all");
-  const [viewMode, setViewMode] = useState<"timeline" | "calendar">("timeline");
-  const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
-  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
-  const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
+  const [searchFocused, setSearchFocused] = useState(false);
   const [isPullRefreshing, setIsPullRefreshing] = useState(false);
+  const [composeVisible, setComposeVisible] = useState(false);
+  const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
+  void selectedMemory; // Card detail view — TODO
 
   const params: MemoriesParams = useMemo(
     () => ({
       q: query || undefined,
-      type: activeFilter === "all" ? undefined : activeFilter,
-      date: selectedDate,
       limit: 100,
     }),
-    [query, activeFilter, selectedDate],
+    [query],
   );
 
   const { data, isLoading, refetch } = useMemories(params);
-  const { data: dotData } = useCalendarDots(monthKey(calendarMonth));
+  const memories = useMemo(() => data?.memories ?? [], [data?.memories]);
 
   const onRefresh = useCallback(() => {
     setIsPullRefreshing(true);
     refetch().finally(() => setIsPullRefreshing(false));
   }, [refetch]);
 
-  const memories = useMemo(() => data?.memories ?? [], [data?.memories]);
-  const grouped = useMemo(() => {
-    const groups = new Map<string, Memory[]>();
-    for (const memory of memories) {
-      const dateLabel = formatDateHeading(memory.created_at);
-      const list = groups.get(dateLabel);
-      if (list) list.push(memory);
-      else groups.set(dateLabel, [memory]);
-    }
-    return [...groups.entries()];
-  }, [memories]);
+  const cancelSearch = useCallback(() => {
+    setQuery("");
+    setSearchFocused(false);
+    Keyboard.dismiss();
+  }, []);
 
   return (
-      <SafeAreaView style={styles.safe}>
-        <GradientBackground>
-          <ScrollView
-            contentContainerStyle={styles.scroll}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl
-                refreshing={isPullRefreshing}
-                onRefresh={onRefresh}
-                tintColor={colors.primary}
-              />
-            }
-          >
-            <View style={styles.headerRow}>
-              <View style={styles.titleWrap}>
-                <Text style={[styles.pageEyebrow, { color: colors.primary }]}>Vault</Text>
-                <Text style={[styles.pageTitle, { color: colors.foreground }]}>Your living archive</Text>
-                <Text style={[styles.pageSubtitle, { color: colors.mutedForeground }]}>
-                  Search whispers, revisit images, and map moments by day.
-                </Text>
-              </View>
+    <SafeAreaView style={styles.safe}>
+      <View style={styles.root}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl
+              refreshing={isPullRefreshing}
+              onRefresh={onRefresh}
+              tintColor="#111"
+            />
+          }
+        >
+          {/* ── Header ── */}
+          <View style={styles.header}>
+            <View>
+              <Text style={styles.appName}>noto</Text>
+              <Text style={styles.thoughtCount}>
+                {memories.length} thought{memories.length !== 1 ? "s" : ""}
+              </Text>
             </View>
+            <Pressable
+              onPress={() => router.push("/settings")}
+              style={styles.avatarBtn}
+              hitSlop={8}
+            >
+              <Settings size={20} color="#666" strokeWidth={1.6} />
+            </Pressable>
+          </View>
 
-            <SearchInput
+          {/* ── Search bar ── */}
+          <View style={[styles.searchBar, searchFocused && styles.searchBarActive]}>
+            <Search size={16} color={searchFocused ? "#FFF" : "#BBB"} strokeWidth={2} />
+            <TextInput
+              style={[styles.searchInput, searchFocused && styles.searchInputActive]}
+              placeholder="Search your mind..."
+              placeholderTextColor={searchFocused ? "rgba(255,255,255,0.5)" : "#CCC"}
               value={query}
               onChangeText={setQuery}
-              placeholder="Search the vault..."
+              onFocus={() => setSearchFocused(true)}
+              returnKeyType="search"
             />
-
-            <View style={[styles.viewToggle, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-              <PressScale
-                onPress={() => {
-                  setViewMode("timeline");
-                  setActiveFilter("all");
-                }}
-                haptic={false}
-                style={styles.viewToggleButton}
-              >
-                <View
-                  style={[
-                    styles.viewToggleButton,
-                    viewMode === "timeline" ? { backgroundColor: colors.card } : null,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.viewToggleText,
-                      { color: viewMode === "timeline" ? colors.foreground : colors.mutedForeground },
-                    ]}
-                  >
-                    Timeline
-                  </Text>
-                </View>
-              </PressScale>
-              <PressScale
-                onPress={() => setViewMode("calendar")}
-                haptic={false}
-                style={styles.viewToggleButton}
-              >
-                <View
-                  style={[
-                    styles.viewToggleButton,
-                    viewMode === "calendar" ? { backgroundColor: colors.card } : null,
-                  ]}
-                >
-                  <CalendarDays
-                    size={15}
-                    color={viewMode === "calendar" ? colors.primary : colors.mutedForeground}
-                    strokeWidth={1.9}
-                  />
-                  <Text
-                    style={[
-                      styles.viewToggleText,
-                      { color: viewMode === "calendar" ? colors.foreground : colors.mutedForeground },
-                    ]}
-                  >
-                    Calendar
-                  </Text>
-                </View>
-              </PressScale>
-            </View>
-
-            {viewMode === "calendar" ? (
-              <>
-                <View style={styles.filterChips}>
-                  {FILTERS.map((filter) => (
-                    <PressScale key={filter.key} onPress={() => setActiveFilter(filter.key)} scale={0.96}>
-                          <PillBadge
-                            label={filter.label}
-                            color={activeFilter === filter.key ? colors.primary : colors.secondary}
-                            textColor={activeFilter === filter.key ? colors.primaryForeground : colors.mutedForeground}
-                            small
-                          />
-                    </PressScale>
-                  ))}
-                </View>
-              </>
-            ) : null}
-
-            {viewMode === "calendar" ? (
-              <CalendarSection
-                month={calendarMonth}
-                onMonthChange={setCalendarMonth}
-                markedDates={new Set(dotData?.dates ?? [])}
-                selectedDate={selectedDate}
-                onSelectDate={(date) => setSelectedDate((prev) => (prev === date ? undefined : date))}
-              />
-            ) : selectedDate ? (
-              <View style={styles.selectedDateRow}>
-                <PillBadge
-                  label={new Date(`${selectedDate}T12:00:00`).toLocaleDateString("en-US", {
-                    month: "long",
-                    day: "numeric",
-                  })}
-                  color={colors.secondary}
-                  textColor={colors.secondaryForeground}
-                />
-                <PressScale onPress={() => setSelectedDate(undefined)} haptic={false}>
-                  <PillBadge label="Clear" small />
-                </PressScale>
-              </View>
-            ) : null}
-
-            {isLoading ? (
-              <View style={styles.loadingWrap}>
-                <ActivityIndicator color={colors.primary} size="large" />
-              </View>
-            ) : memories.length === 0 ? (
-              <GlassCard style={styles.emptyCard} padding={26}>
-                <View style={styles.emptyInner}>
-                  <BookOpen size={34} color={colors.mutedForeground} strokeWidth={1.5} />
-                  <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No memories surfaced</Text>
-                  <Text style={[styles.emptySubtitle, { color: colors.mutedForeground }]}>
-                    Try another search phrase or clear the filters to open more of your archive.
-                  </Text>
-                </View>
-              </GlassCard>
-            ) : (
-              grouped.map(([dateLabel, entries]) => (
-                <View key={dateLabel} style={styles.groupWrap}>
-                  <Text style={[styles.groupTitle, { color: colors.mutedForeground }]}>{dateLabel}</Text>
-                  {entries.map((memory, index) => (
-                    <PressScale
-                      key={memory.id}
-                      onPress={() => setSelectedMemory(memory)}
-                      style={index < entries.length - 1 ? styles.entryGap : undefined}
-                      scale={0.987}
-                    >
-                      <GlassCard padding={14}>
-                        <View style={styles.entryHead}>
-                          <Text style={[styles.entryTime, { color: colors.mutedForeground }]}>
-                            {formatTime(memory.created_at)}
-                          </Text>
-                          {memory.message_type !== "audio" ? (
-                            <PillBadge label={memory.message_type || "Entry"} small />
-                          ) : null}
-                        </View>
-
-                        {/* Groot's preceding question for context */}
-                        {memory.context_message ? (
-                          <View style={[styles.contextWrap, { borderLeftColor: `${colors.primary}40` }]}>
-                            <Text style={[styles.contextLabel, { color: colors.mutedForeground }]}>
-                              Groot asked:
-                            </Text>
-                            <Text style={[styles.contextText, { color: `${colors.mutedForeground}CC` }]} numberOfLines={2}>
-                              {memory.context_message}
-                            </Text>
-                          </View>
-                        ) : null}
-
-                        {memory.media_url &&
-                          (memory.media_url.startsWith("storage:") || memory.media_url.startsWith("media:")) &&
-                          (memory.message_type === "image" || memory.message_type === "audio") ? (
-                          <MediaPlayer mediaUrl={memory.media_url} messageType={memory.message_type} />
-                        ) : null}
-
-                        {(memory.content || memory.media_description) ? (
-                          <Text style={[styles.entryText, { color: colors.foreground }]} numberOfLines={3}>
-                            {memory.content || memory.media_description}
-                          </Text>
-                        ) : null}
-                      </GlassCard>
-                    </PressScale>
-                  ))}
-                </View>
-              ))
+            {searchFocused && (
+              <Pressable onPress={cancelSearch} hitSlop={8}>
+                <X size={16} color="rgba(255,255,255,0.6)" strokeWidth={2} />
+              </Pressable>
             )}
-
-            <View style={styles.bottomGap} />
-          </ScrollView>
-
-          <MemoryModal memory={selectedMemory} onClose={() => setSelectedMemory(null)} />
-        </GradientBackground>
-      </SafeAreaView>
-  );
-}
-
-// Calendar cell sizing — computed from screen width
-const CAL_H_PADDING = 18; // scroll paddingHorizontal
-const CAL_CARD_PADDING = 16; // GlassCard padding
-const CAL_GAP = 4;
-const CAL_COLS = 7;
-const CAL_CELL_SIZE = Math.floor(
-  (Dimensions.get("window").width - CAL_H_PADDING * 2 - CAL_CARD_PADDING * 2 - CAL_GAP * (CAL_COLS - 1)) / CAL_COLS,
-);
-
-function CalendarSection({
-  month,
-  onMonthChange,
-  markedDates,
-  selectedDate,
-  onSelectDate,
-}: {
-  month: Date;
-  onMonthChange: (d: Date) => void;
-  markedDates: Set<string>;
-  selectedDate?: string;
-  onSelectDate: (d: string) => void;
-}) {
-  const { colors } = useTheme();
-  const year = month.getFullYear();
-  const monthIndex = month.getMonth();
-  const firstWeekday = new Date(year, monthIndex, 1).getDay();
-  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-  const mondayOffset = firstWeekday === 0 ? 6 : firstWeekday - 1;
-  const today = new Date().toISOString().slice(0, 10);
-
-  const cells: Array<{ day: number; date: string } | null> = [];
-  for (let i = 0; i < mondayOffset; i++) cells.push(null);
-  for (let day = 1; day <= daysInMonth; day++) {
-    const date = `${year}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    cells.push({ day, date });
-  }
-
-  const dayCellStyle = {
-    width: CAL_CELL_SIZE,
-    height: CAL_CELL_SIZE,
-    borderRadius: CAL_CELL_SIZE / 4,
-  };
-
-  return (
-    <GlassCard padding={CAL_CARD_PADDING} style={styles.calendarCard}>
-      <View style={styles.calendarHeader}>
-        <PressScale onPress={() => onMonthChange(new Date(year, monthIndex - 1, 1))} haptic={false}>
-          <ChevronLeft size={18} color={colors.foreground} strokeWidth={1.8} />
-        </PressScale>
-        <View style={styles.calendarTitleRow}>
-          <CalendarDays size={15} color={colors.primary} strokeWidth={1.8} />
-          <Text style={[styles.calendarTitle, { color: colors.foreground }]}>
-            {month.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
-          </Text>
-        </View>
-        <PressScale onPress={() => onMonthChange(new Date(year, monthIndex + 1, 1))} haptic={false}>
-          <ChevronRight size={18} color={colors.foreground} strokeWidth={1.8} />
-        </PressScale>
-      </View>
-
-      <View style={styles.calendarGrid}>
-        {["M", "T", "W", "T", "F", "S", "S"].map((label, i) => (
-          <View key={`label-${i}`} style={[styles.dayLabelCell, dayCellStyle]}>
-            <Text style={[styles.dayLabelText, { color: colors.mutedForeground }]}>{label}</Text>
           </View>
-        ))}
 
-        {cells.map((cell, idx) => {
-          if (!cell) return <View key={`empty-${idx}`} style={dayCellStyle} />;
-          const isSelected = selectedDate === cell.date;
-          const hasEntry = markedDates.has(cell.date);
-          const isToday = today === cell.date;
-
-          return (
-            <PressScale key={cell.date} onPress={() => onSelectDate(cell.date)} haptic={false} scale={0.92}>
-              <View
-                style={[
-                  styles.dayCell,
-                  dayCellStyle,
-                  {
-                    backgroundColor: isSelected ? colors.primary : hasEntry ? `${colors.accent}20` : "transparent",
-                    borderColor: isToday ? colors.primary : "transparent",
-                    borderWidth: isToday ? 1.5 : 0,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.dayText,
-                    {
-                      color: isSelected
-                        ? colors.primaryForeground
-                        : hasEntry
-                          ? colors.accent
-                          : colors.foreground,
-                    },
-                  ]}
-                >
-                  {cell.day}
-                </Text>
-                {hasEntry ? (
-                  <View
-                    style={[
-                      styles.dayDot,
-                      {
-                        backgroundColor: isSelected ? colors.primaryForeground : colors.accent,
-                      },
-                    ]}
-                  />
-                ) : null}
-              </View>
-            </PressScale>
-          );
-        })}
-      </View>
-    </GlassCard>
-  );
-}
-
-function MemoryModal({ memory, onClose }: { memory: Memory | null; onClose: () => void }) {
-  const { colors } = useTheme();
-  if (!memory) return null;
-
-  return (
-    <Modal transparent animationType="fade" visible={!!memory} onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
-        <Pressable style={styles.modalBackdrop} onPress={onClose} />
-        <View style={styles.modalWrap}>
-          <GlassCard padding={18}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.foreground }]}>Journal Entry</Text>
-              <PressScale onPress={onClose} haptic={false}>
-                <View style={styles.modalClose}>
-                  <X size={18} color={colors.mutedForeground} strokeWidth={2} />
-                </View>
-              </PressScale>
-            </View>
-
-            <Text style={[styles.modalMeta, { color: colors.mutedForeground }]}>
-              {new Date(memory.created_at).toLocaleString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-              })}
+          {/* ── Results count (search mode) ── */}
+          {searchFocused && query.length > 0 && (
+            <Text style={styles.resultsCount}>
+              {memories.length} thought{memories.length !== 1 ? "s" : ""}
             </Text>
+          )}
 
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-              {/* Groot's question context in full view */}
-              {memory.context_message ? (
-                <View style={[styles.contextWrap, { borderLeftColor: `${colors.primary}40`, marginBottom: 12 }]}>
-                  <Text style={[styles.contextLabel, { color: colors.mutedForeground }]}>
-                    Groot asked:
-                  </Text>
-                  <Text style={[styles.contextText, { color: `${colors.mutedForeground}CC` }]}>
-                    {memory.context_message}
-                  </Text>
-                </View>
-              ) : null}
-
-              {memory.media_url &&
-              (memory.media_url.startsWith("storage:") || memory.media_url.startsWith("media:")) ? (
-                <View style={styles.modalMedia}>
-                  <MediaPlayer mediaUrl={memory.media_url} messageType={memory.message_type} />
-                </View>
-              ) : null}
-              <Text style={[styles.modalContent, { color: colors.foreground }]}>
-                {memory.content || memory.media_description || "No text available"}
+          {/* ── Content ── */}
+          {isLoading ? (
+            <View style={styles.loadingWrap}>
+              <ActivityIndicator color="#111" size="large" />
+            </View>
+          ) : memories.length === 0 ? (
+            <View style={styles.emptyState}>
+              <NotoMascot size={200} />
+              <Text style={styles.emptyTitle}>
+                {query ? "No thoughts found" : "Your mind is clear"}
               </Text>
-            </ScrollView>
-          </GlassCard>
-        </View>
+              <Text style={styles.emptySubtitle}>
+                {query
+                  ? "Try a different search"
+                  : "Tap + to capture your first thought"}
+              </Text>
+            </View>
+          ) : (
+            <MasonryGrid
+              memories={memories}
+              onCardPress={(m) => setSelectedMemory(m)}
+            />
+          )}
+
+          <View style={styles.bottomGap} />
+        </ScrollView>
+
+        {/* ── FAB ── */}
+        {!searchFocused && (
+          <Pressable
+            onPress={() => setComposeVisible(true)}
+            style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
+          >
+            <Text style={styles.fabIcon}>+</Text>
+          </Pressable>
+        )}
+
+        {/* ── Compose modal ── */}
+        <ComposeModal
+          visible={composeVisible}
+          onClose={() => {
+            setComposeVisible(false);
+            // Refresh feed after capture
+            refetch();
+          }}
+        />
       </View>
-    </Modal>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1 },
-  scroll: {
-    paddingHorizontal: 18,
-    paddingTop: 10,
-    paddingBottom: 90,
+  safe: {
+    flex: 1,
+    backgroundColor: "#FAFAFA",
   },
-  headerRow: {
+  root: {
+    flex: 1,
+    backgroundColor: "#FAFAFA",
+  },
+  scroll: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 100,
+  },
+
+  // ── Header ──
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: 18,
   },
-  titleWrap: {
-    paddingRight: 8,
-  },
-  pageEyebrow: {
-    fontFamily: "Manrope_700Bold",
-    ...typography.caption,
-    textTransform: "uppercase",
-    letterSpacing: 1.1,
-    marginBottom: 10,
-  },
-  pageTitle: {
+  appName: {
     fontFamily: "Sora_700Bold",
-    ...typography["2xl"],
-    marginBottom: 8,
+    fontSize: 28,
+    color: "#111",
+    letterSpacing: -0.8,
   },
-  pageSubtitle: {
+  thoughtCount: {
     fontFamily: "Manrope_500Medium",
-    ...typography.sm,
-    lineHeight: 22,
+    fontSize: 13,
+    color: "#BBB",
+    marginTop: 2,
   },
-  viewToggle: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 4,
+  avatarBtn: {
+    width: 36,
+    height: 36,
     borderRadius: 18,
-    borderWidth: 1,
-    marginTop: 16,
-    marginBottom: 10,
-    gap: 4,
-  },
-  viewToggleButton: {
-    flex: 1,
-    minHeight: 40,
-    borderRadius: 14,
-    flexDirection: "row",
+    backgroundColor: "#F0F0F0",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    marginTop: 4,
   },
-  viewToggleText: {
+
+  // ── Search ──
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F3F3F3",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 16,
+    gap: 8,
+  },
+  searchBarActive: {
+    backgroundColor: "#111",
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: "Manrope_500Medium",
+    fontSize: 14,
+    color: "#333",
+    padding: 0,
+  },
+  searchInputActive: {
+    color: "#FFF",
+  },
+  resultsCount: {
     fontFamily: "Manrope_700Bold",
-    ...typography.xs,
+    fontSize: 11,
+    color: "#BBB",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginBottom: 12,
   },
-  filterChips: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 8,
-    marginBottom: 6,
-  },
-  selectedDateRow: {
-    marginTop: 14,
-    flexDirection: "row",
-    gap: 8,
-  },
+
+  // ── Loading ──
   loadingWrap: {
-    paddingTop: 90,
+    paddingTop: 100,
     alignItems: "center",
   },
-  emptyCard: {
-    marginTop: 26,
-  },
-  emptyInner: {
+
+  // ── Empty state ──
+  emptyState: {
     alignItems: "center",
+    paddingTop: 60,
   },
   emptyTitle: {
-    fontFamily: "Sora_600SemiBold",
+    fontFamily: "Sora_700Bold",
     ...typography.lg,
-    marginTop: 12,
-    marginBottom: 6,
+    color: "#333",
+    marginTop: 20,
   },
   emptySubtitle: {
     fontFamily: "Manrope_400Regular",
     ...typography.sm,
+    color: "#999",
+    marginTop: 6,
     textAlign: "center",
-    lineHeight: 22,
   },
-  groupWrap: {
-    marginTop: 24,
-  },
-  groupTitle: {
-    fontFamily: "Manrope_700Bold",
-    ...typography.caption,
-    marginBottom: 10,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  entryGap: {
-    marginBottom: 10,
-  },
-  entryHead: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+
+  // ── FAB ──
+  fab: {
+    position: "absolute",
+    bottom: 24,
+    left: SCREEN_W / 2 - 28,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#111",
     alignItems: "center",
-    marginBottom: 10,
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
   },
-  entryTime: {
-    fontFamily: "Manrope_500Medium",
-    ...typography.xs,
+  fabPressed: {
+    transform: [{ scale: 0.94 }],
   },
-  entryText: {
-    fontFamily: "Manrope_400Regular",
-    ...typography.sm,
-    lineHeight: 22,
+  fabIcon: {
+    color: "#FFF",
+    fontSize: 28,
+    fontWeight: "300",
+    lineHeight: 30,
   },
-  // ── Groot context message ──
-  contextWrap: {
-    borderLeftWidth: 2,
-    paddingLeft: 10,
-    marginBottom: 10,
-    paddingBottom: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(128,128,128,0.12)",
-  },
-  contextLabel: {
-    fontFamily: "Manrope_600SemiBold",
-    fontSize: 10,
-    letterSpacing: 0.3,
-    marginBottom: 3,
-  },
-  contextText: {
-    fontFamily: "Manrope_400Regular",
-    fontSize: 12,
-    lineHeight: 18,
-  },
+
   bottomGap: {
     height: 20,
-  },
-  calendarCard: {
-    marginTop: 14,
-  },
-  calendarHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  calendarTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  calendarTitle: {
-    fontFamily: "Sora_600SemiBold",
-    ...typography.base,
-  },
-  calendarGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: CAL_GAP,
-  },
-  dayLabelCell: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  dayLabelText: {
-    fontFamily: "Manrope_600SemiBold",
-    fontSize: 11,
-  },
-  dayCell: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  dayText: {
-    fontFamily: "Manrope_600SemiBold",
-    fontSize: 12,
-  },
-  dayDot: {
-    marginTop: 2,
-    width: 4,
-    height: 4,
-    borderRadius: 4,
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "center",
-    paddingHorizontal: 18,
-  },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(5, 12, 28, 0.68)",
-  },
-  modalWrap: {
-    maxHeight: "80%",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
-  modalTitle: {
-    fontFamily: "Sora_600SemiBold",
-    ...typography.lg,
-  },
-  modalClose: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  modalMeta: {
-    fontFamily: "Manrope_400Regular",
-    ...typography.xs,
-    marginBottom: 12,
-  },
-  modalBody: {
-    maxHeight: "100%",
-  },
-  modalMedia: {
-    marginBottom: 12,
-  },
-  modalContent: {
-    fontFamily: "Manrope_400Regular",
-    ...typography.base,
-    lineHeight: 24,
   },
 });

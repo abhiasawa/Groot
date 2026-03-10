@@ -35,7 +35,7 @@ function buildMarkdownExport(payload: Record<string, unknown>) {
   const messages = Array.isArray(payload.messages) ? payload.messages : [];
 
   return [
-    "# Groot Export",
+    "# Noto Export",
     "",
     `Exported: ${String(payload.exported_at ?? new Date().toISOString())}`,
     "",
@@ -173,7 +173,7 @@ export default function SettingsScreen() {
           <SectionTitle title="Account" />
           <GlassCard padding={16} style={styles.accountCard}>
             <Text style={[styles.accountName, { color: colors.foreground }]}>
-              {user?.display_name ?? "Groot user"}
+              {user?.display_name ?? "Noto user"}
             </Text>
             <Text style={[styles.accountMeta, { color: colors.mutedForeground }]}>
               {user?.email ?? "No email linked"}
