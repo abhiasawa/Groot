@@ -57,12 +57,15 @@ const RAIN_DROPS = [
 interface NotoMascotProps {
   /** Overall width — height computed proportionally. Default 260. */
   size?: number;
+  /** If true, crops canvas to just the cloud body (no rain). Good for small sizes. */
+  compact?: boolean;
 }
 
-export function NotoMascot({ size = 260 }: NotoMascotProps) {
+export function NotoMascot({ size = 260, compact = false }: NotoMascotProps) {
   const scale = size / 320;
   const canvasW = 320 * scale;
-  const canvasH = 280 * scale;
+  // Compact mode: crop to just the cloud (y 0–150), no rain area
+  const canvasH = compact ? 160 * scale : 280 * scale;
 
   // ── Shared values ────────────────────────────────────────
   const bobY = useSharedValue(0);

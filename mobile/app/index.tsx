@@ -13,13 +13,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Search, X, Settings, Feather, Mic, Camera } from "lucide-react-native";
+import { Search, X, Settings } from "lucide-react-native";
 import Animated, {
   FadeInDown,
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  withTiming,
   withSequence,
 } from "react-native-reanimated";
 
@@ -45,8 +44,6 @@ export default function FeedScreen() {
   const [searchFocused, setSearchFocused] = useState(false);
   const [isPullRefreshing, setIsPullRefreshing] = useState(false);
   const [composeVisible, setComposeVisible] = useState(false);
-  const [composeMode, setComposeMode] = useState<"text" | "voice" | "image" | null>(null);
-  const [fabExpanded, setFabExpanded] = useState(false);
 
   // FAB bounce animation
   const fabBounce = useSharedValue(1);
@@ -54,42 +51,16 @@ export default function FeedScreen() {
     transform: [{ scale: fabBounce.value }],
   }));
 
-  // Expanded menu animation
-  const menuScale = useSharedValue(0);
-  const menuStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: menuScale.value }],
-    opacity: menuScale.value,
-  }));
-
-  const bounceFab = useCallback(() => {
-    // Bouncy squish effect
+  const handleFabPress = useCallback(() => {
+    // Bouncy squish then open compose
     fabBounce.value = withSequence(
-      withSpring(0.8, { damping: 8, stiffness: 400 }),
-      withSpring(1.1, { damping: 8, stiffness: 300 }),
+      withSpring(0.82, { damping: 8, stiffness: 400 }),
+      withSpring(1.08, { damping: 8, stiffness: 300 }),
       withSpring(1, { damping: 10, stiffness: 250 }),
     );
+    // Open compose slightly delayed so the bounce is visible
+    setTimeout(() => setComposeVisible(true), 180);
   }, [fabBounce]);
-
-  const toggleFab = useCallback(() => {
-    bounceFab();
-    if (fabExpanded) {
-      menuScale.value = withTiming(0, { duration: 150 });
-      setFabExpanded(false);
-    } else {
-      menuScale.value = withSpring(1, { damping: 14, stiffness: 180 });
-      setFabExpanded(true);
-    }
-  }, [fabExpanded, menuScale, bounceFab]);
-
-  const openCompose = useCallback(
-    (mode: "text" | "voice" | "image") => {
-      menuScale.value = withTiming(0, { duration: 100 });
-      setFabExpanded(false);
-      setComposeMode(mode);
-      setComposeVisible(true);
-    },
-    [menuScale],
-  );
 
   const params: MemoriesParams = useMemo(
     () => ({ q: query || undefined, limit: 100 }),
@@ -204,43 +175,11 @@ export default function FeedScreen() {
           <View style={styles.bottomGap} />
         </ScrollView>
 
-        {/* Expanded FAB menu overlay */}
-        {fabExpanded && (
-          <Pressable style={styles.fabOverlay} onPress={toggleFab}>
-            <Animated.View style={[styles.fabMenu, menuStyle]}>
-              <Pressable style={styles.fabOption} onPress={() => openCompose("text")}>
-                <View style={[styles.fabOptionCircle, { backgroundColor: "#E8F0FE" }]}>
-                  <Feather size={22} color="#5B8BD4" strokeWidth={2} />
-                </View>
-                <Text style={styles.fabOptionLabel}>Write</Text>
-              </Pressable>
-              <Pressable style={styles.fabOption} onPress={() => openCompose("voice")}>
-                <View style={[styles.fabOptionCircle, { backgroundColor: "#FDE8EE" }]}>
-                  <Mic size={22} color="#D4607A" strokeWidth={2} />
-                </View>
-                <Text style={styles.fabOptionLabel}>Voice</Text>
-              </Pressable>
-              <Pressable style={styles.fabOption} onPress={() => openCompose("image")}>
-                <View style={[styles.fabOptionCircle, { backgroundColor: "#F0ECF9" }]}>
-                  <Camera size={22} color="#8B78B8" strokeWidth={2} />
-                </View>
-                <Text style={styles.fabOptionLabel}>Photo</Text>
-              </Pressable>
-            </Animated.View>
-          </Pressable>
-        )}
-
-        {/* FAB — animated mascot cloud */}
+        {/* FAB — animated mascot, tap to capture */}
         {!searchFocused && (
           <Animated.View style={[styles.fabWrap, fabBounceStyle]}>
-            <Pressable onPress={toggleFab} style={styles.fab}>
-              {fabExpanded ? (
-                <View style={styles.fabCloseCircle}>
-                  <X size={24} color="#FFF" strokeWidth={2.2} />
-                </View>
-              ) : (
-                <NotoMascot size={85} />
-              )}
+            <Pressable onPress={handleFabPress} style={styles.fab}>
+              <NotoMascot size={110} compact />
             </Pressable>
           </Animated.View>
         )}
@@ -248,10 +187,8 @@ export default function FeedScreen() {
         {/* Compose modal */}
         <ComposeModal
           visible={composeVisible}
-          initialMode={composeMode}
           onClose={() => {
             setComposeVisible(false);
-            setComposeMode(null);
             refetch();
           }}
         />
@@ -373,71 +310,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
 
-  // FAB overlay
-  fabOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(254,254,254,0.88)",
-    justifyContent: "flex-end",
-    alignItems: "center",
-    paddingBottom: 120,
-  },
-  fabMenu: {
-    flexDirection: "row",
-    gap: 32,
-    marginBottom: 20,
-  },
-  fabOption: {
-    alignItems: "center",
-    gap: 8,
-  },
-  fabOptionCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  fabOptionLabel: {
-    fontFamily: "Manrope_600SemiBold",
-    fontSize: 13,
-    color: "#666",
-  },
-
   // FAB — the mascot IS the button
   fabWrap: {
     position: "absolute",
-    bottom: 20,
-    left: SCREEN_W / 2 - 45,
-    width: 90,
-    height: 90,
-    alignItems: "center",
-    justifyContent: "center",
+    bottom: 16,
+    alignSelf: "center",
+    left: SCREEN_W / 2 - 55,
   },
   fab: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
+    width: 110,
+    height: 58,
     alignItems: "center",
     justifyContent: "center",
-    // Soft shadow behind the cloud
+    // Lavender glow behind the cloud
     shadowColor: "#818CF8",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
     shadowRadius: 20,
     elevation: 12,
-  },
-  fabCloseCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "#1A1A1A",
-    alignItems: "center",
-    justifyContent: "center",
   },
 
   bottomGap: {
