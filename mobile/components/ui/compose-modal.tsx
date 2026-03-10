@@ -8,7 +8,6 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Animated as RNAnimated,
   Keyboard,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,6 +15,17 @@ import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { File as ExpoFile } from "expo-file-system";
 import { Audio } from "expo-av";
+import Animated, {
+  FadeIn,
+  FadeInUp,
+  FadeOut,
+  SlideInDown,
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing,
+} from "react-native-reanimated";
 import {
   Send,
   Mic,
@@ -23,21 +33,20 @@ import {
   Camera,
   Square,
   X,
+  Check,
 } from "lucide-react-native";
 
-import { useTheme } from "../../lib/theme/provider";
 import { typography } from "../../constants/typography";
 import { apiFetch } from "../../lib/api/client";
-import { SeedLoader } from "./seed-loader";
+import { VoiceWaveform } from "../feed/voice-waveform";
+import { NotoMascot } from "./noto-mascot";
 
 // ── Helpers ──
 
-/** Read a local file URI as a base64-encoded string (replaces deprecated readAsStringAsync). */
 async function readFileAsBase64(uri: string): Promise<string> {
   const file = new ExpoFile(uri);
   const buffer = await file.arrayBuffer();
   const bytes = new Uint8Array(buffer);
-  // Convert bytes to base64 in chunks to avoid call stack overflow
   let binary = "";
   const chunkSize = 8192;
   for (let i = 0; i < bytes.length; i += chunkSize) {
@@ -60,39 +69,49 @@ interface ComposeResponse {
 interface ComposeModalProps {
   visible: boolean;
   onClose: () => void;
-  /** Auto-trigger mode: "text" focuses input, "voice" starts recording, "image" opens gallery */
   initialMode?: "text" | "voice" | "image" | null;
+}
+
+const PROMPTS = [
+  "What's on your mind?",
+  "What are you thinking about?",
+  "Anything to capture?",
+  "A thought, a feeling, anything...",
+  "What happened today?",
+];
+
+function randomPrompt() {
+  return PROMPTS[Math.floor(Math.random() * PROMPTS.length)];
 }
 
 // ── Main Component ──
 
 export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProps) {
-  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
   const [recording, setRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
-  const [reply, setReply] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageMime, setImageMime] = useState<string>("image/jpeg");
+  const [placeholder] = useState(randomPrompt);
   const recordingRef = useRef<Audio.Recording | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const pulseAnimRef = useRef<RNAnimated.CompositeAnimation | null>(null);
-  const pulseAnim = useRef(new RNAnimated.Value(1)).current;
   const inputRef = useRef<TextInput>(null);
 
-  // Track which mode was auto-triggered to avoid re-triggering
+  // Recording dot blink
+  const dotOpacity = useSharedValue(1);
+  const dotStyle = useAnimatedStyle(() => ({ opacity: dotOpacity.value }));
+
   const triggeredModeRef = useRef<string | null>(null);
 
-  // Auto-trigger mode when modal opens
   useEffect(() => {
     if (visible && initialMode && triggeredModeRef.current !== initialMode) {
       triggeredModeRef.current = initialMode;
       if (initialMode === "text") {
         setTimeout(() => inputRef.current?.focus(), 350);
       } else if (initialMode === "voice") {
-        // Small delay to let modal animate in before starting recording
         setTimeout(() => startRecording(), 400);
       } else if (initialMode === "image") {
         setTimeout(() => pickImage(), 400);
@@ -101,14 +120,12 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
     if (!visible) {
       triggeredModeRef.current = null;
     }
-  // Auto trigger depends on stable modal opening state; callback deps are intentionally omitted here.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, initialMode]);
 
-  // Cleanup on close
   const handleClose = useCallback(() => {
     setText("");
-    setReply(null);
+    setSent(false);
     setImagePreview(null);
     setImageMime("image/jpeg");
     setSending(false);
@@ -119,13 +136,8 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
       recordingRef.current = null;
     }
     if (timerRef.current) clearInterval(timerRef.current);
-    if (pulseAnimRef.current) {
-      pulseAnimRef.current.stop();
-      pulseAnimRef.current = null;
-      pulseAnim.setValue(1);
-    }
     onClose();
-  }, [onClose, pulseAnim]);
+  }, [onClose]);
 
   // ── Send Text ──
   const handleSend = useCallback(async () => {
@@ -135,15 +147,11 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Keyboard.dismiss();
     setSending(true);
-    setReply(null);
 
     try {
-      let response: ComposeResponse;
-
       if (imagePreview) {
-        // Send image
         const base64 = await readFileAsBase64(imagePreview);
-        response = await apiFetch<ComposeResponse>("/api/mobile/compose", {
+        await apiFetch<ComposeResponse>("/api/mobile/compose", {
           method: "POST",
           body: JSON.stringify({
             message_type: "image",
@@ -154,8 +162,7 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
         });
         setImagePreview(null);
       } else {
-        // Send text
-        response = await apiFetch<ComposeResponse>("/api/mobile/compose", {
+        await apiFetch<ComposeResponse>("/api/mobile/compose", {
           method: "POST",
           body: JSON.stringify({
             message_type: "text",
@@ -165,15 +172,13 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
       }
 
       setText("");
-      if (response.reply) {
-        setReply(response.reply);
-      }
+      setSent(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setTimeout(() => handleClose(), 800);
     } catch {
-      setReply("Something went wrong. Please try again.");
-    } finally {
       setSending(false);
     }
-  }, [text, imagePreview, imageMime]);
+  }, [text, imagePreview, imageMime, handleClose]);
 
   // ── Voice Recording ──
   const startRecording = useCallback(async () => {
@@ -194,37 +199,29 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
       setRecordingDuration(0);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-      // Pulse animation — use loop to avoid recursive re-render issues
-      const loop = RNAnimated.loop(
-        RNAnimated.sequence([
-          RNAnimated.timing(pulseAnim, { toValue: 1.15, duration: 600, useNativeDriver: true }),
-          RNAnimated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-        ]),
+      // Blink the recording dot
+      dotOpacity.value = withRepeat(
+        withTiming(0.3, { duration: 700, easing: Easing.inOut(Easing.ease) }),
+        -1,
+        true,
       );
-      pulseAnimRef.current = loop;
-      loop.start();
 
-      // Timer
       timerRef.current = setInterval(() => {
         setRecordingDuration((d) => d + 1);
       }, 1000);
     } catch {
-      // Permission denied or other error
+      // Permission denied
     }
-  }, [pulseAnim]);
+  }, [dotOpacity]);
 
   const stopRecording = useCallback(async () => {
     if (!recordingRef.current) return;
 
     setRecording(false);
+    dotOpacity.value = withTiming(1, { duration: 100 });
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
-    }
-    if (pulseAnimRef.current) {
-      pulseAnimRef.current.stop();
-      pulseAnimRef.current = null;
-      pulseAnim.setValue(1);
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
@@ -233,32 +230,24 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
       const uri = recordingRef.current.getURI();
       recordingRef.current = null;
 
-      if (!uri) {
-        setReply("Recording failed — no audio file was created.");
-        return;
-      }
+      if (!uri) return;
 
       setSending(true);
-      setReply(null);
 
-      // Read audio file as base64
       let base64: string;
       try {
         base64 = await readFileAsBase64(uri);
       } catch {
-        setReply("Couldn't read the recorded audio file. Try again.");
         setSending(false);
         return;
       }
 
-      // Reject empty or suspiciously small recordings
       if (!base64 || base64.length < 100) {
-        setReply("Recording was too short or empty. Hold the button longer.");
         setSending(false);
         return;
       }
 
-      const response = await apiFetch<ComposeResponse>("/api/mobile/compose", {
+      await apiFetch<ComposeResponse>("/api/mobile/compose", {
         method: "POST",
         body: JSON.stringify({
           message_type: "audio",
@@ -267,26 +256,13 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
         }),
       });
 
-      if (response.reply) {
-        setReply(response.reply);
-      }
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Unknown error";
-      if (message.includes("413") || message.includes("too large")) {
-        setReply("Voice note is too large. Try a shorter recording.");
-      } else if (message.includes("401") || message.includes("auth")) {
-        setReply("Session expired. Please restart the app and try again.");
-      } else if (message.includes("timeout") || message.includes("network")) {
-        setReply("Network issue. Check your connection and try again.");
-      } else {
-        setReply(`Couldn't process the voice note: ${message}`);
-      }
-    } finally {
+      setSent(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setTimeout(() => handleClose(), 800);
+    } catch {
       setSending(false);
-      setRecordingDuration(0);
     }
-  }, [pulseAnim]);
+  }, [handleClose, dotOpacity]);
 
   // ── Image Picker ──
   const pickImage = useCallback(async () => {
@@ -330,267 +306,193 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
   const canSend = (text.trim().length > 0 || imagePreview) && !sending;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior="padding"
-      >
+    <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <Pressable style={s.overlay} onPress={handleClose}>
-          <Pressable
-            style={[
-              s.sheet,
-              {
-                backgroundColor: colors.card,
-                paddingBottom: Math.max(insets.bottom, 16),
-              },
-            ]}
-            onPress={() => {}}
+          <Animated.View
+            entering={SlideInDown.springify().damping(20).stiffness(200)}
+            style={[s.sheet, { paddingBottom: Math.max(insets.bottom, 20) }]}
           >
-            <View style={[s.handle, { backgroundColor: colors.border }]} />
+            <Pressable onPress={() => {}}>
+              <View style={s.handle} />
 
-            <View style={s.header}>
-              <View style={s.headerCopy}>
-                <Text style={[s.headerTitle, { color: colors.foreground }]}>
-                  Capture a thought
-                </Text>
-                <Text style={[s.headerSubtitle, { color: colors.mutedForeground }]}>
-                  Text, voice, or photo.
-                </Text>
-              </View>
-              <Pressable onPress={handleClose} hitSlop={12} style={s.closeButton}>
-                <X size={20} color={colors.mutedForeground} />
-              </Pressable>
-            </View>
-
-            {/* ── Reply bubble ── */}
-            {reply && (
-              <View style={[s.replyBubble, { backgroundColor: `${colors.primary}10` }]}>
-                <Text style={[s.replyText, { color: colors.foreground }]}>{reply}</Text>
-                <Pressable
-                  onPress={() => setReply(null)}
-                  style={[s.replyDismiss, { backgroundColor: `${colors.primary}18` }]}
-                >
-                  <Text style={[s.replyDismissText, { color: colors.primary }]}>
-                    New message
-                  </Text>
+              {/* Mascot + header */}
+              <View style={s.header}>
+                <NotoMascot size={56} />
+                <Pressable onPress={handleClose} hitSlop={12} style={s.closeButton}>
+                  <X size={18} color="#C0BDB8" />
                 </Pressable>
               </View>
-            )}
 
-            {/* ── Image preview ── */}
-            {imagePreview && !reply && (
-              <View style={s.imagePreviewWrap}>
-                <RNAnimated.Image
-                  source={{ uri: imagePreview }}
-                  style={[s.imagePreview, { borderColor: colors.glassBorder }]}
-                />
-                <Pressable
-                  onPress={() => setImagePreview(null)}
-                  style={[s.imageRemove, { backgroundColor: colors.card }]}
-                >
-                  <X size={14} color={colors.mutedForeground} />
-                </Pressable>
-              </View>
-            )}
+              {/* Success state */}
+              {sent && (
+                <Animated.View entering={FadeIn.duration(300)} style={s.sentWrap}>
+                  <View style={s.sentIcon}>
+                    <Check size={24} color="#FFF" strokeWidth={2.5} />
+                  </View>
+                  <Text style={s.sentTitle}>Captured</Text>
+                  <Text style={s.sentSubtitle}>Your thought is safe with me</Text>
+                </Animated.View>
+              )}
 
-            {/* ── Recording state ── */}
-            {recording && (
-              <View style={[s.recordingWrap, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-                <View style={s.recordingVisual}>
-                  {[0.3, 0.52, 0.82, 1, 0.74, 0.46].map((scale, index) => (
-                    <RNAnimated.View
-                      key={index}
-                      style={[
-                        s.recordingBar,
-                        {
-                          backgroundColor: index >= 2 ? colors.primary : `${colors.primary}55`,
-                          transform: [{ scaleY: index === 3 ? pulseAnim : scale }],
-                        },
-                      ]}
-                    />
-                  ))}
-                </View>
-                <View style={s.recordingCopy}>
-                  <Text style={[s.recordingTime, { color: colors.foreground }]}>
-                    {formatTime(recordingDuration)}
-                  </Text>
-                  <Text style={[s.recordingLabel, { color: colors.mutedForeground }]}>
-                    Recording...
-                  </Text>
-                </View>
-                <RNAnimated.View
-                  style={[
-                    s.recordingDot,
-                    {
-                      backgroundColor: colors.destructive,
-                      transform: [{ scale: pulseAnim }],
-                    },
-                  ]}
-                />
-              </View>
-            )}
-
-            {/* ── Loading ── */}
-            {sending && (
-              <View style={s.sendingWrap}>
-                <SeedLoader size={40} label="Saving..." />
-              </View>
-            )}
-
-            {/* ── Input area ── */}
-            {!reply && !recording && !sending && (
-              <View style={[s.inputRow, { borderColor: colors.glassBorder, backgroundColor: colors.secondary }]}>
-                <TextInput
-                  ref={inputRef}
-                  style={[s.input, { color: colors.foreground }]}
-                  placeholder={imagePreview ? "Add a note..." : "What's on your mind?"}
-                  placeholderTextColor={colors.mutedForeground}
-                  value={text}
-                  onChangeText={setText}
-                  multiline
-                  maxLength={4000}
-                  textAlignVertical="top"
-                />
-                <Pressable
-                  onPress={handleSend}
-                  disabled={!canSend}
-                  style={[
-                    s.sendBtn,
-                    {
-                      backgroundColor: canSend ? colors.primary : `${colors.primary}30`,
-                    },
-                  ]}
-                >
-                  <Send
-                    size={18}
-                    color={canSend ? colors.primaryForeground : colors.mutedForeground}
-                    strokeWidth={2.2}
+              {/* Image preview */}
+              {imagePreview && !sent && (
+                <View style={s.imagePreviewWrap}>
+                  <Animated.Image
+                    entering={FadeIn.duration(200)}
+                    source={{ uri: imagePreview }}
+                    style={s.imagePreview}
                   />
-                </Pressable>
-              </View>
-            )}
-
-            {/* ── Action buttons ── */}
-            {!reply && !sending && (
-              <View style={s.actions}>
-                {recording ? (
-                  <Pressable
-                    onPress={stopRecording}
-                    style={[s.actionBtn, s.actionBtnWide, { backgroundColor: `${colors.destructive}15` }]}
-                  >
-                    <Square size={16} color={colors.destructive} strokeWidth={2.2} />
-                    <Text style={[s.actionLabel, { color: colors.destructive }]}>
-                      Stop Recording
-                    </Text>
+                  <Pressable onPress={() => setImagePreview(null)} style={s.imageRemove}>
+                    <X size={14} color="#999" />
                   </Pressable>
-                ) : (
-                  <>
-                    {/* Voice is primary action — larger, emphasised */}
+                </View>
+              )}
+
+              {/* Recording state */}
+              {recording && (
+                <Animated.View entering={FadeInUp.duration(300)} style={s.recordingWrap}>
+                  <View style={s.recordingTop}>
+                    <Animated.View style={[s.recordingDot, dotStyle]} />
+                    <Text style={s.recordingTime}>{formatTime(recordingDuration)}</Text>
+                  </View>
+                  <VoiceWaveform active color="#1A1A1A" />
+                  <Pressable onPress={stopRecording} style={s.stopBtn}>
+                    <Square size={18} color="#FFF" strokeWidth={2.5} />
+                  </Pressable>
+                </Animated.View>
+              )}
+
+              {/* Sending */}
+              {sending && !sent && (
+                <View style={s.sendingWrap}>
+                  <NotoMascot size={80} />
+                  <Text style={s.sendingText}>Saving your thought...</Text>
+                </View>
+              )}
+
+              {/* Input */}
+              {!recording && !sending && !sent && (
+                <>
+                  <View style={s.inputWrap}>
+                    <TextInput
+                      ref={inputRef}
+                      style={s.input}
+                      placeholder={placeholder}
+                      placeholderTextColor="#D0CDC8"
+                      value={text}
+                      onChangeText={setText}
+                      multiline
+                      maxLength={4000}
+                      textAlignVertical="top"
+                      autoFocus={initialMode === "text"}
+                    />
+                  </View>
+
+                  {/* Bottom bar: actions + send */}
+                  <View style={s.bottomBar}>
+                    <View style={s.modeButtons}>
+                      <Pressable onPress={startRecording} style={s.modeBtn} hitSlop={6}>
+                        <Mic size={20} color="#999" strokeWidth={1.8} />
+                      </Pressable>
+                      <Pressable onPress={pickImage} style={s.modeBtn} hitSlop={6}>
+                        <ImageIcon size={20} color="#999" strokeWidth={1.8} />
+                      </Pressable>
+                      <Pressable onPress={takePhoto} style={s.modeBtn} hitSlop={6}>
+                        <Camera size={20} color="#999" strokeWidth={1.8} />
+                      </Pressable>
+                    </View>
                     <Pressable
-                      onPress={startRecording}
-                      style={[s.actionPill, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}30` }]}
+                      onPress={handleSend}
+                      disabled={!canSend}
+                      style={[
+                        s.sendBtn,
+                        { backgroundColor: canSend ? "#1A1A1A" : "#E5E5E3" },
+                      ]}
                     >
-                      <Mic size={16} color={colors.primary} strokeWidth={2.2} />
-                      <Text style={[s.actionLabel, { color: colors.primary }]}>Voice</Text>
+                      <Send
+                        size={18}
+                        color={canSend ? "#FFF" : "#BBB"}
+                        strokeWidth={2.2}
+                      />
                     </Pressable>
-                    <Pressable
-                      onPress={pickImage}
-                      style={[s.actionPill, { backgroundColor: colors.secondary, borderColor: colors.border }]}
-                    >
-                      <ImageIcon size={16} color={colors.foreground} strokeWidth={1.8} />
-                      <Text style={[s.actionLabel, { color: colors.foreground }]}>Gallery</Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={takePhoto}
-                      style={[s.actionPill, { backgroundColor: colors.secondary, borderColor: colors.border }]}
-                    >
-                      <Camera size={16} color={colors.foreground} strokeWidth={1.8} />
-                      <Text style={[s.actionLabel, { color: colors.foreground }]}>Camera</Text>
-                    </Pressable>
-                  </>
-                )}
-              </View>
-            )}
-          </Pressable>
+                  </View>
+                </>
+              )}
+            </Pressable>
+          </Animated.View>
         </Pressable>
       </KeyboardAvoidingView>
     </Modal>
   );
 }
 
-// ── Styles ──
-
 const s = StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.28)",
+    backgroundColor: "rgba(0,0,0,0.2)",
   },
   sheet: {
+    backgroundColor: "#FFFFFF",
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     paddingHorizontal: 20,
-    paddingTop: 12,
-    minHeight: 200,
+    paddingTop: 10,
+    minHeight: 280,
   },
   handle: {
     alignSelf: "center",
-    width: 56,
-    height: 5,
+    width: 40,
+    height: 4,
     borderRadius: 999,
-    marginBottom: 16,
-  },
-  header: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 18,
-    minHeight: 40,
-  },
-  headerCopy: {
-    alignItems: "center",
-    paddingHorizontal: 28,
-  },
-  headerTitle: {
-    fontFamily: "Sora_700Bold",
-    ...typography.lg,
-    textAlign: "center",
-  },
-  headerSubtitle: {
-    fontFamily: "Manrope_500Medium",
-    ...typography.sm,
-    marginTop: 4,
-    textAlign: "center",
-  },
-  closeButton: {
-    position: "absolute",
-    right: 0,
-    top: 8,
-  },
-
-  // ── Reply ──
-  replyBubble: {
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: "#E5E5E3",
     marginBottom: 12,
   },
-  replyText: {
-    fontFamily: "Manrope_400Regular",
-    ...typography.sm,
-    lineHeight: 22,
+
+  // Header
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
   },
-  replyDismiss: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginTop: 12,
-  },
-  replyDismissText: {
-    fontFamily: "Manrope_600SemiBold",
-    ...typography.xs,
+  closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F5F4F2",
+    alignItems: "center",
+    justifyContent: "center",
   },
 
-  // ── Image preview ──
+  // Success
+  sentWrap: {
+    alignItems: "center",
+    paddingVertical: 32,
+    gap: 10,
+  },
+  sentIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#49A76C",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sentTitle: {
+    fontFamily: "Sora_700Bold",
+    fontSize: 20,
+    color: "#1A1A1A",
+    marginTop: 4,
+  },
+  sentSubtitle: {
+    fontFamily: "Manrope_400Regular",
+    fontSize: 14,
+    color: "#C0BDB8",
+  },
+
+  // Image
   imagePreviewWrap: {
     marginBottom: 12,
     alignSelf: "flex-start",
@@ -598,136 +500,117 @@ const s = StyleSheet.create({
   imagePreview: {
     width: 100,
     height: 100,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
   },
   imageRemove: {
     position: "absolute",
     top: -6,
     right: -6,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#FFF",
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 3,
   },
 
-  // ── Recording ──
+  // Recording
   recordingWrap: {
+    alignItems: "center",
+    paddingVertical: 24,
+    gap: 20,
+  },
+  recordingTop: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
-    paddingVertical: 18,
-    paddingHorizontal: 16,
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderRadius: 24,
-    marginBottom: 8,
-  },
-  recordingVisual: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    height: 40,
-  },
-  recordingBar: {
-    width: 6,
-    height: 34,
-    borderRadius: 999,
-  },
-  recordingCopy: {
-    flex: 1,
+    gap: 8,
   },
   recordingDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#E25555",
   },
   recordingTime: {
     fontFamily: "Sora_700Bold",
-    ...typography.xl,
+    fontSize: 32,
+    color: "#1A1A1A",
     fontVariant: ["tabular-nums"],
+    letterSpacing: -1,
   },
-  recordingLabel: {
-    fontFamily: "Manrope_400Regular",
-    ...typography.sm,
-  },
-
-  // ── Sending ──
-  sendingWrap: {
-    flexDirection: "row",
+  stopBtn: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#E25555",
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
-    paddingVertical: 20,
+    shadowColor: "#E25555",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+
+  // Sending
+  sendingWrap: {
+    alignItems: "center",
+    paddingVertical: 24,
+    gap: 12,
   },
   sendingText: {
     fontFamily: "Manrope_500Medium",
-    ...typography.sm,
+    fontSize: 14,
+    color: "#C0BDB8",
   },
 
-  // ── Input ──
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    borderRadius: 24,
-    borderWidth: 1,
-    paddingLeft: 16,
-    paddingRight: 8,
-    paddingVertical: 8,
+  // Input
+  inputWrap: {
+    backgroundColor: "#F9F9F8",
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     marginBottom: 12,
+    minHeight: 100,
   },
   input: {
-    flex: 1,
     fontFamily: "Manrope_400Regular",
-    ...typography.sm,
-    maxHeight: 100,
-    minHeight: 24,
-    paddingTop: Platform.OS === "ios" ? 10 : 6,
-    paddingBottom: 10,
+    fontSize: 16,
+    color: "#1A1A1A",
+    lineHeight: 24,
+    maxHeight: 160,
+    minHeight: 70,
+    padding: 0,
   },
-  sendBtn: {
+
+  // Bottom bar
+  bottomBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  modeButtons: {
+    flexDirection: "row",
+    gap: 4,
+  },
+  modeBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: 8,
-  },
-
-  // ── Actions ──
-  actions: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  actionBtn: {
-    flex: 1,
-    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    paddingVertical: 12,
-    borderRadius: 18,
   },
-  actionBtnWide: {
-    flex: 1,
-  },
-  actionPill: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
+  sendBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: "center",
-    gap: 6,
-    paddingVertical: 12,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  actionLabel: {
-    fontFamily: "Manrope_600SemiBold",
-    ...typography.sm,
+    alignItems: "center",
   },
 });

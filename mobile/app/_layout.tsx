@@ -18,18 +18,14 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthProvider, useAuth } from "../lib/auth/provider";
 import { ThemeProvider } from "../lib/theme/provider";
-import { useNotifications } from "../lib/notifications";
 
 export { ErrorBoundary } from "expo-router";
 
 export const unstable_settings = {
-  initialRouteName: "(tabs)",
+  initialRouteName: "index",
 };
 
-// Prevent the splash screen from auto-hiding before assets are loaded.
-SplashScreen.preventAutoHideAsync().catch(() => {
-  // Already hidden or not available — safe to ignore.
-});
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 // ---------------------------------------------------------------------------
 // React Query
@@ -51,7 +47,6 @@ try {
     storage: AsyncStorage,
   });
 } catch {
-  // If persister creation fails, create a no-op persister
   asyncStoragePersister = createAsyncStoragePersister({
     storage: {
       getItem: async () => null,
@@ -65,18 +60,6 @@ try {
 // Auth-aware navigation
 // ---------------------------------------------------------------------------
 
-/**
- * Redirects the user based on their auth state:
- * - No session → login screen
- * - Has session → main tabs
- *
- * Account linking (if needed) is handled automatically by the backend:
- * when a user logs in with an email that matches a Groot user,
- * the backend auto-links the accounts on the first API call.
- *
- * If the backend can't match (no email on record), the user will see
- * an error when accessing data and can link manually via Settings.
- */
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { token, loading } = useAuth();
   const queryClient = useQueryClient();
@@ -93,7 +76,6 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     }
 
     if (previousTokenRef.current !== token) {
-      // Prevent stale cross-account data from persisted query cache.
       queryClient.clear();
     }
     previousTokenRef.current = token;
@@ -105,37 +87,16 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     const inAuthGroup = segments[0] === "(auth)";
 
     if (!token && !inAuthGroup) {
-      // Not signed in → go to login
       router.replace("/(auth)/login");
     } else if (token && inAuthGroup) {
-      // Signed in → go to main app
-      router.replace("/(tabs)");
+      router.replace("/");
     }
   }, [token, loading, segments, router]);
 
   if (loading) {
-    return null; // Splash screen is still showing
+    return null;
   }
 
-  return <>{children}</>;
-}
-
-/**
- * Initialises local notifications once the user is authenticated.
- * Must be rendered inside both AuthProvider and QueryClientProvider.
- */
-function NotificationBootstrap({ children }: { children: React.ReactNode }) {
-  const { token } = useAuth();
-
-  // Only activate notifications when signed in
-  if (token) {
-    return <NotificationRunner>{children}</NotificationRunner>;
-  }
-  return <>{children}</>;
-}
-
-function NotificationRunner({ children }: { children: React.ReactNode }) {
-  useNotifications();
   return <>{children}</>;
 }
 
@@ -155,21 +116,16 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (fontError) {
-      // Log the error but don't throw — the app can still render with system fonts
-      console.warn("[Fonts] Failed to load Inter fonts:", fontError);
+      console.warn("[Fonts] Failed to load fonts:", fontError);
     }
   }, [fontError]);
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync().catch(() => {
-        // Safe to ignore — splash may already be hidden
-      });
+      SplashScreen.hideAsync().catch(() => {});
     }
   }, [fontsLoaded, fontError]);
 
-  // Show a minimal loading view while fonts load (instead of null which can
-  // cause Android to think the app has no UI and kill it)
   if (!fontsLoaded && !fontError) {
     return (
       <View style={fallbackStyles.container}>
@@ -191,22 +147,26 @@ export default function RootLayout() {
             persistOptions={{ persister: asyncStoragePersister }}
           >
             <AuthGate>
-              <NotificationBootstrap>
-                <Stack screenOptions={{ headerShown: false }}>
-                  <Stack.Screen name="(auth)" />
-                  <Stack.Screen name="(tabs)" />
-                  <Stack.Screen
-                    name="capture"
-                    options={{
-                      presentation: "transparentModal",
-                      animation: "fade",
-                      contentStyle: { backgroundColor: "transparent" },
-                    }}
-                  />
-                  <Stack.Screen name="onboarding" />
-                  <Stack.Screen name="settings" />
-                </Stack>
-              </NotificationBootstrap>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="(auth)" />
+                <Stack.Screen name="index" />
+                <Stack.Screen
+                  name="capture"
+                  options={{
+                    presentation: "transparentModal",
+                    animation: "fade",
+                    contentStyle: { backgroundColor: "transparent" },
+                  }}
+                />
+                <Stack.Screen
+                  name="card-detail"
+                  options={{
+                    animation: "fade",
+                  }}
+                />
+                <Stack.Screen name="onboarding" />
+                <Stack.Screen name="settings" />
+              </Stack>
             </AuthGate>
           </PersistQueryClientProvider>
         </AuthProvider>
@@ -220,7 +180,7 @@ const fallbackStyles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#FAFAFA",
+    backgroundColor: "#FEFEFE",
   },
   orb: {
     width: 96,
@@ -237,7 +197,7 @@ const fallbackStyles = StyleSheet.create({
     fontSize: 34,
   },
   title: {
-    color: "#111",
+    color: "#1A1A1A",
     fontFamily: "Sora_700Bold",
     fontSize: 28,
     marginBottom: 8,

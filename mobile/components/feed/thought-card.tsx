@@ -1,9 +1,8 @@
 import React from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
-import { Mic } from "lucide-react-native";
+import { Mic, Image as ImageIcon } from "lucide-react-native";
 
 import { getCardColor } from "../../constants/card-colors";
-import { typography } from "../../constants/typography";
 import type { Memory } from "../../../shared/types/api";
 
 function relativeTime(dateStr: string): string {
@@ -23,49 +22,76 @@ function relativeTime(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+/** Category label for display */
+function categoryLabel(cat?: string | null): string | null {
+  if (!cat || cat === "default") return null;
+  return cat.charAt(0).toUpperCase() + cat.slice(1);
+}
+
 interface ThoughtCardProps {
   memory: Memory;
   onPress?: () => void;
 }
 
 export function ThoughtCard({ memory, onPress }: ThoughtCardProps) {
-  const color = getCardColor((memory as Record<string, unknown>).card_category as string | undefined);
+  const category = (memory as Record<string, unknown>).card_category as string | undefined;
+  const color = getCardColor(category, memory.id);
   const isVoice = memory.message_type === "audio";
   const isImage = memory.message_type === "image";
   const displayText = memory.content || memory.media_description;
+  const label = categoryLabel(category);
 
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [{ opacity: pressed ? 0.92 : 1 }]}>
+    <Pressable onPress={onPress} style={({ pressed }) => [{ opacity: pressed ? 0.94 : 1 }]}>
       <View style={[styles.card, { backgroundColor: color.bg }]}>
+        {/* Category pill */}
+        {label && (
+          <View style={[styles.pill, { backgroundColor: `${color.meta}18` }]}>
+            <Text style={[styles.pillText, { color: color.meta }]}>{label}</Text>
+          </View>
+        )}
+
+        {/* Voice indicator */}
         {isVoice && (
           <View style={styles.voiceRow}>
-            <View style={styles.voiceIcon}>
-              <Mic size={12} color="#FFF" strokeWidth={2.2} />
+            <View style={[styles.voiceIcon, { backgroundColor: color.meta }]}>
+              <Mic size={11} color="#FFF" strokeWidth={2.4} />
             </View>
             <View style={styles.voiceBars}>
-              {[5, 10, 14, 8, 12, 6, 9, 13, 7, 4].map((h, i) => (
-                <View key={i} style={[styles.voiceBar, { height: h }]} />
+              {[4, 8, 14, 10, 16, 7, 12, 15, 9, 5, 11, 13, 6].map((h, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.voiceBar,
+                    { height: h, backgroundColor: `${color.meta}40` },
+                  ]}
+                />
               ))}
             </View>
           </View>
         )}
 
+        {/* Image placeholder */}
         {isImage && !displayText && (
-          <View style={styles.imagePlaceholder} />
+          <View style={[styles.imagePlaceholder, { backgroundColor: `${color.meta}12` }]}>
+            <ImageIcon size={20} color={`${color.meta}60`} strokeWidth={1.5} />
+          </View>
         )}
 
+        {/* Text content */}
         {displayText ? (
           <Text
-            style={[styles.content, isVoice || isImage ? styles.contentWithMedia : null]}
-            numberOfLines={6}
+            style={[styles.content, (isVoice || isImage) && styles.contentWithMedia]}
+            numberOfLines={8}
           >
             {displayText}
           </Text>
         ) : null}
 
-        <Text style={[styles.meta, { color: color.meta }]}>
+        {/* Timestamp */}
+        <Text style={[styles.meta, { color: `${color.meta}90` }]}>
           {relativeTime(memory.created_at)}
-          {isVoice ? " \u00B7 Voice" : isImage ? " \u00B7 Photo" : ""}
+          {isVoice ? " · Voice" : isImage ? " · Photo" : ""}
         </Text>
       </View>
     </Pressable>
@@ -74,21 +100,33 @@ export function ThoughtCard({ memory, onPress }: ThoughtCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 8,
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 10,
+  },
+  pill: {
+    alignSelf: "flex-start",
+    borderRadius: 100,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    marginBottom: 10,
+  },
+  pillText: {
+    fontFamily: "Manrope_700Bold",
+    fontSize: 10,
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
   },
   voiceRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    marginBottom: 8,
+    gap: 8,
+    marginBottom: 10,
   },
   voiceIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    backgroundColor: "#111",
+    width: 26,
+    height: 26,
+    borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -96,25 +134,26 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: 2,
-    height: 16,
+    gap: 2.5,
+    height: 18,
   },
   voiceBar: {
-    width: 2.5,
-    borderRadius: 1.5,
-    backgroundColor: "#DDD",
+    width: 3,
+    borderRadius: 2,
   },
   imagePlaceholder: {
-    height: 80,
-    borderRadius: 10,
-    backgroundColor: "rgba(0,0,0,0.06)",
-    marginBottom: 8,
+    height: 90,
+    borderRadius: 14,
+    marginBottom: 10,
+    alignItems: "center",
+    justifyContent: "center",
   },
   content: {
     fontFamily: "Manrope_400Regular",
-    ...typography.sm,
-    color: "#333",
-    lineHeight: 20,
+    fontSize: 14,
+    color: "#2A2A2A",
+    lineHeight: 21,
+    letterSpacing: -0.1,
   },
   contentWithMedia: {
     marginTop: 0,
@@ -122,6 +161,7 @@ const styles = StyleSheet.create({
   meta: {
     fontFamily: "Manrope_600SemiBold",
     fontSize: 10,
-    marginTop: 8,
+    marginTop: 12,
+    letterSpacing: 0.2,
   },
 });

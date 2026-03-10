@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
-import { Sprout } from "lucide-react-native";
 import {
   GoogleSignin,
   isErrorWithCode,
@@ -18,11 +18,8 @@ import {
 } from "@react-native-google-signin/google-signin";
 
 import { useAuth } from "../../lib/auth/provider";
-import { useTheme } from "../../lib/theme/provider";
 import { typography } from "../../constants/typography";
-import { GlassCard } from "../../components/ui/glass-card";
-import { GradientBackground } from "../../components/ui/gradient-background";
-import { PressScale } from "../../components/ui/press-scale";
+import { NotoMascot } from "../../components/ui/noto-mascot";
 
 const API_BASE = (
   process.env.EXPO_PUBLIC_API_BASE_URL ?? "https://groot-three.vercel.app"
@@ -30,7 +27,6 @@ const API_BASE = (
 
 const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ?? "";
 
-// Configure Google Sign-In on module load
 GoogleSignin.configure({
   webClientId: GOOGLE_WEB_CLIENT_ID,
   offlineAccess: false,
@@ -38,7 +34,6 @@ GoogleSignin.configure({
 
 export default function LoginScreen() {
   const { setToken } = useAuth();
-  const { colors } = useTheme();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,10 +43,7 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      // Check Play Services availability
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-
-      // Sign in natively — no browser redirect needed
       const response = await GoogleSignin.signIn();
 
       if (isSuccessResponse(response)) {
@@ -63,14 +55,12 @@ export default function LoginScreen() {
           setLoading(false);
         }
       } else {
-        // User cancelled
         setLoading(false);
       }
     } catch (err) {
       if (isErrorWithCode(err)) {
         switch (err.code) {
           case statusCodes.SIGN_IN_CANCELLED:
-            // User cancelled the sign-in flow
             break;
           case statusCodes.IN_PROGRESS:
             setError("Sign-in already in progress");
@@ -106,7 +96,7 @@ export default function LoginScreen() {
 
       if (!res.ok || !data.token) {
         if (data.error === "not_allowed") {
-          setError(data.message ?? "Groot is invite-only. Ask the owner to add your email.");
+          setError(data.message ?? "Noto is invite-only.");
         } else {
           const details = (data as Record<string, unknown>).details;
           const msg = data.error ?? data.message ?? "Sign-in failed";
@@ -115,7 +105,6 @@ export default function LoginScreen() {
         return;
       }
 
-      // Store JWT — triggers navigation to main app
       await setToken(data.token);
     } catch {
       setError("Network error. Please check your connection.");
@@ -125,7 +114,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <GradientBackground>
+    <View style={styles.safe}>
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -136,93 +125,58 @@ export default function LoginScreen() {
             entering={FadeInDown.duration(450)}
             style={styles.branding}
           >
-            <View
-              style={[
-                styles.iconWrapper,
-                { backgroundColor: colors.glassSurface },
-              ]}
-            >
-              <Sprout size={48} color={colors.primary} strokeWidth={1.5} />
-            </View>
-            <Text style={[styles.title, { color: colors.foreground }]}>
-              The Garden
-            </Text>
-            <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-              Your AI Second Brain
+            <NotoMascot size={160} />
+            <Text style={styles.title}>noto</Text>
+            <Text style={styles.subtitle}>
+              A calm place for your thoughts
             </Text>
           </Animated.View>
 
-          {/* Google Sign-In Card */}
+          {/* Sign-in card */}
           <Animated.View entering={FadeIn.delay(200).duration(500)}>
-            <GlassCard delay={100} padding={24}>
-              <View style={styles.form}>
-                <Text
-                  style={[styles.welcomeText, { color: colors.mutedForeground }]}
-                >
-                  Sign in to start chatting with Groot — your empathetic AI
-                  companion that remembers everything.
-                </Text>
+            <View style={styles.card}>
+              <Text style={styles.welcomeText}>
+                Capture anything, find everything.{"\n"}Sign in to get started.
+              </Text>
 
-                {error ? (
-                  <View style={[styles.errorBox, { backgroundColor: `${colors.destructive}12` }]}>
-                    <Text
-                      style={[styles.errorText, { color: colors.destructive }]}
-                    >
-                      {error}
+              {error ? (
+                <View style={styles.errorBox}>
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              ) : null}
+
+              <Pressable
+                onPress={handleGoogleSignIn}
+                disabled={loading}
+                style={[styles.googleButton, loading && { opacity: 0.6 }]}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <View style={styles.googleButtonInner}>
+                    <View style={styles.googleIconWrap}>
+                      <GoogleIcon size={20} />
+                    </View>
+                    <Text style={styles.googleButtonText}>
+                      Continue with Google
                     </Text>
                   </View>
-                ) : null}
-
-                <PressScale
-                  onPress={handleGoogleSignIn}
-                  haptic={!loading}
-                >
-                  <View
-                    style={[
-                      styles.googleButton,
-                      {
-                        backgroundColor: colors.foreground,
-                        opacity: loading ? 0.6 : 1,
-                      },
-                    ]}
-                  >
-                    {loading ? (
-                      <ActivityIndicator color={colors.background} />
-                    ) : (
-                      <View style={styles.googleButtonInner}>
-                        <View style={styles.googleIconWrap}>
-                          <GoogleIcon size={20} />
-                        </View>
-                        <Text
-                          style={[
-                            styles.googleButtonText,
-                            { color: colors.background },
-                          ]}
-                        >
-                          Continue with Google
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                </PressScale>
-              </View>
-            </GlassCard>
+                )}
+              </Pressable>
+            </View>
           </Animated.View>
 
           <Animated.View entering={FadeIn.delay(400).duration(500)}>
-            <Text
-              style={[styles.footer, { color: colors.mutedForeground }]}
-            >
-              Groot is invite-only. Ask the owner to add your email to get started.
+            <Text style={styles.footer}>
+              Noto is invite-only. Ask the owner to add your email.
             </Text>
           </Animated.View>
         </View>
       </KeyboardAvoidingView>
-    </GradientBackground>
+    </View>
   );
 }
 
-// ── Official Google "G" logo (multi-color) ──
 function GoogleIcon({ size }: { size: number }) {
   return (
     <View style={{ width: size, height: size, justifyContent: "center", alignItems: "center" }}>
@@ -249,6 +203,10 @@ function GoogleIcon({ size }: { size: number }) {
 }
 
 const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: "#FEFEFE",
+  },
   container: {
     flex: 1,
     justifyContent: "center",
@@ -260,45 +218,50 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 40,
   },
-  iconWrapper: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-  },
   title: {
     fontFamily: "Sora_700Bold",
-    ...typography.hero,
+    fontSize: 36,
+    color: "#1A1A1A",
+    letterSpacing: -1,
+    marginTop: 16,
     marginBottom: 4,
   },
   subtitle: {
     fontFamily: "Manrope_400Regular",
     ...typography.base,
+    color: "#999",
   },
-  form: {
+  card: {
+    backgroundColor: "#FFF",
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.06)",
+    padding: 24,
     gap: 16,
   },
   welcomeText: {
     fontFamily: "Manrope_400Regular",
     ...typography.sm,
+    color: "#999",
     lineHeight: 22,
     textAlign: "center",
   },
   errorBox: {
     borderRadius: 12,
+    backgroundColor: "rgba(226,85,85,0.08)",
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
   errorText: {
     fontFamily: "Manrope_400Regular",
     ...typography.xs,
+    color: "#E25555",
     textAlign: "center",
   },
   googleButton: {
     height: 52,
-    borderRadius: 14,
+    borderRadius: 16,
+    backgroundColor: "#1A1A1A",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -318,10 +281,12 @@ const styles = StyleSheet.create({
   googleButtonText: {
     fontFamily: "Sora_600SemiBold",
     ...typography.base,
+    color: "#FFF",
   },
   footer: {
     fontFamily: "Manrope_400Regular",
     ...typography.xs,
+    color: "#C0BDB8",
     textAlign: "center",
     marginTop: 24,
     lineHeight: 18,

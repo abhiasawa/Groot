@@ -35,7 +35,7 @@ export default function OnboardingScreen() {
       // Proceed even if onboarding write fails.
     } finally {
       setLoading(false);
-      router.replace("/(tabs)/journal");
+      router.replace("/");
     }
   }, [displayName, router]);
 
@@ -47,7 +47,7 @@ export default function OnboardingScreen() {
           <View style={styles.spacer} />
           <Pressable
             style={styles.skipBtn}
-            onPress={() => router.replace("/(tabs)/journal")}
+            onPress={() => router.replace("/")}
             hitSlop={12}
           >
             <X size={18} color="#999" />
@@ -90,7 +90,7 @@ export default function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#FAFAFA" },
+  safe: { flex: 1, backgroundColor: "#FEFEFE" },
   root: { flex: 1, paddingHorizontal: 24 },
   topRow: {
     flexDirection: "row",
