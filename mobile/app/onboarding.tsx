@@ -1,534 +1,294 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useCallback, useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Switch,
   Text,
   TextInput,
-  StyleSheet,
-  Pressable,
-  FlatList,
-  Dimensions,
-  Switch,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import * as Haptics from "expo-haptics";
-import { Sprout, ArrowRight, Mic, BookOpen, Sun } from "lucide-react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import { Mic, X } from "lucide-react-native";
 
-import { useTheme } from "../lib/theme/provider";
-import { typography } from "../constants/typography";
 import { GradientBackground } from "../components/ui/gradient-background";
+import { useTheme } from "../lib/theme/provider";
 import { apiFetch } from "../lib/api/client";
-
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-
-// ── Screen Data ──────────────────────────────
-
-interface OnboardingState {
-  displayName: string;
-  checkinTime: string;
-  morningCheckin: boolean;
-  eveningJournal: boolean;
-  voiceCheckins: boolean;
-}
-
-// ── Main Screen ──────────────────────────────
+import { typography } from "../constants/typography";
 
 export default function OnboardingScreen() {
   const { colors } = useTheme();
   const router = useRouter();
-  const flatListRef = useRef<FlatList>(null);
-  const [step, setStep] = useState(0);
-  const [state, setState] = useState<OnboardingState>({
-    displayName: "",
-    checkinTime: "08:00",
-    morningCheckin: true,
-    eveningJournal: true,
-    voiceCheckins: false,
-  });
-  const [submitting, setSubmitting] = useState(false);
+  const [displayName, setDisplayName] = useState("");
+  const [voiceCheckins, setVoiceCheckins] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  const goNext = useCallback(() => {
-    if (step < 4) {
-      const nextStep = step + 1;
-      setStep(nextStep);
-      flatListRef.current?.scrollToIndex({ index: nextStep, animated: true });
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-  }, [step]);
-
-  const handleComplete = useCallback(async () => {
-    setSubmitting(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
+  const handleFinish = useCallback(async () => {
+    setLoading(true);
     try {
       await apiFetch("/api/mobile/onboard", {
         method: "POST",
         body: JSON.stringify({
-          displayName: state.displayName.trim() || undefined,
-          checkinTime: state.checkinTime,
+          displayName: displayName.trim() || undefined,
+          checkinTime: "08:00",
           preferences: {
-            morning_checkin: state.morningCheckin,
-            evening_journal: state.eveningJournal,
-            voice_checkins: state.voiceCheckins,
+            morning_checkin: true,
+            evening_journal: true,
+            voice_checkins: voiceCheckins,
           },
         }),
       });
-
-      router.replace("/(tabs)/today");
     } catch {
-      // Still navigate even if API fails
-      router.replace("/(tabs)/today");
+      // Proceed even if onboarding write fails.
     } finally {
-      setSubmitting(false);
+      setLoading(false);
+      router.replace("/(tabs)/journal");
     }
-  }, [state, router]);
-
-  const screens = [
-    // Screen 1: Meet Groot
-    <MeetGrootScreen key="meet" colors={colors} onNext={goNext} />,
-    // Screen 2: How It Works
-    <HowItWorksScreen key="how" colors={colors} onNext={goNext} />,
-    // Screen 3: Your Name
-    <YourNameScreen
-      key="name"
-      colors={colors}
-      name={state.displayName}
-      onChangeName={(n) => setState((s) => ({ ...s, displayName: n }))}
-      onNext={goNext}
-    />,
-    // Screen 4: Set Your Time
-    <SetTimeScreen
-      key="time"
-      colors={colors}
-      state={state}
-      onUpdate={(updates) => setState((s) => ({ ...s, ...updates }))}
-      onNext={goNext}
-    />,
-    // Screen 5: First Question
-    <FirstQuestionScreen
-      key="question"
-      colors={colors}
-      name={state.displayName}
-      onComplete={handleComplete}
-      submitting={submitting}
-    />,
-  ];
+  }, [displayName, router, voiceCheckins]);
 
   return (
-    <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={styles.safe}>
       <GradientBackground>
-        {/* Progress dots */}
-        <View style={s.dotsRow}>
-          {[0, 1, 2, 3, 4].map((i) => (
-            <View
-              key={i}
-              style={[
-                s.dot,
-                {
-                  backgroundColor: i <= step ? colors.primary : colors.muted,
-                  width: i === step ? 24 : 8,
-                },
-              ]}
-            />
-          ))}
+        <View style={styles.header}>
+          <Pressable style={[styles.topButton, { backgroundColor: colors.secondary }]} onPress={() => router.replace("/(tabs)/journal")}>
+            <X size={18} color={colors.foreground} />
+          </Pressable>
+          <View style={styles.progressWrap}>
+            <Text style={[styles.brand, { color: colors.primary }]}>Groot</Text>
+            <View style={styles.progressRow}>
+              <View style={[styles.progressActive, { backgroundColor: colors.primary }]} />
+              <View style={[styles.progressIdle, { backgroundColor: `${colors.primary}30` }]} />
+              <View style={[styles.progressIdle, { backgroundColor: `${colors.primary}30` }]} />
+            </View>
+          </View>
+          <View style={styles.placeholder} />
         </View>
 
-        <FlatList
-          ref={flatListRef}
-          data={screens}
-          renderItem={({ item }) => (
-            <View style={{ width: SCREEN_WIDTH }}>{item}</View>
-          )}
-          keyExtractor={(_, i) => String(i)}
-          horizontal
-          pagingEnabled
-          scrollEnabled={false}
-          showsHorizontalScrollIndicator={false}
-        />
+        <View style={styles.copyBlock}>
+          <Text style={[styles.title, { color: colors.foreground }]}>How was your day?</Text>
+          <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Whisper your thoughts to the seed</Text>
+        </View>
+
+        <View style={styles.visualWrap}>
+          <View style={[styles.visualHalo, { backgroundColor: colors.auraPrimary }]} />
+          <View style={styles.waveRow}>
+            {[16, 24, 40, 56, 64, 48, 32, 20, 12].map((bar, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.waveBar,
+                  {
+                    height: bar * 3,
+                    backgroundColor: index >= 3 && index <= 5 ? colors.primary : `${colors.primary}${index > 5 ? "33" : "55"}`,
+                  },
+                ]}
+              />
+            ))}
+          </View>
+          <View style={[styles.listenPill, { backgroundColor: `${colors.primary}16`, borderColor: `${colors.primary}26` }]}>
+            <Mic size={14} color={colors.primary} />
+            <Text style={[styles.listenText, { color: colors.primary }]}>Listening...</Text>
+          </View>
+        </View>
+
+        <View style={[styles.sheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.sheetTitle, { color: colors.foreground }]}>Plant your first seed</Text>
+          <TextInput
+            style={[styles.input, { color: colors.foreground, backgroundColor: colors.secondary, borderColor: colors.border }]}
+            placeholder="What should Groot call you?"
+            placeholderTextColor={colors.mutedForeground}
+            value={displayName}
+            onChangeText={setDisplayName}
+          />
+
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleCopy}>
+              <Text style={[styles.toggleTitle, { color: colors.foreground }]}>Voice check-ins</Text>
+              <Text style={[styles.toggleSubtitle, { color: colors.mutedForeground }]}>Secure and encrypted whispers</Text>
+            </View>
+            <Switch
+              value={voiceCheckins}
+              onValueChange={setVoiceCheckins}
+              trackColor={{ false: colors.muted, true: `${colors.primary}50` }}
+              thumbColor={voiceCheckins ? colors.primary : colors.card}
+            />
+          </View>
+
+          <View style={styles.actionRow}>
+            <Pressable style={[styles.cancelButton, { backgroundColor: colors.secondary }]} onPress={() => router.replace("/(tabs)/journal")}>
+              <Text style={[styles.cancelText, { color: colors.primary }]}>Cancel</Text>
+            </Pressable>
+            <Pressable style={[styles.finishButton, { backgroundColor: colors.primary }]} onPress={handleFinish}>
+              {loading ? (
+                <ActivityIndicator size="small" color={colors.primaryForeground} />
+              ) : (
+                <Text style={[styles.finishText, { color: colors.primaryForeground }]}>Finish Seed</Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
       </GradientBackground>
     </SafeAreaView>
   );
 }
 
-// ── Screen 1: Meet Groot ─────────────────────
-
-function MeetGrootScreen({
-  colors,
-  onNext,
-}: {
-  colors: ReturnType<typeof useTheme>["colors"];
-  onNext: () => void;
-}) {
-  return (
-    <View style={s.screen}>
-      <Animated.View entering={FadeInDown.duration(500)} style={s.content}>
-        <View style={[s.iconCircle, { backgroundColor: `${colors.primary}18` }]}>
-          <Sprout size={48} color={colors.primary} strokeWidth={1.5} />
-        </View>
-        <Text style={[s.title, { color: colors.foreground }]}>Meet Groot</Text>
-        <Text style={[s.body, { color: colors.mutedForeground }]}>
-          Your empathetic AI companion. I remember your stories, track your
-          moods, and help you grow — one conversation at a time.
-        </Text>
-      </Animated.View>
-      <ContinueButton colors={colors} onPress={onNext} />
-    </View>
-  );
-}
-
-// ── Screen 2: How It Works ───────────────────
-
-function HowItWorksScreen({
-  colors,
-  onNext,
-}: {
-  colors: ReturnType<typeof useTheme>["colors"];
-  onNext: () => void;
-}) {
-  const features = [
-    { icon: BookOpen, label: "Journal daily", desc: "Text, voice, or photos" },
-    { icon: Sun, label: "Morning check-ins", desc: "Start each day with intent" },
-    { icon: Mic, label: "Voice notes", desc: "Speak freely, I'll listen" },
-  ];
-
-  return (
-    <View style={s.screen}>
-      <Animated.View entering={FadeInDown.duration(500)} style={s.content}>
-        <Text style={[s.title, { color: colors.foreground }]}>How It Works</Text>
-        <View style={s.features}>
-          {features.map((f, i) => (
-            <Animated.View
-              key={i}
-              entering={FadeInDown.duration(400).delay(200 + i * 100)}
-              style={s.featureRow}
-            >
-              <View style={[s.featureIcon, { backgroundColor: `${colors.primary}12` }]}>
-                <f.icon size={20} color={colors.primary} strokeWidth={1.8} />
-              </View>
-              <View>
-                <Text style={[s.featureLabel, { color: colors.foreground }]}>{f.label}</Text>
-                <Text style={[s.featureDesc, { color: colors.mutedForeground }]}>{f.desc}</Text>
-              </View>
-            </Animated.View>
-          ))}
-        </View>
-      </Animated.View>
-      <ContinueButton colors={colors} onPress={onNext} />
-    </View>
-  );
-}
-
-// ── Screen 3: Your Name ──────────────────────
-
-function YourNameScreen({
-  colors,
-  name,
-  onChangeName,
-  onNext,
-}: {
-  colors: ReturnType<typeof useTheme>["colors"];
-  name: string;
-  onChangeName: (name: string) => void;
-  onNext: () => void;
-}) {
-  return (
-    <View style={s.screen}>
-      <Animated.View entering={FadeInDown.duration(500)} style={s.content}>
-        <Text style={[s.title, { color: colors.foreground }]}>What should I call you?</Text>
-        <Text style={[s.body, { color: colors.mutedForeground }]}>
-          Just your first name is fine. You can always change it later.
-        </Text>
-        <TextInput
-          style={[
-            s.nameInput,
-            {
-              color: colors.foreground,
-              borderColor: colors.border,
-              backgroundColor: colors.secondary,
-            },
-          ]}
-          placeholder="Your name"
-          placeholderTextColor={colors.mutedForeground}
-          value={name}
-          onChangeText={onChangeName}
-          autoCapitalize="words"
-          autoFocus
-        />
-      </Animated.View>
-      <ContinueButton colors={colors} onPress={onNext} disabled={!name.trim()} />
-    </View>
-  );
-}
-
-// ── Screen 4: Set Your Time ──────────────────
-
-function SetTimeScreen({
-  colors,
-  state,
-  onUpdate,
-  onNext,
-}: {
-  colors: ReturnType<typeof useTheme>["colors"];
-  state: OnboardingState;
-  onUpdate: (updates: Partial<OnboardingState>) => void;
-  onNext: () => void;
-}) {
-  return (
-    <View style={s.screen}>
-      <Animated.View entering={FadeInDown.duration(500)} style={s.content}>
-        <Text style={[s.title, { color: colors.foreground }]}>Set Your Rhythm</Text>
-        <Text style={[s.body, { color: colors.mutedForeground }]}>
-          Choose when Groot reaches out to you.
-        </Text>
-
-        <View style={s.toggleList}>
-          <ToggleRow
-            colors={colors}
-            label="Morning Check-in"
-            desc="Start your day with intent"
-            value={state.morningCheckin}
-            onToggle={(v) => onUpdate({ morningCheckin: v })}
-          />
-          <ToggleRow
-            colors={colors}
-            label="Evening Reflection"
-            desc="Close your day with a thought"
-            value={state.eveningJournal}
-            onToggle={(v) => onUpdate({ eveningJournal: v })}
-          />
-          <ToggleRow
-            colors={colors}
-            label="Voice Check-ins"
-            desc="Respond via voice notes"
-            value={state.voiceCheckins}
-            onToggle={(v) => onUpdate({ voiceCheckins: v })}
-          />
-        </View>
-      </Animated.View>
-      <ContinueButton colors={colors} onPress={onNext} />
-    </View>
-  );
-}
-
-function ToggleRow({
-  colors,
-  label,
-  desc,
-  value,
-  onToggle,
-}: {
-  colors: ReturnType<typeof useTheme>["colors"];
-  label: string;
-  desc: string;
-  value: boolean;
-  onToggle: (v: boolean) => void;
-}) {
-  return (
-    <View style={s.toggleRow}>
-      <View style={s.toggleInfo}>
-        <Text style={[s.toggleLabel, { color: colors.foreground }]}>{label}</Text>
-        <Text style={[s.toggleDesc, { color: colors.mutedForeground }]}>{desc}</Text>
-      </View>
-      <Switch
-        value={value}
-        onValueChange={onToggle}
-        trackColor={{ false: colors.muted, true: `${colors.primary}60` }}
-        thumbColor={value ? colors.primary : colors.mutedForeground}
-      />
-    </View>
-  );
-}
-
-// ── Screen 5: First Question ─────────────────
-
-function FirstQuestionScreen({
-  colors,
-  name,
-  onComplete,
-  submitting,
-}: {
-  colors: ReturnType<typeof useTheme>["colors"];
-  name: string;
-  onComplete: () => void;
-  submitting: boolean;
-}) {
-  return (
-    <View style={s.screen}>
-      <Animated.View entering={FadeInDown.duration(500)} style={s.content}>
-        <View style={[s.iconCircle, { backgroundColor: `${colors.moodGreat}18` }]}>
-          <Sprout size={48} color={colors.moodGreat} strokeWidth={1.5} />
-        </View>
-        <Text style={[s.title, { color: colors.foreground }]}>
-          Ready, {name || "friend"}?
-        </Text>
-        <Text style={[s.body, { color: colors.mutedForeground }]}>
-          Your garden is planted. Let&apos;s start growing together. I&apos;ll ask you a
-          question to get us started.
-        </Text>
-      </Animated.View>
-      <Pressable
-        onPress={onComplete}
-        disabled={submitting}
-        style={[
-          s.continueBtn,
-          { backgroundColor: submitting ? `${colors.primary}60` : colors.primary },
-        ]}
-      >
-        <Text style={[s.continueBtnText, { color: colors.primaryForeground }]}>
-          {submitting ? "Setting up..." : "Start My Garden"}
-        </Text>
-        {!submitting && <ArrowRight size={18} color={colors.primaryForeground} />}
-      </Pressable>
-    </View>
-  );
-}
-
-// ── Continue Button ──────────────────────────
-
-function ContinueButton({
-  colors,
-  onPress,
-  disabled,
-}: {
-  colors: ReturnType<typeof useTheme>["colors"];
-  onPress: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      style={[
-        s.continueBtn,
-        { backgroundColor: disabled ? `${colors.primary}40` : colors.primary },
-      ]}
-    >
-      <Text style={[s.continueBtnText, { color: colors.primaryForeground }]}>Continue</Text>
-      <ArrowRight size={18} color={colors.primaryForeground} />
-    </Pressable>
-  );
-}
-
-// ── Styles ───────────────────────────────────
-
-const s = StyleSheet.create({
+const styles = StyleSheet.create({
   safe: { flex: 1 },
-  dotsRow: {
+  header: {
     flexDirection: "row",
-    justifyContent: "center",
     alignItems: "center",
-    gap: 6,
-    paddingVertical: 16,
-  },
-  dot: {
-    height: 6,
-    borderRadius: 3,
-  },
-  screen: {
-    width: SCREEN_WIDTH,
-    flex: 1,
     justifyContent: "space-between",
-    paddingHorizontal: 30,
-    paddingBottom: 30,
+    paddingHorizontal: 20,
+    paddingTop: 8,
   },
-  content: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  iconCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 24,
-  },
-  title: {
-    fontFamily: "Sora_700Bold",
-    ...typography.title,
-    textAlign: "center",
-    marginBottom: 12,
-  },
-  body: {
-    fontFamily: "Manrope_400Regular",
-    ...typography.sm,
-    textAlign: "center",
-    lineHeight: 22,
-    maxWidth: 300,
-  },
-  features: {
-    marginTop: 32,
-    gap: 20,
-    width: "100%",
-  },
-  featureRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-  },
-  featureIcon: {
+  topButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
   },
-  featureLabel: {
-    fontFamily: "Sora_600SemiBold",
-    ...typography.sm,
+  progressWrap: {
+    alignItems: "center",
   },
-  featureDesc: {
-    fontFamily: "Manrope_400Regular",
-    ...typography.xs,
-    marginTop: 1,
+  brand: {
+    fontFamily: "Manrope_700Bold",
+    ...typography.caption,
+    textTransform: "uppercase",
+    letterSpacing: 1.5,
+    marginBottom: 6,
   },
-  nameInput: {
-    fontFamily: "Manrope_500Medium",
-    ...typography.lg,
+  progressRow: {
+    flexDirection: "row",
+    gap: 4,
+  },
+  progressActive: {
+    width: 18,
+    height: 4,
+    borderRadius: 999,
+  },
+  progressIdle: {
+    width: 10,
+    height: 4,
+    borderRadius: 999,
+  },
+  placeholder: {
+    width: 44,
+  },
+  copyBlock: {
+    paddingHorizontal: 24,
+    paddingTop: 30,
+    alignItems: "center",
+  },
+  title: {
+    fontFamily: "Sora_700Bold",
+    ...typography["3xl"],
     textAlign: "center",
-    borderWidth: 1,
-    borderRadius: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    marginTop: 24,
-    width: "100%",
-    maxWidth: 280,
   },
-  toggleList: {
-    marginTop: 24,
-    width: "100%",
-    gap: 16,
+  subtitle: {
+    fontFamily: "Manrope_500Medium",
+    ...typography.base,
+    marginTop: 8,
+    textAlign: "center",
+  },
+  visualWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+  visualHalo: {
+    position: "absolute",
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+  },
+  waveRow: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+  },
+  waveBar: {
+    width: 10,
+    borderRadius: 999,
+  },
+  listenPill: {
+    marginTop: 28,
+    borderWidth: 1,
+    borderRadius: 999,
+    minHeight: 40,
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  listenText: {
+    fontFamily: "Manrope_700Bold",
+    ...typography.xs,
+  },
+  sheet: {
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderWidth: 1,
+    padding: 20,
+    gap: 14,
+  },
+  sheetTitle: {
+    fontFamily: "Sora_600SemiBold",
+    ...typography.lg,
+  },
+  input: {
+    height: 52,
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    fontFamily: "Manrope_500Medium",
+    ...typography.sm,
   },
   toggleRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 12,
   },
-  toggleInfo: {
+  toggleCopy: {
     flex: 1,
-    marginRight: 12,
   },
-  toggleLabel: {
-    fontFamily: "Sora_600SemiBold",
+  toggleTitle: {
+    fontFamily: "Manrope_700Bold",
     ...typography.sm,
+    marginBottom: 4,
   },
-  toggleDesc: {
-    fontFamily: "Manrope_400Regular",
+  toggleSubtitle: {
+    fontFamily: "Manrope_500Medium",
     ...typography.xs,
-    marginTop: 1,
   },
-  continueBtn: {
+  actionRow: {
     flexDirection: "row",
+    gap: 10,
+    paddingBottom: 6,
+  },
+  cancelButton: {
+    flex: 1,
+    height: 54,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    paddingVertical: 16,
-    borderRadius: 16,
   },
-  continueBtnText: {
+  cancelText: {
+    fontFamily: "Manrope_700Bold",
+    ...typography.sm,
+  },
+  finishButton: {
+    flex: 1.4,
+    height: 54,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  finishText: {
     fontFamily: "Sora_600SemiBold",
-    ...typography.base,
+    ...typography.sm,
   },
 });

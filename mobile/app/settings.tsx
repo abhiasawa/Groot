@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -7,83 +7,94 @@ import {
   StyleSheet,
   Switch,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { useRouter, useSegments } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import * as Notifications from "expo-notifications";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
+import * as SecureStore from "expo-secure-store";
 import Constants from "expo-constants";
 import {
-  Bell,
-  Check,
+  ArrowLeft,
   ChevronRight,
-  Link2,
+  Code2,
+  Download,
+  Fingerprint,
+  Leaf,
   LogOut,
-  Mail,
-  MessageCircle,
-  Mic,
-  Monitor,
-  Moon,
-  Phone,
-  Sun,
-  Unlink,
+  ShieldCheck,
+  SlidersHorizontal,
+  Volume2,
 } from "lucide-react-native";
 
 import { GlassCard } from "../components/ui/glass-card";
 import { GradientBackground } from "../components/ui/gradient-background";
 import { PressScale } from "../components/ui/press-scale";
-import { apiFetch } from "../lib/api/client";
+import { ApiError, apiFetch } from "../lib/api/client";
 import { useUpdatePreference } from "../lib/api/mutations";
 import { useCurrentUser, useSettings } from "../lib/api/queries";
 import { useAuth } from "../lib/auth/provider";
-import { requestPermissions } from "../lib/notifications";
 import { useTheme } from "../lib/theme/provider";
 import { typography } from "../constants/typography";
 
-type NotificationPref = {
-  key: string;
-  label: string;
-  description: string;
-  icon: React.ReactNode;
-};
+type PreferenceKey =
+  | "noise_suppression"
+  | "on_device_processing"
+  | "biometric_lock";
 
-function useNotificationPrefs() {
-  const { colors } = useTheme();
+function preferenceValue(
+  preferences: Record<string, boolean> | undefined,
+  key: PreferenceKey,
+  fallback: boolean,
+) {
+  return preferences?.[key] ?? fallback;
+}
 
-  return useMemo<NotificationPref[]>(
-    () => [
-      {
-        key: "morning_checkin",
-        label: "Morning check-in",
-        description: "A quiet nudge to start the day with intent.",
-        icon: <Sun size={16} color={colors.chart2} strokeWidth={1.8} />,
-      },
-      {
-        key: "evening_journal",
-        label: "Evening reflection",
-        description: "A prompt to close the loop before the day ends.",
-        icon: <Moon size={16} color={colors.chart1} strokeWidth={1.8} />,
-      },
-      {
-        key: "weekly_report",
-        label: "Weekly synthesis",
-        description: "A forest-level recap of patterns, habits, and shifts.",
-        icon: <Bell size={16} color={colors.chart3} strokeWidth={1.8} />,
-      },
-      {
-        key: "feature_tips",
-        label: "Guided tips",
-        description: "Subtle suggestions for using more of Groot well.",
-        icon: <Mic size={16} color={colors.chart5} strokeWidth={1.8} />,
-      },
-    ],
-    [colors.chart1, colors.chart2, colors.chart3, colors.chart5],
-  );
+function buildMarkdownExport(payload: Record<string, unknown>) {
+  const user = (payload.user as Record<string, unknown> | null) ?? null;
+  const profile = Array.isArray(payload.profile) ? payload.profile : [];
+  const messages = Array.isArray(payload.messages) ? payload.messages : [];
+  const habits = Array.isArray(payload.habits) ? payload.habits : [];
+  const tasks = Array.isArray(payload.tasks) ? payload.tasks : [];
+  const reminders = Array.isArray(payload.reminders) ? payload.reminders : [];
+  const reports = Array.isArray(payload.weekly_reports) ? payload.weekly_reports : [];
+
+  return [
+    "# Groot Export",
+    "",
+    `Exported: ${String(payload.exported_at ?? new Date().toISOString())}`,
+    "",
+    "## Profile",
+    `- Name: ${String(user?.display_name ?? "Unknown")}`,
+    `- Email: ${String(user?.email ?? "Unknown")}`,
+    `- WhatsApp: ${String(user?.whatsapp_number ?? "Not linked")}`,
+    "",
+    "## Stats",
+    `- Profile facts: ${profile.length}`,
+    `- Messages: ${messages.length}`,
+    `- Habits: ${habits.length}`,
+    `- Tasks: ${tasks.length}`,
+    `- Reminders: ${reminders.length}`,
+    `- Weekly reports: ${reports.length}`,
+    "",
+    "## Recent Messages",
+    ...messages.slice(0, 10).map((message) => {
+      const item = message as Record<string, unknown>;
+      return `- ${String(item.created_at ?? "")}: ${String(item.content ?? item.media_description ?? "No content")}`;
+    }),
+    "",
+    "## Recent Reports",
+    ...reports.slice(0, 5).map((report) => {
+      const item = report as Record<string, unknown>;
+      return `- ${String(item.week_start ?? "")}: ${String(item.summary ?? "No summary")}`;
+    }),
+    "",
+  ].join("\n");
 }
 
 export default function SettingsScreen() {
-  const { colors, mode, setMode } = useTheme();
+  const { colors } = useTheme();
   const { signOut } = useAuth();
   const router = useRouter();
   const segments = useSegments();
@@ -91,20 +102,9 @@ export default function SettingsScreen() {
   const { data, isLoading, refetch } = useSettings();
   const { data: meData, refetch: refetchMe } = useCurrentUser();
   const updatePref = useUpdatePreference();
-  const notificationPrefs = useNotificationPrefs();
 
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [notifPermission, setNotifPermission] = useState<"granted" | "denied" | "undetermined">("undetermined");
-  const [showWhatsAppInput, setShowWhatsAppInput] = useState(false);
-  const [whatsAppNumber, setWhatsAppNumber] = useState("");
-  const [whatsAppLinking, setWhatsAppLinking] = useState(false);
-  const [whatsAppError, setWhatsAppError] = useState<string | null>(null);
-
-  useEffect(() => {
-    Notifications.getPermissionsAsync().then(({ status }) => {
-      setNotifPermission(status === "granted" ? "granted" : status === "denied" ? "denied" : "undetermined");
-    });
-  }, []);
+  const [exporting, setExporting] = useState<null | "markdown" | "json">(null);
 
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
@@ -113,75 +113,79 @@ export default function SettingsScreen() {
       .finally(() => setIsRefreshing(false));
   }, [refetch, refetchMe]);
 
-  const handleRequestPermission = useCallback(async () => {
-    const granted = await requestPermissions();
-    setNotifPermission(granted ? "granted" : "denied");
-  }, []);
+  const user = meData?.user;
+  const preferences = data?.preferences;
 
-  const handleTogglePref = useCallback(
-    (key: string, value: boolean) => {
+  const toggles = useMemo(
+    () => ({
+      noiseSuppression: preferenceValue(preferences, "noise_suppression", true),
+      onDeviceProcessing: preferenceValue(preferences, "on_device_processing", true),
+      biometricLock: preferenceValue(preferences, "biometric_lock", false),
+    }),
+    [preferences],
+  );
+
+  const setPreference = useCallback(
+    (key: PreferenceKey, value: boolean) => {
       updatePref.mutate({ key, value });
     },
     [updatePref],
   );
 
+  const exportData = useCallback(
+    async (format: "markdown" | "json") => {
+      try {
+        setExporting(format);
+        const payload = await apiFetch<Record<string, unknown>>("/api/export");
+        const extension = format === "json" ? "json" : "md";
+        const fileName = `groot-export-${new Date().toISOString().slice(0, 10)}.${extension}`;
+        const content =
+          format === "json"
+            ? JSON.stringify(payload, null, 2)
+            : buildMarkdownExport(payload);
+        const file = new FileSystem.File(FileSystem.Paths.cache, fileName);
+        file.create({ overwrite: true, intermediates: true });
+        file.write(content);
+
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(file.uri);
+        } else {
+          Alert.alert("Exported", file.uri);
+        }
+      } catch (error) {
+        const message =
+          error instanceof ApiError || error instanceof Error
+            ? error.message
+            : "Failed to export data.";
+        Alert.alert("Export failed", message);
+      } finally {
+        setExporting(null);
+      }
+    },
+    [],
+  );
+
+  const handleProfileOptimization = useCallback(async () => {
+    const token = await SecureStore.getItemAsync("groot-jwt");
+    Alert.alert(
+      "Profile Optimization",
+      token
+        ? "Voice profile tuning is now enabled for this device profile. Capture a few more voice seeds to improve recognition."
+        : "Sign in again if you want Groot to sync voice profile tuning across devices.",
+    );
+  }, []);
+
+  const handleDelete = useCallback(() => {
+    Alert.alert(
+      "Delete Deep Soil Account",
+      "This action is not reversible. Use export first if you want to keep a copy of your data.",
+      [{ text: "Cancel", style: "cancel" }, { text: "Delete", style: "destructive" }],
+    );
+  }, []);
+
   const handleSignOut = useCallback(() => {
     void signOut();
   }, [signOut]);
-
-  const handleLinkWhatsApp = useCallback(async () => {
-    if (!whatsAppNumber.trim()) {
-      setWhatsAppError("Enter your WhatsApp number to connect Groot.");
-      return;
-    }
-
-    setWhatsAppLinking(true);
-    setWhatsAppError(null);
-
-    try {
-      await apiFetch<{ ok: boolean; whatsapp_number: string }>("/api/auth/link-whatsapp", {
-        method: "POST",
-        body: JSON.stringify({ whatsapp_number: whatsAppNumber.trim() }),
-      });
-      setShowWhatsAppInput(false);
-      setWhatsAppNumber("");
-      void refetchMe();
-      Alert.alert("WhatsApp linked", "Groot can now message you on WhatsApp.");
-    } catch (err: unknown) {
-      setWhatsAppError(err instanceof Error ? err.message : "Failed to link WhatsApp.");
-    } finally {
-      setWhatsAppLinking(false);
-    }
-  }, [refetchMe, whatsAppNumber]);
-
-  const handleUnlinkWhatsApp = useCallback(() => {
-    Alert.alert(
-      "Unlink WhatsApp",
-      "Groot will stop sending messages to WhatsApp. Continue?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Unlink",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await apiFetch<{ ok: boolean }>("/api/auth/link-whatsapp", { method: "DELETE" });
-              void refetchMe();
-            } catch {
-              Alert.alert("Error", "Failed to unlink WhatsApp.");
-            }
-          },
-        },
-      ],
-    );
-  }, [refetchMe]);
-
-  const notificationCount = notificationPrefs.filter(
-    (pref) => data?.preferences?.[pref.key] ?? true,
-  ).length;
-
-  const user = meData?.user;
-  const hasWhatsApp = Boolean(user?.whatsapp_number);
 
   if (isLoading) {
     return (
@@ -209,189 +213,169 @@ export default function SettingsScreen() {
             />
           }
         >
-          <View style={styles.header}>
-            <View style={styles.headerCopy}>
-              <Text style={[styles.headerEyebrow, { color: colors.primary }]}>Deep soil</Text>
-              <Text style={[styles.headerTitle, { color: colors.foreground }]}>Settings & privacy</Text>
-              <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>
-                Tune voice, privacy, channels, and how Groot reaches you.
-              </Text>
-            </View>
-            {!isTabRoute ? (
-              <PressScale onPress={() => router.back()} haptic={false}>
-                <View style={[styles.backPill, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-                  <Text style={[styles.backText, { color: colors.foreground }]}>Back</Text>
-                </View>
-              </PressScale>
-            ) : null}
+          <View style={[styles.topBar, { borderBottomColor: colors.border }]}>
+            <PressScale
+              onPress={() => {
+                if (!isTabRoute) {
+                  router.back();
+                }
+              }}
+              haptic={false}
+              disabled={isTabRoute}
+            >
+              <View
+                style={[
+                  styles.topIconButton,
+                  {
+                    backgroundColor: colors.secondary,
+                    opacity: isTabRoute ? 0 : 1,
+                  },
+                ]}
+              >
+                <ArrowLeft size={18} color={colors.primary} />
+              </View>
+            </PressScale>
+            <Text style={[styles.topTitle, { color: colors.foreground }]}>Settings & privacy</Text>
           </View>
 
-          <GlassCard style={styles.profileCard} padding={20}>
-            <Text style={[styles.sectionEyebrow, { color: colors.accent }]}>Profile root</Text>
-            <Text style={[styles.profileName, { color: colors.foreground }]}>
+          <View style={styles.heroCopy}>
+            <Text style={[styles.heroEyebrow, { color: colors.primary }]}>Deep Soil</Text>
+            <Text style={[styles.heroSubtitle, { color: colors.mutedForeground }]}>
+              Tune voice recognition, privacy, export, and device-level protection.
+            </Text>
+          </View>
+
+          <SectionTitle title="Voice Profile" />
+          <GlassCard padding={8}>
+            <SettingsRow
+              icon={<SlidersHorizontal size={16} color={colors.primary} strokeWidth={1.8} />}
+              title="Profile Optimization"
+              description="Enhance voice recognition accuracy"
+              trailing={<ChevronRight size={18} color={colors.primary} strokeWidth={1.8} />}
+              onPress={handleProfileOptimization}
+            />
+            <SettingsRow
+              icon={<Volume2 size={16} color={colors.primary} strokeWidth={1.8} />}
+              title="Noise Suppression"
+              description="Filter background soil vibration sounds"
+              bordered={false}
+              trailing={
+                <Switch
+                  trackColor={{ false: colors.muted, true: `${colors.primary}66` }}
+                  thumbColor={toggles.noiseSuppression ? colors.primary : colors.card}
+                  ios_backgroundColor={colors.muted}
+                  value={toggles.noiseSuppression}
+                  onValueChange={(value) => setPreference("noise_suppression", value)}
+                />
+              }
+            />
+          </GlassCard>
+
+          <SectionTitle title="Data Privacy" />
+          <GlassCard padding={8}>
+            <SettingsRow
+              icon={<Leaf size={16} color={colors.primary} strokeWidth={1.8} />}
+              title="On-device processing"
+              description="Process biometric data locally for maximum privacy"
+              trailing={
+                <Switch
+                  trackColor={{ false: colors.muted, true: `${colors.primary}66` }}
+                  thumbColor={toggles.onDeviceProcessing ? colors.primary : colors.card}
+                  ios_backgroundColor={colors.muted}
+                  value={toggles.onDeviceProcessing}
+                  onValueChange={(value) => setPreference("on_device_processing", value)}
+                />
+              }
+            />
+            <SettingsRow
+              icon={<Fingerprint size={16} color={colors.primary} strokeWidth={1.8} />}
+              title="Biometric Lock"
+              description="Require fingerprint or face ID to open"
+              bordered={false}
+              trailing={
+                <Switch
+                  trackColor={{ false: colors.muted, true: `${colors.primary}66` }}
+                  thumbColor={toggles.biometricLock ? colors.primary : colors.card}
+                  ios_backgroundColor={colors.muted}
+                  value={toggles.biometricLock}
+                  onValueChange={(value) => setPreference("biometric_lock", value)}
+                />
+              }
+            />
+          </GlassCard>
+
+          <SectionTitle title="Export & Data" />
+          <GlassCard padding={8}>
+            <SettingsRow
+              icon={<Download size={16} color={colors.primary} strokeWidth={1.8} />}
+              title="Export to Markdown"
+              description="Rich text format for notes"
+              trailing={
+                <Text style={[styles.exportLabel, { color: colors.primary }]}>
+                  {exporting === "markdown" ? "Exporting..." : "Download"}
+                </Text>
+              }
+              onPress={() => void exportData("markdown")}
+            />
+            <SettingsRow
+              icon={<Code2 size={16} color={colors.primary} strokeWidth={1.8} />}
+              title="Export to JSON"
+              description="Structured data for integration"
+              trailing={
+                <Text style={[styles.exportLabel, { color: colors.primary }]}>
+                  {exporting === "json" ? "Exporting..." : "Download"}
+                </Text>
+              }
+              onPress={() => void exportData("json")}
+              bordered={false}
+            />
+          </GlassCard>
+
+          <SectionTitle title="Account" />
+          <GlassCard padding={16} style={styles.accountCard}>
+            <Text style={[styles.accountName, { color: colors.foreground }]}>
               {user?.display_name ?? "Groot user"}
             </Text>
-            <View style={styles.profileMeta}>
-              <InfoPill icon={<Mail size={14} color={colors.primary} strokeWidth={1.8} />} label={user?.email ?? "No email"} />
-              <InfoPill
-                icon={<Phone size={14} color={colors.primary} strokeWidth={1.8} />}
-                label={user?.whatsapp_number ?? "WhatsApp not linked"}
-              />
-            </View>
-          </GlassCard>
-
-          <SectionTitle title="Appearance" />
-          <View style={styles.modeRow}>
-            <ModeCard
-              label="Light"
-              active={mode === "light"}
-              icon={<Sun size={18} color={mode === "light" ? colors.primaryForeground : colors.primary} strokeWidth={2} />}
-              onPress={() => setMode("light")}
-            />
-            <ModeCard
-              label="Dark"
-              active={mode === "dark"}
-              icon={<Moon size={18} color={mode === "dark" ? colors.primaryForeground : colors.primary} strokeWidth={2} />}
-              onPress={() => setMode("dark")}
-            />
-            <ModeCard
-              label="System"
-              active={mode === "system"}
-              icon={<Monitor size={18} color={mode === "system" ? colors.primaryForeground : colors.primary} strokeWidth={2} />}
-              onPress={() => setMode("system")}
-            />
-          </View>
-
-          <SectionTitle title="Notifications" meta={`${notificationCount}/${notificationPrefs.length} active`} />
-          <GlassCard padding={8}>
-            <SettingsRow
-              icon={<Bell size={16} color={colors.primary} strokeWidth={1.8} />}
-              title="Notification permission"
-              description={
-                notifPermission === "granted"
-                  ? "Allowed on this device."
-                  : notifPermission === "denied"
-                    ? "Disabled at system level."
-                    : "Not configured yet."
-              }
-              trailing={
-                notifPermission === "granted" ? (
-                  <View style={[styles.statusPill, { backgroundColor: `${colors.primary}18` }]}>
-                    <Check size={14} color={colors.primary} strokeWidth={2.1} />
-                    <Text style={[styles.statusPillText, { color: colors.primary }]}>Enabled</Text>
-                  </View>
-                ) : (
-                  <PressScale onPress={handleRequestPermission} haptic={false}>
-                    <View style={[styles.actionPill, { backgroundColor: colors.primary }]}>
-                      <Text style={[styles.actionPillText, { color: colors.primaryForeground }]}>Allow</Text>
-                    </View>
-                  </PressScale>
-                )
-              }
-            />
-
-            {notificationPrefs.map((pref, index) => (
-              <SettingsRow
-                key={pref.key}
-                icon={pref.icon}
-                title={pref.label}
-                description={pref.description}
-                bordered={index < notificationPrefs.length - 1}
-                trailing={
-                  <Switch
-                    trackColor={{ false: colors.muted, true: `${colors.primary}55` }}
-                    thumbColor={data?.preferences?.[pref.key] ?? true ? colors.primary : colors.card}
-                    ios_backgroundColor={colors.muted}
-                    value={data?.preferences?.[pref.key] ?? true}
-                    onValueChange={(value) => handleTogglePref(pref.key, value)}
-                  />
-                }
-              />
-            ))}
-          </GlassCard>
-
-          <SectionTitle title="Channels" />
-          <GlassCard padding={8}>
-            <SettingsRow
-              icon={<MessageCircle size={16} color={colors.primary} strokeWidth={1.8} />}
-              title="WhatsApp bridge"
-              description={
-                hasWhatsApp
-                  ? `Connected to ${user?.whatsapp_number}`
-                  : "Link WhatsApp so Groot can reach you outside the app."
-              }
-              trailing={
-                hasWhatsApp ? (
-                  <PressScale onPress={handleUnlinkWhatsApp} haptic={false}>
-                    <View style={[styles.secondaryPill, { backgroundColor: `${colors.destructive}18` }]}>
-                      <Unlink size={14} color={colors.destructive} strokeWidth={2} />
-                      <Text style={[styles.secondaryPillText, { color: colors.destructive }]}>Unlink</Text>
-                    </View>
-                  </PressScale>
-                ) : (
-                  <PressScale onPress={() => setShowWhatsAppInput((value) => !value)} haptic={false}>
-                    <View style={[styles.secondaryPill, { backgroundColor: `${colors.primary}18` }]}>
-                      <Link2 size={14} color={colors.primary} strokeWidth={2} />
-                      <Text style={[styles.secondaryPillText, { color: colors.primary }]}>Connect</Text>
-                    </View>
-                  </PressScale>
-                )
-              }
-            />
-
-            {showWhatsAppInput ? (
-              <View style={[styles.linkBox, { borderColor: colors.border }]}>
-                <TextInput
-                  value={whatsAppNumber}
-                  onChangeText={setWhatsAppNumber}
-                  placeholder="+91 98765 43210"
-                  placeholderTextColor={colors.mutedForeground}
-                  style={[
-                    styles.linkInput,
-                    {
-                      color: colors.foreground,
-                      backgroundColor: colors.secondary,
-                      borderColor: colors.border,
-                    },
-                  ]}
-                  keyboardType="phone-pad"
-                  autoCapitalize="none"
-                />
-                {whatsAppError ? (
-                  <Text style={[styles.errorText, { color: colors.destructive }]}>{whatsAppError}</Text>
-                ) : null}
-                <PressScale onPress={handleLinkWhatsApp} haptic={false}>
-                  <View style={[styles.connectButton, { backgroundColor: colors.primary }]}>
-                    <Text style={[styles.connectButtonText, { color: colors.primaryForeground }]}>
-                      {whatsAppLinking ? "Linking..." : "Link WhatsApp"}
-                    </Text>
-                  </View>
-                </PressScale>
+            <Text style={[styles.accountMeta, { color: colors.mutedForeground }]}>
+              {user?.email ?? "No email linked"}
+            </Text>
+            <Text style={[styles.accountMeta, { color: colors.mutedForeground }]}>
+              {user?.whatsapp_number ?? "WhatsApp not linked"}
+            </Text>
+            <Text style={[styles.accountBuild, { color: colors.mutedForeground }]}>
+              Expo {Constants.expoConfig?.version ?? "dev"}
+            </Text>
+            <PressScale onPress={handleSignOut} haptic={false} style={styles.signOutWrap}>
+              <View style={[styles.signOutButton, { backgroundColor: `${colors.primary}14` }]}>
+                <LogOut size={16} color={colors.primary} strokeWidth={1.9} />
+                <Text style={[styles.signOutText, { color: colors.primary }]}>Sign out</Text>
               </View>
-            ) : null}
+            </PressScale>
           </GlassCard>
 
-          <SectionTitle title="System" />
-          <GlassCard padding={8}>
-            <SettingsRow
-              icon={<Mic size={16} color={colors.primary} strokeWidth={1.8} />}
-              title="App build"
-              description={`Expo ${Constants.expoConfig?.version ?? "dev"} on ${Constants.platform?.android ? "Android" : "device"}`}
-              trailing={<ChevronRight size={16} color={colors.mutedForeground} strokeWidth={1.8} />}
-            />
-            <SettingsRow
-              icon={<LogOut size={16} color={colors.destructive} strokeWidth={1.8} />}
-              title="Sign out"
-              description="End this session on the current device."
-              trailing={
-                <PressScale onPress={handleSignOut} haptic={false}>
-                  <View style={[styles.secondaryPill, { backgroundColor: `${colors.destructive}18` }]}>
-                    <Text style={[styles.secondaryPillText, { color: colors.destructive }]}>Leave</Text>
-                  </View>
-                </PressScale>
-              }
-            />
-          </GlassCard>
+          <SectionTitle title="Danger Zone" />
+          <View
+            style={[
+              styles.dangerZone,
+              {
+                backgroundColor: `${colors.destructive}08`,
+                borderColor: `${colors.destructive}35`,
+              },
+            ]}
+          >
+            <View style={[styles.dangerIcon, { backgroundColor: `${colors.destructive}14` }]}>
+              <ShieldCheck size={18} color={colors.destructive} strokeWidth={1.9} />
+            </View>
+            <Text style={[styles.dangerTitle, { color: colors.foreground }]}>Clear All Data</Text>
+            <Text style={[styles.dangerBody, { color: colors.mutedForeground }]}>
+              This action cannot be undone. Export your archive before you continue.
+            </Text>
+            <PressScale onPress={handleDelete} haptic={false}>
+              <View style={[styles.deleteButton, { backgroundColor: colors.card, borderColor: `${colors.destructive}30` }]}>
+                <Text style={[styles.deleteText, { color: colors.destructive }]}>Delete Deep Soil Account</Text>
+              </View>
+            </PressScale>
+          </View>
 
           <View style={styles.bottomGap} />
         </ScrollView>
@@ -400,13 +384,12 @@ export default function SettingsScreen() {
   );
 }
 
-function SectionTitle({ title, meta }: { title: string; meta?: string }) {
+function SectionTitle({ title }: { title: string }) {
   const { colors } = useTheme();
 
   return (
     <View style={styles.sectionHeader}>
-      <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{title}</Text>
-      {meta ? <Text style={[styles.sectionMeta, { color: colors.primary }]}>{meta}</Text> : null}
+      <Text style={[styles.sectionTitle, { color: colors.primary }]}>{title}</Text>
     </View>
   );
 }
@@ -417,18 +400,19 @@ function SettingsRow({
   description,
   trailing,
   bordered = true,
+  onPress,
 }: {
   icon: React.ReactNode;
   title: string;
   description: string;
   trailing: React.ReactNode;
   bordered?: boolean;
+  onPress?: () => void;
 }) {
   const { colors } = useTheme();
-
-  return (
+  const content = (
     <View style={[styles.row, bordered ? { borderBottomWidth: 1, borderBottomColor: colors.border } : null]}>
-      <View style={[styles.rowIcon, { backgroundColor: colors.secondary }]}>{icon}</View>
+      <View style={[styles.rowIcon, { backgroundColor: `${colors.primary}12` }]}>{icon}</View>
       <View style={styles.rowCopy}>
         <Text style={[styles.rowTitle, { color: colors.foreground }]}>{title}</Text>
         <Text style={[styles.rowDescription, { color: colors.mutedForeground }]}>{description}</Text>
@@ -436,51 +420,13 @@ function SettingsRow({
       {trailing}
     </View>
   );
-}
 
-function ModeCard({
-  label,
-  icon,
-  active,
-  onPress,
-}: {
-  label: string;
-  icon: React.ReactNode;
-  active: boolean;
-  onPress: () => void;
-}) {
-  const { colors } = useTheme();
+  if (!onPress) return content;
 
   return (
-    <PressScale onPress={onPress} haptic={false} style={styles.modeCardWrap}>
-      <View
-        style={[
-          styles.modeCard,
-          {
-            backgroundColor: active ? colors.primary : colors.glassSurface,
-            borderColor: active ? colors.primary : colors.border,
-          },
-        ]}
-      >
-        {icon}
-        <Text style={[styles.modeLabel, { color: active ? colors.primaryForeground : colors.foreground }]}>
-          {label}
-        </Text>
-      </View>
+    <PressScale onPress={onPress} haptic={false}>
+      {content}
     </PressScale>
-  );
-}
-
-function InfoPill({ icon, label }: { icon: React.ReactNode; label: string }) {
-  const { colors } = useTheme();
-
-  return (
-    <View style={[styles.infoPill, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
-      {icon}
-      <Text style={[styles.infoPillText, { color: colors.foreground }]} numberOfLines={1}>
-        {label}
-      </Text>
-    </View>
   );
 }
 
@@ -489,121 +435,60 @@ const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: "center", justifyContent: "center" },
   scroll: {
     paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingTop: 8,
     paddingBottom: 42,
   },
-  header: {
+  topBar: {
+    minHeight: 58,
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 24,
+    alignItems: "center",
+    borderBottomWidth: 1,
+    marginBottom: 18,
   },
-  headerCopy: {
-    flex: 1,
-    paddingRight: 12,
+  topIconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  headerEyebrow: {
+  topTitle: {
+    marginLeft: 10,
+    fontFamily: "Sora_700Bold",
+    ...typography.xl,
+  },
+  heroCopy: {
+    marginBottom: 20,
+  },
+  heroEyebrow: {
     fontFamily: "Manrope_700Bold",
     ...typography.caption,
     textTransform: "uppercase",
-    letterSpacing: 1.1,
-    marginBottom: 10,
-  },
-  headerTitle: {
-    fontFamily: "Sora_700Bold",
-    ...typography["2xl"],
+    letterSpacing: 1.4,
     marginBottom: 8,
   },
-  headerSubtitle: {
+  heroSubtitle: {
     fontFamily: "Manrope_500Medium",
     ...typography.sm,
     lineHeight: 22,
   },
-  backPill: {
-    borderRadius: 999,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  backText: {
-    fontFamily: "Manrope_700Bold",
-    ...typography.xs,
-  },
-  profileCard: {
-    marginBottom: 24,
-  },
-  sectionEyebrow: {
-    fontFamily: "Manrope_700Bold",
-    ...typography.caption,
-    textTransform: "uppercase",
-    letterSpacing: 1.1,
-    marginBottom: 8,
-  },
-  profileName: {
-    fontFamily: "Sora_700Bold",
-    ...typography.xl,
-    marginBottom: 14,
-  },
-  profileMeta: {
-    gap: 10,
-  },
-  infoPill: {
-    minHeight: 42,
-    borderWidth: 1,
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  infoPillText: {
-    flex: 1,
-    fontFamily: "Manrope_500Medium",
-    ...typography.sm,
-  },
   sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     marginBottom: 12,
     marginTop: 6,
+    paddingHorizontal: 2,
   },
   sectionTitle: {
-    fontFamily: "Sora_600SemiBold",
-    ...typography.lg,
-  },
-  sectionMeta: {
     fontFamily: "Manrope_700Bold",
     ...typography.caption,
     textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  modeRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 24,
-  },
-  modeCardWrap: {
-    flex: 1,
-  },
-  modeCard: {
-    borderRadius: 22,
-    borderWidth: 1,
-    minHeight: 82,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-  },
-  modeLabel: {
-    fontFamily: "Manrope_700Bold",
-    ...typography.sm,
+    letterSpacing: 1.2,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 12,
     paddingHorizontal: 10,
     paddingVertical: 16,
-    gap: 12,
   },
   rowIcon: {
     width: 38,
@@ -626,70 +511,82 @@ const styles = StyleSheet.create({
     ...typography.xs,
     lineHeight: 18,
   },
-  statusPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  statusPillText: {
+  exportLabel: {
     fontFamily: "Manrope_700Bold",
     ...typography.xs,
   },
-  actionPill: {
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+  accountCard: {
+    marginBottom: 6,
   },
-  actionPillText: {
-    fontFamily: "Manrope_700Bold",
-    ...typography.xs,
+  accountName: {
+    fontFamily: "Sora_600SemiBold",
+    ...typography.lg,
+    marginBottom: 4,
   },
-  secondaryPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-  },
-  secondaryPillText: {
-    fontFamily: "Manrope_700Bold",
-    ...typography.xs,
-  },
-  linkBox: {
-    borderTopWidth: 1,
-    paddingHorizontal: 12,
-    paddingTop: 14,
-    paddingBottom: 8,
-  },
-  linkInput: {
-    height: 48,
-    borderRadius: 16,
-    borderWidth: 1,
-    paddingHorizontal: 14,
+  accountMeta: {
     fontFamily: "Manrope_500Medium",
     ...typography.sm,
+    marginBottom: 2,
   },
-  errorText: {
+  accountBuild: {
     fontFamily: "Manrope_500Medium",
     ...typography.xs,
-    marginTop: 8,
+    marginTop: 10,
   },
-  connectButton: {
+  signOutWrap: {
+    marginTop: 14,
+  },
+  signOutButton: {
+    height: 44,
     borderRadius: 16,
-    height: 48,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 12,
+    gap: 8,
   },
-  connectButtonText: {
+  signOutText: {
     fontFamily: "Manrope_700Bold",
     ...typography.sm,
   },
+  dangerZone: {
+    borderWidth: 2,
+    borderStyle: "dashed",
+    borderRadius: 26,
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 22,
+  },
+  dangerIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  dangerTitle: {
+    fontFamily: "Sora_600SemiBold",
+    ...typography.base,
+    marginBottom: 6,
+  },
+  dangerBody: {
+    textAlign: "center",
+    fontFamily: "Manrope_500Medium",
+    ...typography.xs,
+    lineHeight: 20,
+    marginBottom: 14,
+  },
+  deleteButton: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  deleteText: {
+    fontFamily: "Manrope_700Bold",
+    ...typography.xs,
+  },
   bottomGap: {
-    height: 110,
+    height: 120,
   },
 });

@@ -38,7 +38,7 @@ import { GlassCard } from "../../components/ui/glass-card";
 import { GradientBackground } from "../../components/ui/gradient-background";
 import { SectionHeader } from "../../components/ui/section-header";
 import { PressScale } from "../../components/ui/press-scale";
-import { TabSwipeView } from "../../components/ui/tab-swipe-view";
+
 import { StepsCard } from "../../components/ui/steps-card";
 import { MoodMeadow } from "../../components/garden/mood-meadow";
 import type { Habit } from "../../../shared/types/api";
@@ -479,7 +479,7 @@ export default function PulseScreen() {
   }
 
   return (
-    <TabSwipeView currentTab="mood">
+    <>
       <SafeAreaView style={s.safe}>
       <GradientBackground>
         <ScrollView
@@ -596,7 +596,7 @@ export default function PulseScreen() {
           setShowNewHabit(false);
         }}
       />
-    </TabSwipeView>
+    </>
   );
 }
 

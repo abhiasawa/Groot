@@ -27,7 +27,7 @@ export function GradientBackground({ children, colors: overrideColors }: Gradien
     >
       <View
         pointerEvents="none"
-        style={[styles.veil, { backgroundColor: `${colors.background}CC` }]}
+        style={[styles.veil, { backgroundColor: `${colors.background}88` }]}
       />
       <View
         pointerEvents="none"

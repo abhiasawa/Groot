@@ -23,7 +23,7 @@ import { useTheme } from "../../lib/theme/provider";
 import { typography } from "../../constants/typography";
 import { MOOD_LABELS, getMoodColor } from "../../constants/mood";
 import { MoodFlower } from "../illustrations/flowers";
-import { StreakVine } from "./streak-vine";
+
 import type { DailyMood } from "../../../shared/types/api";
 
 // ── Types ────────────────────────────────────
@@ -302,17 +302,6 @@ function WeekRow({ days, onDayPress }: { days: DayCell[]; onDayPress: (day: DayC
 
         return (
           <View key={day.date} style={[rowS.cell, { width: CELL_SIZE, height: CELL_SIZE + 12 }]}>
-            {/* Vine connector to previous day */}
-            {day.showVine && (
-              <View style={rowS.vineWrap}>
-                <StreakVine
-                  streakLength={day.streakLength}
-                  width={CELL_PADDING + 4}
-                  height={CELL_SIZE * 0.4}
-                  active={day.streakLength > 0}
-                />
-              </View>
-            )}
             <Pressable
               onPress={() => day.score !== null && onDayPress(day)}
               style={rowS.flowerWrap}
@@ -355,11 +344,7 @@ const rowS = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  vineWrap: {
-    position: "absolute",
-    left: -CELL_PADDING - 2,
-    top: "50%",
-  },
+
   dayNum: {
     fontFamily: "Manrope_400Regular",
     fontSize: 9,

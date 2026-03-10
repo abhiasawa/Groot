@@ -29,7 +29,7 @@ import { PressScale } from "../components/ui/press-scale";
 import { SectionHeader } from "../components/ui/section-header";
 import { PillBadge } from "../components/ui/pill-badge";
 import { DeepScreenHeader } from "../components/ui/deep-screen-header";
-import { TabSwipeView } from "../components/ui/tab-swipe-view";
+
 
 import type { Task } from "../../shared/types/api";
 
@@ -310,7 +310,7 @@ export default function TasksScreen() {
     </SafeAreaView>
   );
 
-  return isTabRoute ? <TabSwipeView currentTab="tasks">{content}</TabSwipeView> : content;
+  return content;
 }
 
 function TaskRow({

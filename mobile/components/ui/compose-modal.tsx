@@ -17,13 +17,12 @@ import * as ImagePicker from "expo-image-picker";
 import { File as ExpoFile } from "expo-file-system";
 import { Audio } from "expo-av";
 import {
-  X,
   Send,
   Mic,
   Image as ImageIcon,
   Camera,
   Square,
-  Sparkles,
+  X,
 } from "lucide-react-native";
 
 import { useTheme } from "../../lib/theme/provider";
@@ -347,18 +346,18 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
             ]}
             onPress={() => {}}
           >
-            {/* ── Header ── */}
+            <View style={[s.handle, { backgroundColor: colors.border }]} />
+
             <View style={s.header}>
-              <View style={s.headerLeft}>
-                <Sparkles size={18} color={colors.primary} strokeWidth={2} />
-                <View>
-                  <Text style={[s.headerEyebrow, { color: colors.primary }]}>Seed capture</Text>
-                  <Text style={[s.headerTitle, { color: colors.foreground }]}>
-                    Plant a whisper
-                  </Text>
-                </View>
+              <View style={s.headerCopy}>
+                <Text style={[s.headerTitle, { color: colors.foreground }]}>
+                  Talk to Groot
+                </Text>
+                <Text style={[s.headerSubtitle, { color: colors.mutedForeground }]}>
+                  Share a thought, photo, or voice note.
+                </Text>
               </View>
-              <Pressable onPress={handleClose} hitSlop={12}>
+              <Pressable onPress={handleClose} hitSlop={12} style={s.closeButton}>
                 <X size={20} color={colors.mutedForeground} />
               </Pressable>
             </View>
@@ -366,9 +365,7 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
             {/* ── Reply bubble ── */}
             {reply && (
               <View style={[s.replyBubble, { backgroundColor: `${colors.primary}10` }]}>
-                <Text style={[s.replyText, { color: colors.foreground }]}>
-                  {reply}
-                </Text>
+                <Text style={[s.replyText, { color: colors.foreground }]}>{reply}</Text>
                 <Pressable
                   onPress={() => setReply(null)}
                   style={[s.replyDismiss, { backgroundColor: `${colors.primary}18` }]}
@@ -446,7 +443,7 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
                 <TextInput
                   ref={inputRef}
                   style={[s.input, { color: colors.foreground }]}
-                  placeholder={imagePreview ? "Add context to this capture..." : "How was your day?"}
+                  placeholder={imagePreview ? "Add a note..." : "How was your day?"}
                   placeholderTextColor={colors.mutedForeground}
                   value={text}
                   onChangeText={setText}
@@ -491,24 +488,24 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
                     {/* Voice is primary action — larger, emphasised */}
                     <Pressable
                       onPress={startRecording}
-                      style={[s.actionBtn, s.voiceBtn, { backgroundColor: `${colors.primary}15`, borderColor: `${colors.primary}30` }]}
+                      style={[s.actionPill, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}30` }]}
                     >
-                      <Mic size={22} color={colors.primary} strokeWidth={2.2} />
-                      <Text style={[s.actionLabel, s.voiceBtnLabel, { color: colors.primary }]}>Whisper</Text>
+                      <Mic size={16} color={colors.primary} strokeWidth={2.2} />
+                      <Text style={[s.actionLabel, { color: colors.primary }]}>Voice</Text>
                     </Pressable>
                     <Pressable
                       onPress={pickImage}
-                      style={[s.actionBtn, s.secondaryBtn, { backgroundColor: `${colors.accent}08` }]}
+                      style={[s.actionPill, { backgroundColor: colors.secondary, borderColor: colors.border }]}
                     >
-                      <ImageIcon size={16} color={colors.accent} strokeWidth={1.8} />
-                      <Text style={[s.actionLabel, { color: colors.accent }]}>Archive</Text>
+                      <ImageIcon size={16} color={colors.foreground} strokeWidth={1.8} />
+                      <Text style={[s.actionLabel, { color: colors.foreground }]}>Gallery</Text>
                     </Pressable>
                     <Pressable
                       onPress={takePhoto}
-                      style={[s.actionBtn, s.secondaryBtn, { backgroundColor: `${colors.muted}` }]}
+                      style={[s.actionPill, { backgroundColor: colors.secondary, borderColor: colors.border }]}
                     >
-                      <Camera size={16} color={colors.mutedForeground} strokeWidth={1.8} />
-                      <Text style={[s.actionLabel, { color: colors.mutedForeground }]}>Capture</Text>
+                      <Camera size={16} color={colors.foreground} strokeWidth={1.8} />
+                      <Text style={[s.actionLabel, { color: colors.foreground }]}>Camera</Text>
                     </Pressable>
                   </>
                 )}
@@ -527,35 +524,47 @@ const s = StyleSheet.create({
   overlay: {
     flex: 1,
     justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.45)",
+    backgroundColor: "rgba(0,0,0,0.28)",
   },
   sheet: {
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 12,
     minHeight: 200,
   },
+  handle: {
+    alignSelf: "center",
+    width: 56,
+    height: 5,
+    borderRadius: 999,
+    marginBottom: 16,
+  },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "center",
     marginBottom: 18,
+    minHeight: 40,
   },
-  headerLeft: {
-    flexDirection: "row",
+  headerCopy: {
     alignItems: "center",
-    gap: 8,
-  },
-  headerEyebrow: {
-    fontFamily: "Manrope_700Bold",
-    ...typography.caption,
-    textTransform: "uppercase",
-    letterSpacing: 1.1,
-    marginBottom: 2,
+    paddingHorizontal: 28,
   },
   headerTitle: {
     fontFamily: "Sora_700Bold",
     ...typography.lg,
+    textAlign: "center",
+  },
+  headerSubtitle: {
+    fontFamily: "Manrope_500Medium",
+    ...typography.sm,
+    marginTop: 4,
+    textAlign: "center",
+  },
+  closeButton: {
+    position: "absolute",
+    right: 0,
+    top: 8,
   },
 
   // ── Reply ──
@@ -665,29 +674,29 @@ const s = StyleSheet.create({
   inputRow: {
     flexDirection: "row",
     alignItems: "flex-end",
-    borderRadius: 22,
+    borderRadius: 24,
     borderWidth: 1,
     paddingLeft: 16,
-    paddingRight: 6,
-    paddingVertical: 6,
+    paddingRight: 8,
+    paddingVertical: 8,
     marginBottom: 12,
   },
   input: {
     flex: 1,
     fontFamily: "Manrope_400Regular",
     ...typography.sm,
-    maxHeight: 120,
-    minHeight: 40,
-    paddingTop: Platform.OS === "ios" ? 10 : 8,
-    paddingBottom: 8,
+    maxHeight: 100,
+    minHeight: 24,
+    paddingTop: Platform.OS === "ios" ? 10 : 6,
+    paddingBottom: 10,
   },
   sendBtn: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: "center",
     alignItems: "center",
-    marginLeft: 6,
+    marginLeft: 8,
   },
 
   // ── Actions ──
@@ -707,21 +716,18 @@ const s = StyleSheet.create({
   actionBtnWide: {
     flex: 1,
   },
-  voiceBtn: {
-    flex: 1.4,
+  actionPill: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 999,
     borderWidth: 1,
-    paddingVertical: 14,
-  },
-  voiceBtnLabel: {
-    fontFamily: "Sora_600SemiBold",
-    ...typography.sm,
-  },
-  secondaryBtn: {
-    flex: 0.8,
-    paddingVertical: 10,
   },
   actionLabel: {
     fontFamily: "Manrope_600SemiBold",
-    ...typography.xs,
+    ...typography.sm,
   },
 });

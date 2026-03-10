@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/immutability */
 import React, { useEffect } from "react";
-import { View, StyleSheet, type ViewStyle } from "react-native";
+import { View, StyleSheet, type StyleProp, type ViewStyle } from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -13,7 +13,7 @@ import { useTheme } from "../../lib/theme/provider";
 
 interface GlassCardProps {
   children: React.ReactNode;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   accentColor?: string;
   delay?: number;
   padding?: number;

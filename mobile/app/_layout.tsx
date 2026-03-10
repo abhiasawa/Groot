@@ -195,9 +195,17 @@ export default function RootLayout() {
                 <Stack screenOptions={{ headerShown: false }}>
                   <Stack.Screen name="(auth)" />
                   <Stack.Screen name="(tabs)" />
+                  <Stack.Screen
+                    name="capture"
+                    options={{
+                      presentation: "transparentModal",
+                      animation: "fade",
+                      contentStyle: { backgroundColor: "transparent" },
+                    }}
+                  />
+                  <Stack.Screen name="onboarding" />
                   <Stack.Screen name="tasks" />
                   <Stack.Screen name="insights" />
-                  <Stack.Screen name="topics" />
                   <Stack.Screen name="profile" />
                   <Stack.Screen name="settings" />
                 </Stack>

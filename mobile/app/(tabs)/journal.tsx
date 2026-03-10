@@ -33,7 +33,7 @@ import { PressScale } from "../../components/ui/press-scale";
 import { PillBadge } from "../../components/ui/pill-badge";
 import { MediaPlayer } from "../../components/ui/media-player";
 import { SearchInput } from "../../components/ui/search-input";
-import { TabSwipeView } from "../../components/ui/tab-swipe-view";
+
 
 const FILTERS = [
   { key: "all", label: "All" },
@@ -103,7 +103,6 @@ export default function JournalScreen() {
   }, [memories]);
 
   return (
-    <TabSwipeView currentTab="journal">
       <SafeAreaView style={styles.safe}>
         <GradientBackground>
           <ScrollView
@@ -298,7 +297,6 @@ export default function JournalScreen() {
           <MemoryModal memory={selectedMemory} onClose={() => setSelectedMemory(null)} />
         </GradientBackground>
       </SafeAreaView>
-    </TabSwipeView>
   );
 }
 

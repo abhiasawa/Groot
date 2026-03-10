@@ -13,6 +13,8 @@
     "version:major": "node scripts/bump-version.js major"
   },
   "dependencies": {
+    "@expo-google-fonts/inter": "^0.4.2",
+    "@expo-google-fonts/jetbrains-mono": "^0.4.1",
     "@expo-google-fonts/manrope": "^0.4.2",
     "@expo-google-fonts/sora": "^0.4.2",
     "@expo/vector-icons": "^15.0.3",
