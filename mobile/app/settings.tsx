@@ -1,11 +1,10 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   View,
 } from "react-native";
@@ -13,52 +12,27 @@ import { useRouter, useSegments } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
-import * as SecureStore from "expo-secure-store";
 import Constants from "expo-constants";
 import {
   ArrowLeft,
-  ChevronRight,
   Code2,
   Download,
-  Fingerprint,
-  Leaf,
   LogOut,
   ShieldCheck,
-  SlidersHorizontal,
-  Volume2,
 } from "lucide-react-native";
 
 import { GlassCard } from "../components/ui/glass-card";
 import { GradientBackground } from "../components/ui/gradient-background";
 import { PressScale } from "../components/ui/press-scale";
 import { ApiError, apiFetch } from "../lib/api/client";
-import { useUpdatePreference } from "../lib/api/mutations";
-import { useCurrentUser, useSettings } from "../lib/api/queries";
+import { useCurrentUser } from "../lib/api/queries";
 import { useAuth } from "../lib/auth/provider";
 import { useTheme } from "../lib/theme/provider";
 import { typography } from "../constants/typography";
 
-type PreferenceKey =
-  | "noise_suppression"
-  | "on_device_processing"
-  | "biometric_lock";
-
-function preferenceValue(
-  preferences: Record<string, boolean> | undefined,
-  key: PreferenceKey,
-  fallback: boolean,
-) {
-  return preferences?.[key] ?? fallback;
-}
-
 function buildMarkdownExport(payload: Record<string, unknown>) {
   const user = (payload.user as Record<string, unknown> | null) ?? null;
-  const profile = Array.isArray(payload.profile) ? payload.profile : [];
   const messages = Array.isArray(payload.messages) ? payload.messages : [];
-  const habits = Array.isArray(payload.habits) ? payload.habits : [];
-  const tasks = Array.isArray(payload.tasks) ? payload.tasks : [];
-  const reminders = Array.isArray(payload.reminders) ? payload.reminders : [];
-  const reports = Array.isArray(payload.weekly_reports) ? payload.weekly_reports : [];
 
   return [
     "# Groot Export",
@@ -68,26 +42,13 @@ function buildMarkdownExport(payload: Record<string, unknown>) {
     "## Profile",
     `- Name: ${String(user?.display_name ?? "Unknown")}`,
     `- Email: ${String(user?.email ?? "Unknown")}`,
-    `- WhatsApp: ${String(user?.whatsapp_number ?? "Not linked")}`,
     "",
-    "## Stats",
-    `- Profile facts: ${profile.length}`,
-    `- Messages: ${messages.length}`,
-    `- Habits: ${habits.length}`,
-    `- Tasks: ${tasks.length}`,
-    `- Reminders: ${reminders.length}`,
-    `- Weekly reports: ${reports.length}`,
+    "## Messages",
+    `Total: ${messages.length}`,
     "",
-    "## Recent Messages",
-    ...messages.slice(0, 10).map((message) => {
+    ...messages.slice(0, 20).map((message) => {
       const item = message as Record<string, unknown>;
       return `- ${String(item.created_at ?? "")}: ${String(item.content ?? item.media_description ?? "No content")}`;
-    }),
-    "",
-    "## Recent Reports",
-    ...reports.slice(0, 5).map((report) => {
-      const item = report as Record<string, unknown>;
-      return `- ${String(item.week_start ?? "")}: ${String(item.summary ?? "No summary")}`;
     }),
     "",
   ].join("\n");
@@ -99,38 +60,19 @@ export default function SettingsScreen() {
   const router = useRouter();
   const segments = useSegments();
   const isTabRoute = segments[0] === "(tabs)";
-  const { data, isLoading, refetch } = useSettings();
-  const { data: meData, refetch: refetchMe } = useCurrentUser();
-  const updatePref = useUpdatePreference();
+  const { data: meData, isLoading, refetch } = useCurrentUser();
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [exporting, setExporting] = useState<null | "markdown" | "json">(null);
 
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
-    Promise.all([refetch(), refetchMe()])
+    refetch()
       .catch(() => {})
       .finally(() => setIsRefreshing(false));
-  }, [refetch, refetchMe]);
+  }, [refetch]);
 
   const user = meData?.user;
-  const preferences = data?.preferences;
-
-  const toggles = useMemo(
-    () => ({
-      noiseSuppression: preferenceValue(preferences, "noise_suppression", true),
-      onDeviceProcessing: preferenceValue(preferences, "on_device_processing", true),
-      biometricLock: preferenceValue(preferences, "biometric_lock", false),
-    }),
-    [preferences],
-  );
-
-  const setPreference = useCallback(
-    (key: PreferenceKey, value: boolean) => {
-      updatePref.mutate({ key, value });
-    },
-    [updatePref],
-  );
 
   const exportData = useCallback(
     async (format: "markdown" | "json") => {
@@ -165,20 +107,10 @@ export default function SettingsScreen() {
     [],
   );
 
-  const handleProfileOptimization = useCallback(async () => {
-    const token = await SecureStore.getItemAsync("groot-jwt");
-    Alert.alert(
-      "Profile Optimization",
-      token
-        ? "Voice profile tuning is now enabled for this device profile. Capture a few more voice seeds to improve recognition."
-        : "Sign in again if you want Groot to sync voice profile tuning across devices.",
-    );
-  }, []);
-
   const handleDelete = useCallback(() => {
     Alert.alert(
-      "Delete Deep Soil Account",
-      "This action is not reversible. Use export first if you want to keep a copy of your data.",
+      "Delete Account",
+      "This action is not reversible. Export your data first if you want to keep a copy.",
       [{ text: "Cancel", style: "cancel" }, { text: "Delete", style: "destructive" }],
     );
   }, []);
@@ -235,81 +167,33 @@ export default function SettingsScreen() {
                 <ArrowLeft size={18} color={colors.primary} />
               </View>
             </PressScale>
-            <Text style={[styles.topTitle, { color: colors.foreground }]}>Settings & privacy</Text>
+            <Text style={[styles.topTitle, { color: colors.foreground }]}>Settings</Text>
           </View>
 
-          <View style={styles.heroCopy}>
-            <Text style={[styles.heroEyebrow, { color: colors.primary }]}>Deep Soil</Text>
-            <Text style={[styles.heroSubtitle, { color: colors.mutedForeground }]}>
-              Tune voice recognition, privacy, export, and device-level protection.
+          <SectionTitle title="Account" />
+          <GlassCard padding={16} style={styles.accountCard}>
+            <Text style={[styles.accountName, { color: colors.foreground }]}>
+              {user?.display_name ?? "Groot user"}
             </Text>
-          </View>
-
-          <SectionTitle title="Voice Profile" />
-          <GlassCard padding={8}>
-            <SettingsRow
-              icon={<SlidersHorizontal size={16} color={colors.primary} strokeWidth={1.8} />}
-              title="Profile Optimization"
-              description="Enhance voice recognition accuracy"
-              trailing={<ChevronRight size={18} color={colors.primary} strokeWidth={1.8} />}
-              onPress={handleProfileOptimization}
-            />
-            <SettingsRow
-              icon={<Volume2 size={16} color={colors.primary} strokeWidth={1.8} />}
-              title="Noise Suppression"
-              description="Filter background soil vibration sounds"
-              bordered={false}
-              trailing={
-                <Switch
-                  trackColor={{ false: colors.muted, true: `${colors.primary}66` }}
-                  thumbColor={toggles.noiseSuppression ? colors.primary : colors.card}
-                  ios_backgroundColor={colors.muted}
-                  value={toggles.noiseSuppression}
-                  onValueChange={(value) => setPreference("noise_suppression", value)}
-                />
-              }
-            />
+            <Text style={[styles.accountMeta, { color: colors.mutedForeground }]}>
+              {user?.email ?? "No email linked"}
+            </Text>
+            <Text style={[styles.accountBuild, { color: colors.mutedForeground }]}>
+              v{Constants.expoConfig?.version ?? "dev"}
+            </Text>
+            <PressScale onPress={handleSignOut} haptic={false} style={styles.signOutWrap}>
+              <View style={[styles.signOutButton, { backgroundColor: `${colors.primary}14` }]}>
+                <LogOut size={16} color={colors.primary} strokeWidth={1.9} />
+                <Text style={[styles.signOutText, { color: colors.primary }]}>Sign out</Text>
+              </View>
+            </PressScale>
           </GlassCard>
 
-          <SectionTitle title="Data Privacy" />
-          <GlassCard padding={8}>
-            <SettingsRow
-              icon={<Leaf size={16} color={colors.primary} strokeWidth={1.8} />}
-              title="On-device processing"
-              description="Process biometric data locally for maximum privacy"
-              trailing={
-                <Switch
-                  trackColor={{ false: colors.muted, true: `${colors.primary}66` }}
-                  thumbColor={toggles.onDeviceProcessing ? colors.primary : colors.card}
-                  ios_backgroundColor={colors.muted}
-                  value={toggles.onDeviceProcessing}
-                  onValueChange={(value) => setPreference("on_device_processing", value)}
-                />
-              }
-            />
-            <SettingsRow
-              icon={<Fingerprint size={16} color={colors.primary} strokeWidth={1.8} />}
-              title="Biometric Lock"
-              description="Require fingerprint or face ID to open"
-              bordered={false}
-              trailing={
-                <Switch
-                  trackColor={{ false: colors.muted, true: `${colors.primary}66` }}
-                  thumbColor={toggles.biometricLock ? colors.primary : colors.card}
-                  ios_backgroundColor={colors.muted}
-                  value={toggles.biometricLock}
-                  onValueChange={(value) => setPreference("biometric_lock", value)}
-                />
-              }
-            />
-          </GlassCard>
-
-          <SectionTitle title="Export & Data" />
+          <SectionTitle title="Export" />
           <GlassCard padding={8}>
             <SettingsRow
               icon={<Download size={16} color={colors.primary} strokeWidth={1.8} />}
               title="Export to Markdown"
-              description="Rich text format for notes"
               trailing={
                 <Text style={[styles.exportLabel, { color: colors.primary }]}>
                   {exporting === "markdown" ? "Exporting..." : "Download"}
@@ -320,7 +204,6 @@ export default function SettingsScreen() {
             <SettingsRow
               icon={<Code2 size={16} color={colors.primary} strokeWidth={1.8} />}
               title="Export to JSON"
-              description="Structured data for integration"
               trailing={
                 <Text style={[styles.exportLabel, { color: colors.primary }]}>
                   {exporting === "json" ? "Exporting..." : "Download"}
@@ -329,28 +212,6 @@ export default function SettingsScreen() {
               onPress={() => void exportData("json")}
               bordered={false}
             />
-          </GlassCard>
-
-          <SectionTitle title="Account" />
-          <GlassCard padding={16} style={styles.accountCard}>
-            <Text style={[styles.accountName, { color: colors.foreground }]}>
-              {user?.display_name ?? "Groot user"}
-            </Text>
-            <Text style={[styles.accountMeta, { color: colors.mutedForeground }]}>
-              {user?.email ?? "No email linked"}
-            </Text>
-            <Text style={[styles.accountMeta, { color: colors.mutedForeground }]}>
-              {user?.whatsapp_number ?? "WhatsApp not linked"}
-            </Text>
-            <Text style={[styles.accountBuild, { color: colors.mutedForeground }]}>
-              Expo {Constants.expoConfig?.version ?? "dev"}
-            </Text>
-            <PressScale onPress={handleSignOut} haptic={false} style={styles.signOutWrap}>
-              <View style={[styles.signOutButton, { backgroundColor: `${colors.primary}14` }]}>
-                <LogOut size={16} color={colors.primary} strokeWidth={1.9} />
-                <Text style={[styles.signOutText, { color: colors.primary }]}>Sign out</Text>
-              </View>
-            </PressScale>
           </GlassCard>
 
           <SectionTitle title="Danger Zone" />
@@ -368,11 +229,11 @@ export default function SettingsScreen() {
             </View>
             <Text style={[styles.dangerTitle, { color: colors.foreground }]}>Clear All Data</Text>
             <Text style={[styles.dangerBody, { color: colors.mutedForeground }]}>
-              This action cannot be undone. Export your archive before you continue.
+              This cannot be undone. Export your data first.
             </Text>
             <PressScale onPress={handleDelete} haptic={false}>
               <View style={[styles.deleteButton, { backgroundColor: colors.card, borderColor: `${colors.destructive}30` }]}>
-                <Text style={[styles.deleteText, { color: colors.destructive }]}>Delete Deep Soil Account</Text>
+                <Text style={[styles.deleteText, { color: colors.destructive }]}>Delete Account</Text>
               </View>
             </PressScale>
           </View>
@@ -397,14 +258,12 @@ function SectionTitle({ title }: { title: string }) {
 function SettingsRow({
   icon,
   title,
-  description,
   trailing,
   bordered = true,
   onPress,
 }: {
   icon: React.ReactNode;
   title: string;
-  description: string;
   trailing: React.ReactNode;
   bordered?: boolean;
   onPress?: () => void;
@@ -413,11 +272,8 @@ function SettingsRow({
   const content = (
     <View style={[styles.row, bordered ? { borderBottomWidth: 1, borderBottomColor: colors.border } : null]}>
       <View style={[styles.rowIcon, { backgroundColor: `${colors.primary}12` }]}>{icon}</View>
-      <View style={styles.rowCopy}>
-        <Text style={[styles.rowTitle, { color: colors.foreground }]}>{title}</Text>
-        <Text style={[styles.rowDescription, { color: colors.mutedForeground }]}>{description}</Text>
-      </View>
-      {trailing}
+      <Text style={[styles.rowTitle, { color: colors.foreground }]}>{title}</Text>
+      <View style={styles.rowTrailing}>{trailing}</View>
     </View>
   );
 
@@ -457,21 +313,6 @@ const styles = StyleSheet.create({
     fontFamily: "Sora_700Bold",
     ...typography.xl,
   },
-  heroCopy: {
-    marginBottom: 20,
-  },
-  heroEyebrow: {
-    fontFamily: "Manrope_700Bold",
-    ...typography.caption,
-    textTransform: "uppercase",
-    letterSpacing: 1.4,
-    marginBottom: 8,
-  },
-  heroSubtitle: {
-    fontFamily: "Manrope_500Medium",
-    ...typography.sm,
-    lineHeight: 22,
-  },
   sectionHeader: {
     marginBottom: 12,
     marginTop: 6,
@@ -497,20 +338,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  rowCopy: {
-    flex: 1,
-    paddingRight: 8,
-  },
   rowTitle: {
+    flex: 1,
     fontFamily: "Manrope_700Bold",
     ...typography.sm,
-    marginBottom: 4,
   },
-  rowDescription: {
-    fontFamily: "Manrope_500Medium",
-    ...typography.xs,
-    lineHeight: 18,
-  },
+  rowTrailing: {},
   exportLabel: {
     fontFamily: "Manrope_700Bold",
     ...typography.xs,

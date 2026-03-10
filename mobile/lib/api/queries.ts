@@ -2,55 +2,17 @@ import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "./client";
 
 import type {
-  HomeData,
   MemoriesResponse,
   CalendarDotsResponse,
-  StoriesResponse,
-  StoryStats,
-  MoodResponse,
-  TasksResponse,
-  HabitsResponse,
-  ReportsResponse,
-  TopicsData,
-  ProfileData,
-  SettingsResponse,
   MeResponse,
 } from "../../../shared/types/api";
 
 // ── Query key factory ────────────────────────
 
-/** Today screen API response */
-export interface TodayData {
-  greeting: string;
-  todayPrompt: string | null;
-  observation: string | null;
-  yesterdayMoment: string | null;
-  yesterdayMood: string | null;
-  recentMood: string | null;
-  habits: Array<{
-    name: string;
-    currentStreak: number;
-    checkedInToday: boolean;
-    targetUnit: string | null;
-  }>;
-}
-
 export const qk = {
-  today: ["today"] as const,
-  home: ["home"] as const,
   memories: (params?: MemoriesParams) => ["memories", params] as const,
   calendarDots: (yearMonth: string) => ["calendarDots", yearMonth] as const,
-  stories: ["stories"] as const,
-  storyStats: ["storyStats"] as const,
-  mood: (year: number) => ["mood", year] as const,
-  tasks: ["tasks"] as const,
-  habits: ["habits"] as const,
-  reports: ["reports"] as const,
-  topics: ["topics"] as const,
-  profile: ["profile"] as const,
-  settings: ["settings"] as const,
   currentUser: ["currentUser"] as const,
-  mirror: ["mirror"] as const,
 };
 
 // ── Param types ──────────────────────────────
@@ -64,24 +26,6 @@ export interface MemoriesParams {
 }
 
 // ── Hooks ────────────────────────────────────
-
-/** GET /api/mobile/today */
-export function useToday() {
-  return useQuery<TodayData>({
-    queryKey: qk.today,
-    queryFn: () => apiFetch<TodayData>("/api/mobile/today"),
-    staleTime: 30_000,
-  });
-}
-
-/** GET /api/garden/home */
-export function useHome() {
-  return useQuery<HomeData>({
-    queryKey: qk.home,
-    queryFn: () => apiFetch<HomeData>("/api/garden/home"),
-    staleTime: 30_000,
-  });
-}
 
 /** GET /api/memories */
 export function useMemories(params?: MemoriesParams) {
@@ -113,146 +57,11 @@ export function useCalendarDots(yearMonth: string) {
   });
 }
 
-/** GET /api/stories */
-export function useStories() {
-  return useQuery<StoriesResponse>({
-    queryKey: qk.stories,
-    queryFn: () => apiFetch<StoriesResponse>("/api/stories"),
-    staleTime: 30_000,
-  });
-}
-
-/** GET /api/stories?stats=true */
-export function useStoryStats() {
-  return useQuery<StoryStats>({
-    queryKey: qk.storyStats,
-    queryFn: () => apiFetch<StoryStats>("/api/stories?stats=true"),
-    staleTime: 30_000,
-  });
-}
-
-/** GET /api/mood?year=YYYY */
-export function useMood(year: number) {
-  return useQuery<MoodResponse>({
-    queryKey: qk.mood(year),
-    queryFn: () => apiFetch<MoodResponse>(`/api/mood?year=${year}`),
-    staleTime: 60_000,
-  });
-}
-
-/** GET /api/tasks */
-export function useTasks() {
-  return useQuery<TasksResponse>({
-    queryKey: qk.tasks,
-    queryFn: () => apiFetch<TasksResponse>("/api/tasks"),
-    staleTime: 30_000,
-  });
-}
-
-/** GET /api/habits?include=checkins */
-export function useHabits() {
-  return useQuery<HabitsResponse>({
-    queryKey: qk.habits,
-    queryFn: () => apiFetch<HabitsResponse>("/api/habits?include=checkins"),
-    staleTime: 30_000,
-  });
-}
-
-/** GET /api/reports */
-export function useReports() {
-  return useQuery<ReportsResponse>({
-    queryKey: qk.reports,
-    queryFn: () => apiFetch<ReportsResponse>("/api/reports"),
-    staleTime: 30_000,
-  });
-}
-
-/** GET /api/topics */
-export function useTopics() {
-  return useQuery<TopicsData>({
-    queryKey: qk.topics,
-    queryFn: () => apiFetch<TopicsData>("/api/topics"),
-    staleTime: 60_000,
-  });
-}
-
-/** GET /api/profile */
-export function useProfile() {
-  return useQuery<ProfileData>({
-    queryKey: qk.profile,
-    queryFn: () => apiFetch<ProfileData>("/api/profile"),
-    staleTime: 30_000,
-  });
-}
-
-/** GET /api/settings */
-export function useSettings() {
-  return useQuery<SettingsResponse>({
-    queryKey: qk.settings,
-    queryFn: () => apiFetch<SettingsResponse>("/api/settings"),
-    staleTime: 30_000,
-  });
-}
-
 /** GET /api/me */
 export function useCurrentUser() {
   return useQuery<MeResponse>({
     queryKey: qk.currentUser,
     queryFn: () => apiFetch<MeResponse>("/api/me"),
     staleTime: 300_000,
-  });
-}
-
-/** Mirror screen data */
-export interface MirrorData {
-  narrativeBio: string | null;
-  patterns: Array<{
-    id: string;
-    category: string;
-    title: string;
-    description: string;
-    confidence: number;
-    timeframe: string;
-  }>;
-  milestones: Array<{
-    id: string;
-    type: string;
-    title: string;
-    description: string;
-    achievedAt: string;
-    icon: string;
-  }>;
-  weeklyReports: Array<{
-    id: string;
-    week_start: string;
-    week_end: string;
-    summary: string;
-    key_topics: string[] | null;
-    mood_trend: string | null;
-    insights: string | null;
-    created_at: string;
-  }>;
-  profileFacts: Array<{
-    id: string;
-    key: string;
-    value: string;
-    confidence: number;
-    source: string;
-    lastMentioned: string | null;
-  }>;
-  stats: {
-    totalMessages: number;
-    totalMemories: number;
-    daysActive: number;
-    displayName: string | null;
-  };
-}
-
-/** GET /api/mobile/mirror */
-export function useMirror() {
-  return useQuery<MirrorData>({
-    queryKey: qk.mirror,
-    queryFn: () => apiFetch<MirrorData>("/api/mobile/mirror"),
-    staleTime: 120_000,
   });
 }

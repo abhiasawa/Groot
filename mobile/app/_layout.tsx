@@ -204,9 +204,6 @@ export default function RootLayout() {
                     }}
                   />
                   <Stack.Screen name="onboarding" />
-                  <Stack.Screen name="tasks" />
-                  <Stack.Screen name="insights" />
-                  <Stack.Screen name="profile" />
                   <Stack.Screen name="settings" />
                 </Stack>
               </NotificationBootstrap>

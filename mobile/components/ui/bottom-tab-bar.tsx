@@ -8,7 +8,7 @@ import { Plus } from "lucide-react-native";
 
 import { useTheme } from "../../lib/theme/provider";
 
-const TAB_ORDER = ["journal", "mood", "__fab__", "tasks", "settings"] as const;
+const TAB_ORDER = ["journal", "__fab__", "settings"] as const;
 
 function getTabLabel(name: string, title?: string) {
   if (title) return title;
