@@ -38,6 +38,7 @@ import {
   Check,
 } from "lucide-react-native";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { fonts, typography } from "../../constants/typography";
 import { apiFetch } from "../../lib/api/client";
 import { VoiceWaveform } from "../feed/voice-waveform";
@@ -72,6 +73,9 @@ interface ComposeModalProps {
   onClose: () => void;
   initialMode?: "text" | "voice" | "image" | null;
   initialPrompt?: string;
+  /** When set, modal operates in edit mode for an existing memory. */
+  editId?: string;
+  editContent?: string;
 }
 
 const PROMPTS = [
@@ -88,7 +92,9 @@ function randomPrompt() {
 
 // ── Main Component ──
 
-export function ComposeModal({ visible, onClose, initialMode, initialPrompt }: ComposeModalProps) {
+export function ComposeModal({ visible, onClose, initialMode, initialPrompt, editId, editContent }: ComposeModalProps) {
+  const isEditMode = !!editId;
+  const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
@@ -106,13 +112,16 @@ export function ComposeModal({ visible, onClose, initialMode, initialPrompt }: C
   const dotOpacity = useSharedValue(1);
   const dotStyle = useAnimatedStyle(() => ({ opacity: dotOpacity.value }));
 
-  // Pre-fill text from quick journal prompts
+  // Pre-fill text from edit mode or quick journal prompts
   useEffect(() => {
-    if (visible && initialPrompt) {
+    if (visible && isEditMode && editContent) {
+      setText(editContent);
+      setTimeout(() => inputRef.current?.focus(), 350);
+    } else if (visible && initialPrompt) {
       setText(initialPrompt);
       setTimeout(() => inputRef.current?.focus(), 350);
     }
-  }, [visible, initialPrompt]);
+  }, [visible, initialPrompt, isEditMode, editContent]);
 
   const triggeredModeRef = useRef<string | null>(null);
 
@@ -149,7 +158,7 @@ export function ComposeModal({ visible, onClose, initialMode, initialPrompt }: C
     onClose();
   }, [onClose]);
 
-  // ── Send Text ──
+  // ── Send Text (or update in edit mode) ──
   const handleSend = useCallback(async () => {
     const trimmed = text.trim();
     if (!trimmed && !imagePreview) return;
@@ -159,7 +168,14 @@ export function ComposeModal({ visible, onClose, initialMode, initialPrompt }: C
     setSending(true);
 
     try {
-      if (imagePreview) {
+      if (isEditMode && editId) {
+        // Edit mode — PATCH existing memory
+        await apiFetch(`/api/memories/${editId}`, {
+          method: "PATCH",
+          body: JSON.stringify({ content: trimmed }),
+        });
+        queryClient.invalidateQueries({ queryKey: ["memories"] });
+      } else if (imagePreview) {
         const base64 = await readFileAsBase64(imagePreview);
         await apiFetch<ComposeResponse>("/api/mobile/compose", {
           method: "POST",
@@ -188,7 +204,7 @@ export function ComposeModal({ visible, onClose, initialMode, initialPrompt }: C
     } catch {
       setSending(false);
     }
-  }, [text, imagePreview, imageMime, handleClose]);
+  }, [text, imagePreview, imageMime, handleClose, isEditMode, editId]);
 
   // ── Voice Recording ──
   const startRecording = useCallback(async () => {
@@ -328,7 +344,7 @@ export function ComposeModal({ visible, onClose, initialMode, initialPrompt }: C
 
               {/* Header */}
               <View style={s.header}>
-                <Text style={s.headerTitle}>New Thought</Text>
+                <Text style={s.headerTitle}>{isEditMode ? "Edit Thought" : "New Thought"}</Text>
                 <Pressable onPress={handleClose} hitSlop={12} style={s.closeButton}>
                   <X size={18} color="#999" />
                 </Pressable>
@@ -346,9 +362,9 @@ export function ComposeModal({ visible, onClose, initialMode, initialPrompt }: C
                       <View style={s.sentIcon}>
                         <Check size={18} color="#FFF" strokeWidth={2.5} />
                       </View>
-                      <Text style={s.sentTitle}>Captured</Text>
+                      <Text style={s.sentTitle}>{isEditMode ? "Updated" : "Captured"}</Text>
                     </View>
-                    <Text style={s.sentSubtitle}>Your thought is safe with me</Text>
+                    <Text style={s.sentSubtitle}>{isEditMode ? "Your thought has been updated" : "Your thought is safe with me"}</Text>
                   </Animated.View>
                 </Animated.View>
               )}
@@ -409,27 +425,31 @@ export function ComposeModal({ visible, onClose, initialMode, initialPrompt }: C
                   {/* Bottom bar: actions + send */}
                   <View style={s.bottomBar}>
                     <View style={s.modeButtons}>
-                      <Pressable
-                        onPress={startRecording}
-                        onLongPress={startRecording}
-                        onPressOut={() => {
-                          // Auto-send when finger lifts if recording (hold-to-record)
-                          if (recordingRef.current && recording) {
-                            stopRecording();
-                          }
-                        }}
-                        delayLongPress={300}
-                        style={s.modeBtn}
-                        hitSlop={6}
-                      >
-                        <Mic size={20} color="#999" strokeWidth={1.8} />
-                      </Pressable>
-                      <Pressable onPress={pickImage} style={s.modeBtn} hitSlop={6}>
-                        <ImageIcon size={20} color="#999" strokeWidth={1.8} />
-                      </Pressable>
-                      <Pressable onPress={takePhoto} style={s.modeBtn} hitSlop={6}>
-                        <Camera size={20} color="#999" strokeWidth={1.8} />
-                      </Pressable>
+                      {!isEditMode && (
+                        <>
+                          <Pressable
+                            onPress={startRecording}
+                            onLongPress={startRecording}
+                            onPressOut={() => {
+                              // Auto-send when finger lifts if recording (hold-to-record)
+                              if (recordingRef.current && recording) {
+                                stopRecording();
+                              }
+                            }}
+                            delayLongPress={300}
+                            style={s.modeBtn}
+                            hitSlop={6}
+                          >
+                            <Mic size={20} color="#999" strokeWidth={1.8} />
+                          </Pressable>
+                          <Pressable onPress={pickImage} style={s.modeBtn} hitSlop={6}>
+                            <ImageIcon size={20} color="#999" strokeWidth={1.8} />
+                          </Pressable>
+                          <Pressable onPress={takePhoto} style={s.modeBtn} hitSlop={6}>
+                            <Camera size={20} color="#999" strokeWidth={1.8} />
+                          </Pressable>
+                        </>
+                      )}
                     </View>
                     <Pressable
                       onPress={handleSend}

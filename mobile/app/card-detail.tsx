@@ -157,7 +157,19 @@ export default function CardDetailScreen() {
 
       {/* Floating action bar */}
       <Animated.View entering={FadeInUp.duration(300).delay(200)} style={styles.actionBar}>
-        <Pressable style={styles.actionBtn}>
+        <Pressable
+          onPress={() => {
+            router.push({
+              pathname: "/capture",
+              params: {
+                mode: "text",
+                editId: memory.id,
+                editContent: displayText ?? "",
+              },
+            });
+          }}
+          style={styles.actionBtn}
+        >
           <Pencil size={20} color="#1E1E1E" strokeWidth={1.8} />
         </Pressable>
         <Pressable style={styles.actionBtn}>

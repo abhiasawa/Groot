@@ -7,7 +7,11 @@ type CaptureMode = "text" | "voice" | "image";
 
 export default function CaptureScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ mode?: string }>();
+  const params = useLocalSearchParams<{
+    mode?: string;
+    editId?: string;
+    editContent?: string;
+  }>();
 
   const initialMode =
     params.mode === "voice" || params.mode === "image" || params.mode === "text"
@@ -18,6 +22,8 @@ export default function CaptureScreen() {
     <ComposeModal
       visible
       initialMode={initialMode}
+      editId={params.editId}
+      editContent={params.editContent}
       onClose={() => router.back()}
     />
   );
