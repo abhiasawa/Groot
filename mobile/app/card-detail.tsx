@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,8 +10,15 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { ArrowLeft, Trash2, Mic, Image as ImageIcon } from "lucide-react-native";
-import Animated, { FadeIn, SlideInUp } from "react-native-reanimated";
+import { ArrowLeft, Mic, Image as ImageIcon } from "lucide-react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  withDelay,
+  Easing,
+} from "react-native-reanimated";
 
 import { useMemories } from "../lib/api/queries";
 import { getCardColor } from "../constants/card-colors";
@@ -48,6 +55,33 @@ export default function CardDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data } = useMemories({ limit: 100 });
 
+  // Card expand animation — simulates shared element transition
+  const cardScale = useSharedValue(0.88);
+  const cardOpacity = useSharedValue(0);
+  const cardTranslateY = useSharedValue(40);
+  const contentOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    // Card expands in with spring physics
+    cardScale.value = withSpring(1, { damping: 14, stiffness: 180 });
+    cardOpacity.value = withTiming(1, { duration: 250, easing: Easing.out(Easing.cubic) });
+    cardTranslateY.value = withSpring(0, { damping: 16, stiffness: 160 });
+    // Content fades in slightly after card settles
+    contentOpacity.value = withDelay(150, withTiming(1, { duration: 300 }));
+  }, []);
+
+  const cardAnimStyle = useAnimatedStyle(() => ({
+    opacity: cardOpacity.value,
+    transform: [
+      { scale: cardScale.value },
+      { translateY: cardTranslateY.value },
+    ],
+  }));
+
+  const contentAnimStyle = useAnimatedStyle(() => ({
+    opacity: contentOpacity.value,
+  }));
+
   const memory = useMemo(() => {
     if (!data?.memories || !id) return null;
     return data.memories.find((m: Memory) => m.id === id) ?? null;
@@ -66,7 +100,7 @@ export default function CardDetailScreen() {
     );
   }
 
-  const category = (memory as unknown as Record<string, unknown>).card_category as string | undefined;
+  const category = memory.card_category;
   const color = getCardColor(category, memory.id, memory.content, memory.message_type);
   const label = categoryLabel(category);
   const isVoice = memory.message_type === "audio";
@@ -76,22 +110,21 @@ export default function CardDetailScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       {/* Top bar */}
-      <View style={styles.topBar}>
+      <Animated.View style={[styles.topBar, contentAnimStyle]}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={12}>
           <ArrowLeft size={20} color="#1A1A1A" strokeWidth={1.8} />
         </Pressable>
         <Text style={styles.timestamp}>{relativeTime(memory.created_at)}</Text>
         <View style={styles.backBtn} />
-      </View>
+      </Animated.View>
 
       <ScrollView
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        {/* Card surface */}
+        {/* Card surface — expand animation */}
         <Animated.View
-          entering={FadeIn.duration(300)}
-          style={[styles.card, { backgroundColor: color.bg }]}
+          style={[styles.card, { backgroundColor: color.bg }, cardAnimStyle]}
         >
           {/* Category + type badge */}
           <View style={styles.badges}>
@@ -126,8 +159,7 @@ export default function CardDetailScreen() {
           {/* Content */}
           {displayText ? (
             <Animated.Text
-              entering={SlideInUp.delay(100).duration(300)}
-              style={styles.content}
+              style={[styles.content, contentAnimStyle]}
             >
               {displayText}
             </Animated.Text>
@@ -137,7 +169,7 @@ export default function CardDetailScreen() {
         </Animated.View>
 
         {/* Metadata */}
-        <View style={styles.meta}>
+        <Animated.View style={[styles.meta, contentAnimStyle]}>
           <Text style={styles.metaLabel}>
             {new Date(memory.created_at).toLocaleDateString("en-US", {
               weekday: "long",
@@ -152,7 +184,7 @@ export default function CardDetailScreen() {
               minute: "2-digit",
             })}
           </Text>
-        </View>
+        </Animated.View>
       </ScrollView>
     </SafeAreaView>
   );

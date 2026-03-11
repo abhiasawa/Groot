@@ -37,6 +37,8 @@ export interface LLMResponse {
     detectedEmail?: string;
     /** True when the user is asking Groot to resend their last image/photo */
     lastImageRequest?: boolean;
+    /** AI-classified card category for the user's message */
+    cardCategory?: "task" | "idea" | "reflection" | "emotion" | "media" | null;
   };
   usage?: {
     inputTokens: number;

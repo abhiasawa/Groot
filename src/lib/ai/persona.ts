@@ -205,9 +205,17 @@ Use ONLY these four:
 
 Use snake_case for keys. Use ONE canonical key per fact (e.g. always "weight" for weight, not "current_weight_kg" sometimes and "weight_today" other times).
 
+Classify the user's message into exactly one cardCategory:
+- "task" — todos, reminders, deadlines, action items, things to buy/do/schedule
+- "idea" — brainstorms, what-ifs, creative thoughts, project ideas, hypotheticals
+- "reflection" — journal entries, looking back, lessons learned, self-analysis, gratitude
+- "emotion" — feelings, venting, mood expression, anxiety, excitement, frustration
+- "media" — voice notes, photos, image descriptions
+- null — if the message is purely conversational with no clear category
+
 Format metadata EXACTLY like this (after your response):
 ---METADATA---
-{"memoryTags": ["work", "productivity"], "detectedMood": "focused", "profileUpdates": [{"category": "static", "key": "occupation", "value": "product manager"}, {"category": "static", "key": "company", "value": "Google"}], "shouldStoreMemory": false, "detectedDates": [], "detectedPeople": [], "detectedTasks": []}
+{"memoryTags": ["work", "productivity"], "detectedMood": "focused", "cardCategory": "task", "profileUpdates": [{"category": "static", "key": "occupation", "value": "product manager"}, {"category": "static", "key": "company", "value": "Google"}], "shouldStoreMemory": false, "detectedDates": [], "detectedPeople": [], "detectedTasks": []}
 
 Note: profileUpdates should be an EMPTY array [] only when the user's message contains zero personal facts. Most conversational messages DO contain extractable facts — look harder.
 

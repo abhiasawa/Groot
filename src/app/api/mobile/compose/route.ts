@@ -139,11 +139,12 @@ export async function POST(request: NextRequest) {
     // ── Post-processing (fire-and-forget) ──
     const postOps: PromiseLike<unknown>[] = [];
 
-    // Enrich inbound metadata
+    // Enrich inbound metadata + card category
     postOps.push(
       supabase
         .from("messages")
         .update({
+          card_category: grootResponse.detectedCardCategory ?? null,
           metadata: {
             memoryTags: grootResponse.memoryTags.length > 0 ? grootResponse.memoryTags : ["daily-life"],
             detectedMood: grootResponse.detectedMood ?? null,

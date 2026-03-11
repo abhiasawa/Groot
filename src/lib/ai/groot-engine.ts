@@ -8,6 +8,7 @@ import type { ProfileFact } from "@/lib/memory/profile-builder";
 export interface GrootResponse {
   text: string;
   detectedMood?: string;
+  detectedCardCategory?: "task" | "idea" | "reflection" | "emotion" | "media" | null;
   shouldStoreMemory: boolean;
   memoryTags: string[];
   profileUpdates: ProfileFact[];
@@ -171,6 +172,7 @@ export async function generateGrootResponse(
   return {
     text: response.text,
     detectedMood: metadata?.detectedMood,
+    detectedCardCategory: metadata?.cardCategory ?? null,
     shouldStoreMemory: metadata?.shouldStoreMemory ?? false,
     memoryTags: metadata?.memoryTags ?? [],
     profileUpdates,

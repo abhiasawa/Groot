@@ -36,7 +36,7 @@ interface ThoughtCardProps {
 }
 
 export function ThoughtCard({ memory, onPress, onLongPress }: ThoughtCardProps) {
-  const category = (memory as unknown as Record<string, unknown>).card_category as string | undefined;
+  const category = memory.card_category;
   const color = getCardColor(category, memory.id, memory.content, memory.message_type);
   const isVoice = memory.message_type === "audio";
   const isImage = memory.message_type === "image";

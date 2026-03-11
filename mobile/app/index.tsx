@@ -1,10 +1,8 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useRef } from "react";
 import {
   View,
   Text,
-  ScrollView,
   StyleSheet,
-  RefreshControl,
   Pressable,
   TextInput,
   Dimensions,
@@ -14,13 +12,16 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Search, X } from "lucide-react-native";
 import Animated, {
-  FadeIn,
   FadeInDown,
-  FadeOut,
   useSharedValue,
   useAnimatedStyle,
+  useAnimatedScrollHandler,
   withSpring,
   withSequence,
+  withTiming,
+  interpolate,
+  Extrapolation,
+  runOnJS,
 } from "react-native-reanimated";
 
 import { useMemories, useCurrentUser, type MemoriesParams } from "../lib/api/queries";
@@ -41,12 +42,18 @@ export default function FeedScreen() {
   const [composeVisible, setComposeVisible] = useState(false);
   const [justCapturedId, setJustCapturedId] = useState<string | null>(null);
   const { data: userData } = useCurrentUser();
+  const isRefreshingRef = useRef(false);
 
   // FAB bounce animation
   const fabBounce = useSharedValue(1);
   const fabBounceStyle = useAnimatedStyle(() => ({
     transform: [{ scale: fabBounce.value }],
   }));
+
+  // Custom pull-to-refresh shared values
+  const scrollY = useSharedValue(0);
+  const pullProgress = useSharedValue(0);
+  const PULL_THRESHOLD = 100;
 
   const handleFabPress = useCallback(() => {
     // Bouncy squish then open compose
@@ -67,10 +74,63 @@ export default function FeedScreen() {
   const { data, isLoading, refetch } = useMemories(params);
   const memories = useMemo(() => data?.memories ?? [], [data?.memories]);
 
-  const onRefresh = useCallback(() => {
+  const triggerRefresh = useCallback(() => {
+    if (isRefreshingRef.current) return;
+    isRefreshingRef.current = true;
     setIsPullRefreshing(true);
-    refetch().finally(() => setIsPullRefreshing(false));
-  }, [refetch]);
+    refetch().finally(() => {
+      setIsPullRefreshing(false);
+      isRefreshingRef.current = false;
+      pullProgress.value = withTiming(0, { duration: 300 });
+    });
+  }, [refetch, pullProgress]);
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+      if (event.contentOffset.y < 0) {
+        pullProgress.value = Math.min(Math.abs(event.contentOffset.y) / PULL_THRESHOLD, 1.5);
+      }
+    },
+    onEndDrag: (event) => {
+      if (event.contentOffset.y < -PULL_THRESHOLD && !isRefreshingRef.current) {
+        runOnJS(triggerRefresh)();
+      } else if (!isRefreshingRef.current) {
+        pullProgress.value = withTiming(0, { duration: 200 });
+      }
+    },
+  });
+
+  const pullMascotStyle = useAnimatedStyle(() => {
+    const ty = interpolate(
+      pullProgress.value,
+      [0, 0.3, 1, 1.5],
+      [-60, -30, 10, 20],
+      Extrapolation.CLAMP,
+    );
+    const s = interpolate(
+      pullProgress.value,
+      [0, 0.5, 1, 1.5],
+      [0.3, 0.7, 1, 1.1],
+      Extrapolation.CLAMP,
+    );
+    const o = interpolate(
+      pullProgress.value,
+      [0, 0.2, 0.5, 1],
+      [0, 0.3, 0.8, 1],
+      Extrapolation.CLAMP,
+    );
+    const r = interpolate(
+      pullProgress.value,
+      [0, 1, 1.5],
+      [0, 0, 15],
+      Extrapolation.CLAMP,
+    );
+    return {
+      transform: [{ translateY: ty }, { scale: s }, { rotate: `${r}deg` }],
+      opacity: o,
+    };
+  });
 
   const cancelSearch = useCallback(() => {
     setQuery("");
@@ -101,17 +161,21 @@ export default function FeedScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.root}>
-        <ScrollView
+        {/* Pull-to-refresh mascot indicator */}
+        <Animated.View style={[styles.pullMascot, pullMascotStyle]}>
+          <NotoMascot size={60} compact />
+          {isPullRefreshing && (
+            <Text style={styles.refreshText}>Refreshing...</Text>
+          )}
+        </Animated.View>
+
+        <Animated.ScrollView
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          refreshControl={
-            <RefreshControl
-              refreshing={isPullRefreshing}
-              onRefresh={onRefresh}
-              tintColor="#1A1A1A"
-            />
-          }
+          scrollEventThrottle={16}
+          onScroll={scrollHandler}
+          bounces={true}
         >
           {/* Header */}
           <View style={styles.header}>
@@ -165,14 +229,6 @@ export default function FeedScreen() {
             </Text>
           )}
 
-          {/* Pull-to-refresh mascot */}
-          {isPullRefreshing && (
-            <Animated.View entering={FadeIn.duration(200)} exiting={FadeOut.duration(200)} style={styles.refreshMascot}>
-              <NotoMascot size={60} compact />
-              <Text style={styles.refreshText}>Refreshing...</Text>
-            </Animated.View>
-          )}
-
           {/* Content */}
           {isLoading ? (
             <SkeletonGrid />
@@ -193,7 +249,7 @@ export default function FeedScreen() {
           )}
 
           <View style={styles.bottomGap} />
-        </ScrollView>
+        </Animated.ScrollView>
 
         {/* FAB — animated mascot, tap to capture */}
         {!searchFocused && (
@@ -311,17 +367,21 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
-  // Refresh mascot
-  refreshMascot: {
+  // Pull-to-refresh mascot (positioned above scroll)
+  pullMascot: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
     alignItems: "center",
-    paddingVertical: 8,
-    marginBottom: 8,
+    zIndex: 10,
+    paddingTop: 4,
   },
   refreshText: {
     fontFamily: "Manrope_500Medium",
     fontSize: 11,
     color: "#C0BDB8",
-    marginTop: 4,
+    marginTop: 2,
   },
 
   // Empty state
