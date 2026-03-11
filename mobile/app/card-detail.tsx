@@ -90,7 +90,7 @@ export default function CardDetailScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       {/* Back button */}
-      <Animated.View entering={FadeInDown.duration(300)} style={styles.topBar}>
+      <Animated.View entering={FadeInDown.duration(250)} style={styles.topBar}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={12}>
           <ArrowLeft size={20} color="#1E1E1E" strokeWidth={1.8} />
         </Pressable>
@@ -101,17 +101,17 @@ export default function CardDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Date */}
-        <Animated.Text entering={FadeInDown.duration(400).delay(100)} style={styles.date}>
+        <Animated.Text entering={FadeInDown.duration(280).delay(50)} style={styles.date}>
           {dateFormatted}
         </Animated.Text>
 
         {/* Title */}
-        <Animated.Text entering={FadeInDown.duration(400).delay(150)} style={styles.title}>
+        <Animated.Text entering={FadeInDown.duration(280).delay(80)} style={styles.title}>
           {title}
         </Animated.Text>
 
         {/* Tags */}
-        <Animated.View entering={FadeInDown.duration(400).delay(200)} style={styles.tagsRow}>
+        <Animated.View entering={FadeInDown.duration(280).delay(110)} style={styles.tagsRow}>
           {label && (
             <View style={styles.tag}>
               <Text style={styles.tagText}>{label}</Text>
@@ -131,7 +131,7 @@ export default function CardDetailScreen() {
 
         {/* Hero image */}
         {isImage && memory.media_url && (
-          <Animated.View entering={FadeInDown.duration(400).delay(250)}>
+          <Animated.View entering={FadeInDown.duration(280).delay(140)}>
             <Image
               source={{ uri: memory.media_url }}
               style={styles.heroImage}
@@ -142,21 +142,21 @@ export default function CardDetailScreen() {
 
         {/* Audio player */}
         {isVoice && memory.media_url && (
-          <Animated.View entering={FadeInDown.duration(400).delay(250)}>
+          <Animated.View entering={FadeInDown.duration(280).delay(140)}>
             <AudioPlayer uri={memory.media_url} />
           </Animated.View>
         )}
 
         {/* Body text */}
         {displayText && (
-          <Animated.Text entering={FadeInDown.duration(400).delay(300)} style={styles.body}>
+          <Animated.Text entering={FadeInDown.duration(280).delay(170)} style={styles.body}>
             {displayText}
           </Animated.Text>
         )}
       </ScrollView>
 
       {/* Floating action bar */}
-      <Animated.View entering={FadeInUp.duration(400).delay(500)} style={styles.actionBar}>
+      <Animated.View entering={FadeInUp.duration(300).delay(200)} style={styles.actionBar}>
         <Pressable style={styles.actionBtn}>
           <Pencil size={20} color="#1E1E1E" strokeWidth={1.8} />
         </Pressable>

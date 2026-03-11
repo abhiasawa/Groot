@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -16,7 +16,6 @@ import { fonts, typography } from "../../constants/typography";
 import { WeekCalendar } from "../../components/home/week-calendar";
 import { JournalHero } from "../../components/home/journal-hero";
 import { QuickPrompts } from "../../components/home/quick-prompts";
-import { ComposeModal } from "../../components/ui/compose-modal";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -24,16 +23,12 @@ export default function HomeScreen() {
   const { data } = useMemories({ limit: 100 });
   const memories = useMemo(() => data?.memories ?? [], [data?.memories]);
 
-  const [composeVisible, setComposeVisible] = useState(false);
-  const [initialPrompt, setInitialPrompt] = useState("");
-
   const displayName = userData?.user?.display_name || "there";
   const firstName = displayName.split(" ")[0];
 
-  const handlePromptPress = useCallback((text: string) => {
-    setInitialPrompt(text);
-    setComposeVisible(true);
-  }, []);
+  const handlePromptPress = useCallback((_text: string) => {
+    router.push("/capture");
+  }, [router]);
 
   const handleJournalHeroPress = useCallback(() => {
     router.push("/(tabs)/journey");
@@ -46,7 +41,7 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <Animated.View entering={FadeInDown.duration(400).delay(100)} style={styles.header}>
+        <Animated.View entering={FadeInDown.duration(300)} style={styles.header}>
           <View>
             <Text style={styles.greeting}>Hi, {firstName}</Text>
           </View>
@@ -69,23 +64,23 @@ export default function HomeScreen() {
         </Animated.View>
 
         {/* Week Calendar */}
-        <Animated.View entering={FadeInDown.duration(400).delay(200)}>
+        <Animated.View entering={FadeInDown.duration(300).delay(60)}>
           <WeekCalendar />
         </Animated.View>
 
         {/* Journal Hero Card */}
-        <Animated.View entering={FadeInDown.duration(400).delay(300)}>
+        <Animated.View entering={FadeInDown.duration(300).delay(120)}>
           <JournalHero onPress={handleJournalHeroPress} />
         </Animated.View>
 
         {/* Quick Journal Prompts */}
-        <Animated.View entering={FadeInDown.duration(400).delay(400)}>
+        <Animated.View entering={FadeInDown.duration(300).delay(180)}>
           <QuickPrompts onPromptPress={handlePromptPress} />
         </Animated.View>
 
         {/* Recent entries count */}
         {memories.length > 0 && (
-          <Animated.View entering={FadeInDown.duration(400).delay(500)}>
+          <Animated.View entering={FadeInDown.duration(300).delay(240)}>
             <Pressable
               onPress={() => router.push("/(tabs)/journey")}
               style={styles.recentCard}
@@ -98,16 +93,6 @@ export default function HomeScreen() {
           </Animated.View>
         )}
       </ScrollView>
-
-      {/* Compose modal with optional initial prompt */}
-      <ComposeModal
-        visible={composeVisible}
-        onClose={() => {
-          setComposeVisible(false);
-          setInitialPrompt("");
-        }}
-        initialPrompt={initialPrompt}
-      />
     </SafeAreaView>
   );
 }

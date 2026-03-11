@@ -20,7 +20,6 @@ import Animated, {
   FadeInUp,
   FadeOut,
   SlideInDown,
-  ZoomIn,
   useSharedValue,
   useAnimatedStyle,
   withRepeat,
@@ -321,7 +320,7 @@ export function ComposeModal({ visible, onClose, initialMode, initialPrompt }: C
       <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <Pressable style={s.overlay} onPress={handleClose}>
           <Animated.View
-            entering={SlideInDown.springify().damping(20).stiffness(200)}
+            entering={SlideInDown.duration(280).easing(Easing.out(Easing.cubic))}
             style={[s.sheet, { paddingBottom: Math.max(insets.bottom, 20) }]}
           >
             <Pressable onPress={() => {}}>
@@ -340,7 +339,7 @@ export function ComposeModal({ visible, onClose, initialMode, initialPrompt }: C
                 <Animated.View entering={FadeIn.duration(200)} style={s.sentWrap}>
                   {/* Mini card that "becomes" the feed card */}
                   <Animated.View
-                    entering={ZoomIn.springify().damping(12).stiffness(200)}
+                    entering={FadeIn.duration(250)}
                     style={s.sentCard}
                   >
                     <View style={s.sentCardInner}>

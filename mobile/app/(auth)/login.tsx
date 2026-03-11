@@ -19,6 +19,7 @@ import {
 
 import { useAuth } from "../../lib/auth/provider";
 import { fonts, typography } from "../../constants/typography";
+import { AnimatedSun } from "../../components/ui/animated-sun";
 
 const API_BASE = (
   process.env.EXPO_PUBLIC_API_BASE_URL ?? "https://groot-three.vercel.app"
@@ -124,9 +125,7 @@ export default function LoginScreen() {
             entering={FadeInDown.duration(450)}
             style={styles.branding}
           >
-            <View style={styles.logoCircle}>
-              <Text style={styles.logoText}>N</Text>
-            </View>
+            <AnimatedSun size={96} />
             <Text style={styles.title}>noto</Text>
             <Text style={styles.subtitle}>
               A calm place for your thoughts
@@ -207,19 +206,6 @@ const styles = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: "#F0EFEB",
-  },
-  logoCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: "#FFBB2C",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  logoText: {
-    fontFamily: fonts.bold,
-    fontSize: 40,
-    color: "#FFF",
   },
   container: {
     flex: 1,
