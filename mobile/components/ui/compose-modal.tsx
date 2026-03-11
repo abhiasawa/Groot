@@ -42,6 +42,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { fonts, typography } from "../../constants/typography";
 import { apiFetch } from "../../lib/api/client";
 import { VoiceWaveform } from "../feed/voice-waveform";
+import { notoTheme, shadows } from "../../lib/theme/tokens";
 
 // ── Helpers ──
 
@@ -390,7 +391,7 @@ export function ComposeModal({ visible, onClose, initialMode, initialPrompt, edi
                     <Animated.View style={[s.recordingDot, dotStyle]} />
                     <Text style={s.recordingTime}>{formatTime(recordingDuration)}</Text>
                   </View>
-                  <VoiceWaveform active color="#1A1A1A" />
+                  <VoiceWaveform active color={notoTheme.foreground} />
                   <Pressable onPress={stopRecording} style={s.stopBtn}>
                     <Square size={18} color="#FFF" strokeWidth={2.5} />
                   </Pressable>
@@ -456,7 +457,7 @@ export function ComposeModal({ visible, onClose, initialMode, initialPrompt, edi
                       disabled={!canSend}
                       style={[
                         s.sendBtn,
-                        { backgroundColor: canSend ? "#1A1A1A" : "#E5E5E3" },
+                        { backgroundColor: canSend ? notoTheme.foreground : "#E5E5E3" },
                       ]}
                     >
                       <Send
@@ -514,8 +515,8 @@ const s = StyleSheet.create({
   closeButton: {
     width: 36,
     height: 36,
-    borderRadius: 18,
-    backgroundColor: "#F5F4F2",
+    borderRadius: 20,
+    backgroundColor: notoTheme.background,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -541,7 +542,7 @@ const s = StyleSheet.create({
   sentIcon: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: 20,
     backgroundColor: "#49A76C",
     alignItems: "center",
     justifyContent: "center",
@@ -549,7 +550,7 @@ const s = StyleSheet.create({
   sentTitle: {
     fontFamily: fonts.bold,
     fontSize: 18,
-    color: "#2A2A2A",
+    color: notoTheme.foreground,
   },
   sentSubtitle: {
     fontFamily: fonts.regular,
@@ -580,10 +581,7 @@ const s = StyleSheet.create({
     backgroundColor: "#FFF",
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadows.sm,
   },
 
   // Recording
@@ -601,12 +599,12 @@ const s = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#E25555",
+    backgroundColor: notoTheme.destructive,
   },
   recordingTime: {
     fontFamily: fonts.bold,
     fontSize: 32,
-    color: "#1A1A1A",
+    color: notoTheme.foreground,
     fontVariant: ["tabular-nums"],
     letterSpacing: -1,
   },
@@ -614,14 +612,12 @@ const s = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#E25555",
+    backgroundColor: notoTheme.destructive,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#E25555",
-    shadowOffset: { width: 0, height: 4 },
+    ...shadows.lg,
+    shadowColor: notoTheme.destructive,
     shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
   },
 
   // Sending
@@ -638,7 +634,7 @@ const s = StyleSheet.create({
 
   // Input
   inputWrap: {
-    backgroundColor: "#F9F9F8",
+    backgroundColor: notoTheme.background,
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -648,7 +644,7 @@ const s = StyleSheet.create({
   input: {
     fontFamily: fonts.regular,
     fontSize: 16,
-    color: "#1A1A1A",
+    color: notoTheme.foreground,
     lineHeight: 24,
     maxHeight: 160,
     minHeight: 70,

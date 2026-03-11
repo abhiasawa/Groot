@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -20,7 +20,8 @@ import { QuickPrompts } from "../../components/home/quick-prompts";
 export default function HomeScreen() {
   const router = useRouter();
   const { data: userData } = useCurrentUser();
-  const { data } = useMemories({ limit: 100 });
+  const [selectedDate, setSelectedDate] = useState<string | undefined>();
+  const { data } = useMemories({ limit: 100, date: selectedDate });
   const memories = useMemo(() => data?.memories ?? [], [data?.memories]);
 
   const displayName = userData?.user?.display_name || "there";
@@ -65,7 +66,10 @@ export default function HomeScreen() {
 
         {/* Week Calendar */}
         <Animated.View entering={FadeInDown.duration(300).delay(60)}>
-          <WeekCalendar />
+          <WeekCalendar
+            selectedDate={selectedDate}
+            onSelectDate={(d) => setSelectedDate(d === selectedDate ? undefined : d)}
+          />
         </Animated.View>
 
         {/* Journal Hero Card */}

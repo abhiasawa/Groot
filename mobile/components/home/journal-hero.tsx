@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 
 import { fonts, typography } from "../../constants/typography";
 import { AnimatedSun } from "../ui/animated-sun";
+import { notoTheme } from "../../lib/theme/tokens";
 
 function getTimeOfDay(): string {
   const hour = new Date().getHours();
@@ -79,7 +80,7 @@ const styles = StyleSheet.create({
   },
   mainCard: {
     flex: 1,
-    backgroundColor: "#FFC856",
+    backgroundColor: notoTheme.accent,
     borderRadius: 20,
     padding: 20,
     justifyContent: "space-between",

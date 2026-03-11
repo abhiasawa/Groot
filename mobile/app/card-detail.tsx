@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from "react";
+import React, { useMemo, useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
   ArrowLeft,
   Pencil,
   Bookmark,
+  BookmarkCheck,
   Trash2,
 } from "lucide-react-native";
 import Animated, {
@@ -25,6 +26,7 @@ import { useMemories } from "../lib/api/queries";
 import { apiFetch } from "../lib/api/client";
 import { fonts, typography } from "../constants/typography";
 import { AudioPlayer } from "../components/detail/audio-player";
+import { notoTheme, shadows } from "../lib/theme/tokens";
 import type { Memory } from "../../shared/types/api";
 
 function categoryLabel(cat?: string | null): string | null {
@@ -57,6 +59,18 @@ export default function CardDetailScreen() {
       },
     ]);
   }, [memory, refetch, router]);
+
+  const [isBookmarked, setIsBookmarked] = useState(() => memory?.bookmarked ?? false);
+
+  const handleBookmark = useCallback(() => {
+    if (!memory) return;
+    const next = !isBookmarked;
+    setIsBookmarked(next);
+    apiFetch(`/api/memories/${memory.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ bookmarked: next }),
+    }).catch(() => setIsBookmarked(!next));
+  }, [memory, isBookmarked]);
 
   if (!memory) {
     return (
@@ -172,8 +186,12 @@ export default function CardDetailScreen() {
         >
           <Pencil size={20} color="#1E1E1E" strokeWidth={1.8} />
         </Pressable>
-        <Pressable style={styles.actionBtn}>
-          <Bookmark size={20} color="#1E1E1E" strokeWidth={1.8} />
+        <Pressable onPress={handleBookmark} style={styles.actionBtn}>
+          {isBookmarked ? (
+            <BookmarkCheck size={20} color={notoTheme.accent} strokeWidth={1.8} />
+          ) : (
+            <Bookmark size={20} color="#1E1E1E" strokeWidth={1.8} />
+          )}
         </Pressable>
         <Pressable onPress={handleDelete} style={styles.actionBtn}>
           <Trash2 size={20} color="#EE2336" strokeWidth={1.8} />
@@ -207,7 +225,7 @@ const styles = StyleSheet.create({
   date: {
     fontFamily: fonts.semiBold,
     fontSize: 14,
-    color: "#8F4601",
+    color: notoTheme.secondaryForeground,
     marginBottom: 8,
   },
   title: {
@@ -224,14 +242,14 @@ const styles = StyleSheet.create({
   },
   tag: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 14,
+    borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 6,
   },
   tagText: {
     fontFamily: fonts.medium,
     fontSize: 13,
-    color: "#555555",
+    color: notoTheme.secondaryForeground,
   },
   heroImage: {
     width: "100%",
@@ -261,11 +279,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
+    ...shadows.md,
   },
   emptyWrap: {
     flex: 1,
@@ -275,7 +289,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontFamily: fonts.medium,
     fontSize: 15,
-    color: "#555555",
+    color: notoTheme.secondaryForeground,
     textAlign: "center",
     marginTop: 40,
   },

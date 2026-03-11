@@ -22,10 +22,11 @@ import {
   ShieldCheck,
 } from "lucide-react-native";
 
-import { typography } from "../constants/typography";
+import { fonts, typography } from "../constants/typography";
 import { ApiError, apiFetch } from "../lib/api/client";
 import { useCurrentUser } from "../lib/api/queries";
 import { useAuth } from "../lib/auth/provider";
+import { notoTheme } from "../lib/theme/tokens";
 
 function buildMarkdownExport(payload: Record<string, unknown>) {
   const user = (payload.user as Record<string, unknown> | null) ?? null;
@@ -117,7 +118,7 @@ export default function SettingsScreen() {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.loading}>
-          <ActivityIndicator size="large" color="#1A1A1A" />
+          <ActivityIndicator size="large" color={notoTheme.foreground} />
         </View>
       </SafeAreaView>
     );
@@ -132,13 +133,13 @@ export default function SettingsScreen() {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={onRefresh}
-            tintColor="#1A1A1A"
+            tintColor={notoTheme.foreground}
           />
         }
       >
         <View style={styles.topBar}>
           <Pressable onPress={() => router.back()} style={styles.topIconButton}>
-            <ArrowLeft size={18} color="#1A1A1A" />
+            <ArrowLeft size={18} color={notoTheme.foreground} />
           </Pressable>
           <Text style={styles.topTitle}>Settings</Text>
         </View>
@@ -156,7 +157,7 @@ export default function SettingsScreen() {
           </Text>
           <Pressable onPress={handleSignOut} style={styles.signOutWrap}>
             <View style={styles.signOutButton}>
-              <LogOut size={16} color="#1A1A1A" strokeWidth={1.9} />
+              <LogOut size={16} color={notoTheme.foreground} strokeWidth={1.9} />
               <Text style={styles.signOutText}>Sign out</Text>
             </View>
           </Pressable>
@@ -165,7 +166,7 @@ export default function SettingsScreen() {
         <SectionTitle title="Export" />
         <View style={styles.card}>
           <SettingsRow
-            icon={<Download size={16} color="#1A1A1A" strokeWidth={1.8} />}
+            icon={<Download size={16} color={notoTheme.foreground} strokeWidth={1.8} />}
             title="Export to Markdown"
             trailing={
               <Text style={styles.exportLabel}>
@@ -175,7 +176,7 @@ export default function SettingsScreen() {
             onPress={() => void exportData("markdown")}
           />
           <SettingsRow
-            icon={<Code2 size={16} color="#1A1A1A" strokeWidth={1.8} />}
+            icon={<Code2 size={16} color={notoTheme.foreground} strokeWidth={1.8} />}
             title="Export to JSON"
             trailing={
               <Text style={styles.exportLabel}>
@@ -190,7 +191,7 @@ export default function SettingsScreen() {
         <SectionTitle title="Danger Zone" />
         <View style={styles.dangerZone}>
           <View style={styles.dangerIcon}>
-            <ShieldCheck size={18} color="#E25555" strokeWidth={1.9} />
+            <ShieldCheck size={18} color={notoTheme.destructive} strokeWidth={1.9} />
           </View>
           <Text style={styles.dangerTitle}>Clear All Data</Text>
           <Text style={styles.dangerBody}>
@@ -256,22 +257,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.06)",
+    borderBottomColor: notoTheme.border,
     marginBottom: 18,
   },
   topIconButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#F5F4F2",
+    backgroundColor: notoTheme.background,
     alignItems: "center",
     justifyContent: "center",
   },
   topTitle: {
     marginLeft: 10,
-    fontFamily: "PlusJakartaSans_700Bold",
+    fontFamily: fonts.bold,
     ...typography.xl,
-    color: "#1A1A1A",
+    color: notoTheme.foreground,
   },
   sectionHeader: {
     marginBottom: 12,
@@ -279,7 +280,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   sectionTitle: {
-    fontFamily: "PlusJakartaSans_700Bold",
+    fontFamily: fonts.bold,
     ...typography.caption,
     color: "#C0BDB8",
     textTransform: "uppercase",
@@ -289,7 +290,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF",
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: notoTheme.border,
     padding: 8,
     marginBottom: 6,
   },
@@ -302,49 +303,49 @@ const styles = StyleSheet.create({
   },
   rowBordered: {
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.06)",
+    borderBottomColor: notoTheme.border,
   },
   rowIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "#F5F4F2",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: notoTheme.background,
     alignItems: "center",
     justifyContent: "center",
   },
   rowTitle: {
     flex: 1,
-    fontFamily: "PlusJakartaSans_700Bold",
+    fontFamily: fonts.bold,
     ...typography.sm,
-    color: "#1A1A1A",
+    color: notoTheme.foreground,
   },
   exportLabel: {
-    fontFamily: "PlusJakartaSans_700Bold",
+    fontFamily: fonts.bold,
     ...typography.xs,
-    color: "#1A1A1A",
+    color: notoTheme.foreground,
   },
   accountCard: {
     backgroundColor: "#FFF",
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: notoTheme.border,
     padding: 16,
     marginBottom: 6,
   },
   accountName: {
-    fontFamily: "PlusJakartaSans_600SemiBold",
+    fontFamily: fonts.semiBold,
     ...typography.lg,
-    color: "#1A1A1A",
+    color: notoTheme.foreground,
     marginBottom: 4,
   },
   accountMeta: {
-    fontFamily: "PlusJakartaSans_500Medium",
+    fontFamily: fonts.medium,
     ...typography.sm,
     color: "#999",
     marginBottom: 2,
   },
   accountBuild: {
-    fontFamily: "PlusJakartaSans_500Medium",
+    fontFamily: fonts.medium,
     ...typography.xs,
     color: "#C0BDB8",
     marginTop: 10,
@@ -353,18 +354,18 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   signOutButton: {
-    height: 44,
+    height: 48,
     borderRadius: 16,
-    backgroundColor: "#F5F4F2",
+    backgroundColor: notoTheme.background,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
   },
   signOutText: {
-    fontFamily: "PlusJakartaSans_700Bold",
+    fontFamily: fonts.bold,
     ...typography.sm,
-    color: "#1A1A1A",
+    color: notoTheme.foreground,
   },
   dangerZone: {
     borderWidth: 2,
@@ -386,14 +387,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   dangerTitle: {
-    fontFamily: "PlusJakartaSans_600SemiBold",
+    fontFamily: fonts.semiBold,
     ...typography.base,
-    color: "#1A1A1A",
+    color: notoTheme.foreground,
     marginBottom: 6,
   },
   dangerBody: {
     textAlign: "center",
-    fontFamily: "PlusJakartaSans_500Medium",
+    fontFamily: fonts.medium,
     ...typography.xs,
     color: "#999",
     lineHeight: 20,
@@ -408,9 +409,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   deleteText: {
-    fontFamily: "PlusJakartaSans_700Bold",
+    fontFamily: fonts.bold,
     ...typography.xs,
-    color: "#E25555",
+    color: notoTheme.destructive,
   },
   bottomGap: {
     height: 120,

@@ -5,7 +5,7 @@ import { fonts } from "../../constants/typography";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-function getWeekDates(): { label: string; date: number; isToday: boolean }[] {
+function getWeekDates(): { label: string; date: number; fullDate: string; isToday: boolean }[] {
   const today = new Date();
   const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon, ...
   const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
@@ -13,17 +13,22 @@ function getWeekDates(): { label: string; date: number; isToday: boolean }[] {
   return DAY_LABELS.map((label, i) => {
     const d = new Date(today);
     d.setDate(today.getDate() + mondayOffset + i);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
     return {
       label,
       date: d.getDate(),
+      fullDate: `${yyyy}-${mm}-${dd}`,
       isToday: d.toDateString() === today.toDateString(),
     };
   });
 }
 
 interface WeekCalendarProps {
-  selectedDate?: number;
-  onSelectDate?: (date: number) => void;
+  /** Full date string YYYY-MM-DD of the selected day, or undefined for today */
+  selectedDate?: string;
+  onSelectDate?: (fullDate: string) => void;
 }
 
 export function WeekCalendar({ selectedDate, onSelectDate }: WeekCalendarProps) {
@@ -32,11 +37,11 @@ export function WeekCalendar({ selectedDate, onSelectDate }: WeekCalendarProps) 
   return (
     <View style={styles.container}>
       {week.map((day) => {
-        const isActive = selectedDate != null ? day.date === selectedDate : day.isToday;
+        const isActive = selectedDate != null ? day.fullDate === selectedDate : day.isToday;
         return (
           <Pressable
             key={day.label}
-            onPress={() => onSelectDate?.(day.date)}
+            onPress={() => onSelectDate?.(day.fullDate)}
             style={styles.dayColumn}
           >
             <Text style={[styles.dayLabel, isActive && styles.dayLabelActive]}>

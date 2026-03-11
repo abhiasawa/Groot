@@ -20,6 +20,7 @@ import {
 import { useAuth } from "../../lib/auth/provider";
 import { fonts, typography } from "../../constants/typography";
 import { AnimatedSun } from "../../components/ui/animated-sun";
+import { notoTheme } from "../../lib/theme/tokens";
 
 const API_BASE = (
   process.env.EXPO_PUBLIC_API_BASE_URL ?? "https://groot-three.vercel.app"
@@ -221,7 +222,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: fonts.bold,
     fontSize: 36,
-    color: "#1A1A1A",
+    color: notoTheme.foreground,
     letterSpacing: -1,
     marginTop: 16,
     marginBottom: 4,
@@ -229,20 +230,20 @@ const styles = StyleSheet.create({
   subtitle: {
     fontFamily: fonts.regular,
     ...typography.base,
-    color: "#999",
+    color: notoTheme.mutedForeground,
   },
   card: {
     backgroundColor: "#FFF",
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: notoTheme.border,
     padding: 24,
     gap: 16,
   },
   welcomeText: {
     fontFamily: fonts.regular,
     ...typography.sm,
-    color: "#999",
+    color: notoTheme.mutedForeground,
     lineHeight: 22,
     textAlign: "center",
   },
@@ -255,13 +256,13 @@ const styles = StyleSheet.create({
   errorText: {
     fontFamily: fonts.regular,
     ...typography.xs,
-    color: "#E25555",
+    color: notoTheme.destructive,
     textAlign: "center",
   },
   googleButton: {
     height: 52,
     borderRadius: 16,
-    backgroundColor: "#1A1A1A",
+    backgroundColor: notoTheme.foreground,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -273,7 +274,7 @@ const styles = StyleSheet.create({
   googleIconWrap: {
     width: 28,
     height: 28,
-    borderRadius: 14,
+    borderRadius: 16,
     backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
@@ -286,7 +287,7 @@ const styles = StyleSheet.create({
   footer: {
     fontFamily: fonts.regular,
     ...typography.xs,
-    color: "#C0BDB8",
+    color: notoTheme.mutedForeground,
     textAlign: "center",
     marginTop: 24,
     lineHeight: 18,

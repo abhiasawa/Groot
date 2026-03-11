@@ -4,6 +4,8 @@ import { Mic, Image as ImageIcon } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 
 import { getCardColor } from "../../constants/card-colors";
+import { fonts } from "../../constants/typography";
+import { notoTheme } from "../../lib/theme/tokens";
 import type { Memory } from "../../../shared/types/api";
 
 function relativeTime(dateStr: string): string {
@@ -129,7 +131,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   pillText: {
-    fontFamily: "PlusJakartaSans_700Bold",
+    fontFamily: fonts.bold,
     fontSize: 10,
     letterSpacing: 0.4,
     textTransform: "uppercase",
@@ -161,20 +163,20 @@ const styles = StyleSheet.create({
   imageThumbnail: {
     width: "100%",
     height: 100,
-    borderRadius: 14,
+    borderRadius: 16,
     marginBottom: 10,
   },
   imagePlaceholder: {
     height: 90,
-    borderRadius: 14,
+    borderRadius: 16,
     marginBottom: 10,
     alignItems: "center",
     justifyContent: "center",
   },
   content: {
-    fontFamily: "PlusJakartaSans_400Regular",
+    fontFamily: fonts.regular,
     fontSize: 14,
-    color: "#2A2A2A",
+    color: notoTheme.foreground,
     lineHeight: 21,
     letterSpacing: -0.1,
   },
@@ -182,7 +184,7 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   meta: {
-    fontFamily: "PlusJakartaSans_600SemiBold",
+    fontFamily: fonts.semiBold,
     fontSize: 10,
     marginTop: 12,
     letterSpacing: 0.2,

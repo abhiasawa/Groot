@@ -14,6 +14,7 @@ import { X } from "lucide-react-native";
 import { apiFetch } from "../lib/api/client";
 import { fonts, typography } from "../constants/typography";
 import { AnimatedSun } from "../components/ui/animated-sun";
+import { notoTheme } from "../lib/theme/tokens";
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -102,7 +103,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#F0F0F0",
+    backgroundColor: notoTheme.background,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -114,7 +115,7 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: fonts.bold,
     ...typography["2xl"],
-    color: "#111",
+    color: notoTheme.foreground,
     marginTop: 24,
   },
   subtitle: {
@@ -132,16 +133,16 @@ const styles = StyleSheet.create({
   input: {
     height: 52,
     borderRadius: 16,
-    backgroundColor: "#F3F3F3",
+    backgroundColor: notoTheme.background,
     paddingHorizontal: 16,
     fontFamily: fonts.medium,
     ...typography.sm,
     color: "#333",
   },
   finishBtn: {
-    height: 54,
-    borderRadius: 18,
-    backgroundColor: "#111",
+    height: 52,
+    borderRadius: 20,
+    backgroundColor: notoTheme.foreground,
     alignItems: "center",
     justifyContent: "center",
   },

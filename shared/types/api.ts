@@ -13,6 +13,7 @@ export interface Memory {
   message_type: string;
   metadata?: Record<string, unknown> | null;
   card_category?: "task" | "idea" | "reflection" | "emotion" | "media" | null;
+  bookmarked?: boolean;
   created_at: string;
   /** Groot's preceding message that prompted this user message (computed at query time) */
   context_message?: string | null;

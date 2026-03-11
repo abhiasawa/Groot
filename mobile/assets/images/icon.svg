@@ -1,40 +1,68 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <!-- Background -->
-  <rect width="1024" height="1024" rx="224" fill="#4A7C59"/>
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFBB2C" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#FFFBF0" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="bodyGrad" cx="40%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#FFD666"/>
+      <stop offset="60%" stop-color="#FFBB2C"/>
+      <stop offset="100%" stop-color="#F5A623"/>
+    </radialGradient>
+    <radialGradient id="rayGrad" cx="50%" cy="0%" r="100%">
+      <stop offset="0%" stop-color="#FFCC44"/>
+      <stop offset="100%" stop-color="#FFBB2C"/>
+    </radialGradient>
+  </defs>
 
-  <!-- Inner glow circle -->
-  <circle cx="512" cy="512" r="380" fill="#5A8E69" opacity="0.3"/>
-  <circle cx="512" cy="512" r="280" fill="#6BA07A" opacity="0.2"/>
+  <!-- Background — warm cream -->
+  <rect width="1024" height="1024" rx="224" fill="#FFFBF0"/>
 
-  <!-- Pot / base -->
-  <path d="M410 720 L420 800 Q512 840 604 800 L614 720 Z" fill="#E8EDDF" opacity="0.9"/>
-  <path d="M395 690 Q395 725 420 725 L604 725 Q629 725 629 690 Z" fill="#FFFFFF" opacity="0.25"/>
+  <!-- Subtle warm glow behind sun -->
+  <circle cx="512" cy="480" r="400" fill="url(#glow)"/>
 
-  <!-- Stem -->
-  <path d="M512 700 Q505 580 512 440" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round" fill="none" opacity="0.9"/>
+  <!-- 8 Rays — rounded rectangles rotated around center -->
+  <!-- Ray dimensions: 62w x 130h, placed at distance from center -->
+  <g transform="translate(512, 480)">
+    <!-- Ray 0° (up) -->
+    <rect x="-31" y="-350" width="62" height="130" rx="31" fill="url(#rayGrad)"/>
+    <!-- Ray 45° -->
+    <rect x="-31" y="-350" width="62" height="130" rx="31" fill="url(#rayGrad)" transform="rotate(45)"/>
+    <!-- Ray 90° -->
+    <rect x="-31" y="-350" width="62" height="130" rx="31" fill="url(#rayGrad)" transform="rotate(90)"/>
+    <!-- Ray 135° -->
+    <rect x="-31" y="-350" width="62" height="130" rx="31" fill="url(#rayGrad)" transform="rotate(135)"/>
+    <!-- Ray 180° -->
+    <rect x="-31" y="-350" width="62" height="130" rx="31" fill="url(#rayGrad)" transform="rotate(180)"/>
+    <!-- Ray 225° -->
+    <rect x="-31" y="-350" width="62" height="130" rx="31" fill="url(#rayGrad)" transform="rotate(225)"/>
+    <!-- Ray 270° -->
+    <rect x="-31" y="-350" width="62" height="130" rx="31" fill="url(#rayGrad)" transform="rotate(270)"/>
+    <!-- Ray 315° -->
+    <rect x="-31" y="-350" width="62" height="130" rx="31" fill="url(#rayGrad)" transform="rotate(315)"/>
+  </g>
 
-  <!-- Left leaf -->
-  <path d="M512 560 Q380 480 340 400 Q420 420 512 530" fill="#FFFFFF" opacity="0.7"/>
-  <path d="M505 550 Q420 490 360 420" stroke="#4A7C59" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.2"/>
+  <!-- Sun body — large circle with gradient -->
+  <circle cx="512" cy="480" r="210" fill="url(#bodyGrad)"/>
 
-  <!-- Right leaf -->
-  <path d="M512 490 Q650 380 700 300 Q630 340 512 465" fill="#FFFFFF" opacity="0.85"/>
-  <path d="M518 480 Q630 390 685 320" stroke="#4A7C59" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.2"/>
+  <!-- Subtle inner highlight -->
+  <circle cx="480" cy="440" r="160" fill="#FFD666" opacity="0.15"/>
 
-  <!-- Top sprout -->
-  <path d="M512 440 Q480 320 460 230 Q495 300 512 400 Q529 300 564 230 Q544 320 512 440" fill="#FFFFFF"/>
+  <!-- Face — two dot eyes -->
+  <circle cx="462" cy="468" r="22" fill="#1E1E1E"/>
+  <circle cx="562" cy="468" r="22" fill="#1E1E1E"/>
 
-  <!-- Face — eyes -->
-  <circle cx="478" cy="640" r="12" fill="#2D3A2E" opacity="0.5"/>
-  <circle cx="546" cy="640" r="12" fill="#2D3A2E" opacity="0.5"/>
   <!-- Eye highlights -->
-  <circle cx="482" cy="636" r="4" fill="#FFFFFF" opacity="0.8"/>
-  <circle cx="550" cy="636" r="4" fill="#FFFFFF" opacity="0.8"/>
+  <circle cx="470" cy="460" r="8" fill="#FFFFFF" opacity="0.7"/>
+  <circle cx="570" cy="460" r="8" fill="#FFFFFF" opacity="0.7"/>
 
-  <!-- Smile -->
-  <path d="M485 665 Q512 685 539 665" stroke="#2D3A2E" stroke-width="7" stroke-linecap="round" fill="none" opacity="0.4"/>
+  <!-- Smile — arc -->
+  <path d="M472 510 Q512 550 552 510" stroke="#1E1E1E" stroke-width="10" stroke-linecap="round" fill="none"/>
 
   <!-- Cheek blush -->
-  <circle cx="460" cy="658" r="14" fill="#E8845A" opacity="0.25"/>
-  <circle cx="564" cy="658" r="14" fill="#E8845A" opacity="0.25"/>
+  <circle cx="430" cy="505" r="22" fill="#FF8815" opacity="0.2"/>
+  <circle cx="594" cy="505" r="22" fill="#FF8815" opacity="0.2"/>
+
+  <!-- App name text -->
+  <text x="512" y="750" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="80" font-weight="600" fill="#1E1E1E" letter-spacing="6">the garden</text>
 </svg>
