@@ -9,23 +9,21 @@ import {
   View,
   Pressable,
 } from "react-native";
-import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import Constants from "expo-constants";
 import {
-  ArrowLeft,
   Code2,
   Download,
   LogOut,
   ShieldCheck,
 } from "lucide-react-native";
 
-import { typography } from "../constants/typography";
-import { ApiError, apiFetch } from "../lib/api/client";
-import { useCurrentUser } from "../lib/api/queries";
-import { useAuth } from "../lib/auth/provider";
+import { fonts, typography } from "../../constants/typography";
+import { ApiError, apiFetch } from "../../lib/api/client";
+import { useCurrentUser } from "../../lib/api/queries";
+import { useAuth } from "../../lib/auth/provider";
 
 function buildMarkdownExport(payload: Record<string, unknown>) {
   const user = (payload.user as Record<string, unknown> | null) ?? null;
@@ -51,9 +49,8 @@ function buildMarkdownExport(payload: Record<string, unknown>) {
   ].join("\n");
 }
 
-export default function SettingsScreen() {
+export default function ProfileScreen() {
   const { signOut } = useAuth();
-  const router = useRouter();
   const { data: meData, isLoading, refetch } = useCurrentUser();
 
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -117,7 +114,7 @@ export default function SettingsScreen() {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.loading}>
-          <ActivityIndicator size="large" color="#1A1A1A" />
+          <ActivityIndicator size="large" color="#1E1E1E" />
         </View>
       </SafeAreaView>
     );
@@ -132,65 +129,65 @@ export default function SettingsScreen() {
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={onRefresh}
-            tintColor="#1A1A1A"
+            tintColor="#1E1E1E"
           />
         }
       >
-        <View style={styles.topBar}>
-          <Pressable onPress={() => router.back()} style={styles.topIconButton}>
-            <ArrowLeft size={18} color="#1A1A1A" />
-          </Pressable>
-          <Text style={styles.topTitle}>Settings</Text>
-        </View>
+        <Text style={styles.pageTitle}>Profile</Text>
 
-        <SectionTitle title="Account" />
-        <View style={styles.accountCard}>
-          <Text style={styles.accountName}>
+        {/* Avatar + Name */}
+        <View style={styles.profileHeader}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {(user?.display_name || "?")[0].toUpperCase()}
+            </Text>
+          </View>
+          <Text style={styles.profileName}>
             {user?.display_name ?? "Noto user"}
           </Text>
-          <Text style={styles.accountMeta}>
+          <Text style={styles.profileEmail}>
             {user?.email ?? "No email linked"}
           </Text>
-          <Text style={styles.accountBuild}>
+          <Text style={styles.profileVersion}>
             v{Constants.expoConfig?.version ?? "dev"}
           </Text>
-          <Pressable onPress={handleSignOut} style={styles.signOutWrap}>
-            <View style={styles.signOutButton}>
-              <LogOut size={16} color="#1A1A1A" strokeWidth={1.9} />
-              <Text style={styles.signOutText}>Sign out</Text>
+        </View>
+
+        {/* Export section */}
+        <Text style={styles.sectionTitle}>Export</Text>
+        <View style={styles.card}>
+          <Pressable onPress={() => void exportData("markdown")} style={styles.row}>
+            <View style={styles.rowIcon}>
+              <Download size={16} color="#1E1E1E" strokeWidth={1.8} />
             </View>
+            <Text style={styles.rowTitle}>Export to Markdown</Text>
+            <Text style={styles.rowAction}>
+              {exporting === "markdown" ? "Exporting..." : "Download"}
+            </Text>
+          </Pressable>
+          <View style={styles.separator} />
+          <Pressable onPress={() => void exportData("json")} style={styles.row}>
+            <View style={styles.rowIcon}>
+              <Code2 size={16} color="#1E1E1E" strokeWidth={1.8} />
+            </View>
+            <Text style={styles.rowTitle}>Export to JSON</Text>
+            <Text style={styles.rowAction}>
+              {exporting === "json" ? "Exporting..." : "Download"}
+            </Text>
           </Pressable>
         </View>
 
-        <SectionTitle title="Export" />
-        <View style={styles.card}>
-          <SettingsRow
-            icon={<Download size={16} color="#1A1A1A" strokeWidth={1.8} />}
-            title="Export to Markdown"
-            trailing={
-              <Text style={styles.exportLabel}>
-                {exporting === "markdown" ? "Exporting..." : "Download"}
-              </Text>
-            }
-            onPress={() => void exportData("markdown")}
-          />
-          <SettingsRow
-            icon={<Code2 size={16} color="#1A1A1A" strokeWidth={1.8} />}
-            title="Export to JSON"
-            trailing={
-              <Text style={styles.exportLabel}>
-                {exporting === "json" ? "Exporting..." : "Download"}
-              </Text>
-            }
-            onPress={() => void exportData("json")}
-            bordered={false}
-          />
-        </View>
+        {/* Sign out */}
+        <Pressable onPress={handleSignOut} style={styles.signOutButton}>
+          <LogOut size={16} color="#1E1E1E" strokeWidth={1.9} />
+          <Text style={styles.signOutText}>Sign out</Text>
+        </Pressable>
 
-        <SectionTitle title="Danger Zone" />
+        {/* Danger zone */}
+        <Text style={styles.sectionTitle}>Danger Zone</Text>
         <View style={styles.dangerZone}>
           <View style={styles.dangerIcon}>
-            <ShieldCheck size={18} color="#E25555" strokeWidth={1.9} />
+            <ShieldCheck size={18} color="#EE2336" strokeWidth={1.9} />
           </View>
           <Text style={styles.dangerTitle}>Clear All Data</Text>
           <Text style={styles.dangerBody}>
@@ -202,175 +199,127 @@ export default function SettingsScreen() {
             </View>
           </Pressable>
         </View>
-
-        <View style={styles.bottomGap} />
       </ScrollView>
     </SafeAreaView>
   );
-}
-
-function SectionTitle({ title }: { title: string }) {
-  return (
-    <View style={styles.sectionHeader}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-    </View>
-  );
-}
-
-function SettingsRow({
-  icon,
-  title,
-  trailing,
-  bordered = true,
-  onPress,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  trailing: React.ReactNode;
-  bordered?: boolean;
-  onPress?: () => void;
-}) {
-  const content = (
-    <View style={[styles.row, bordered && styles.rowBordered]}>
-      <View style={styles.rowIcon}>{icon}</View>
-      <Text style={styles.rowTitle}>{title}</Text>
-      <View>{trailing}</View>
-    </View>
-  );
-
-  if (!onPress) return content;
-
-  return <Pressable onPress={onPress}>{content}</Pressable>;
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#F0EFEB" },
   loading: { flex: 1, alignItems: "center", justifyContent: "center" },
   scroll: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 42,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 120,
   },
-  topBar: {
-    minHeight: 58,
-    flexDirection: "row",
+  pageTitle: {
+    fontFamily: fonts.bold,
+    ...typography.xl,
+    color: "#1E1E1E",
+    marginBottom: 20,
+  },
+  profileHeader: {
     alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.06)",
-    marginBottom: 18,
+    marginBottom: 28,
   },
-  topIconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#F5F4F2",
+  avatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: "#D0C5B6",
     alignItems: "center",
     justifyContent: "center",
-  },
-  topTitle: {
-    marginLeft: 10,
-    fontFamily: "PlusJakartaSans_700Bold",
-    ...typography.xl,
-    color: "#1A1A1A",
-  },
-  sectionHeader: {
     marginBottom: 12,
-    marginTop: 6,
-    paddingHorizontal: 2,
+  },
+  avatarText: {
+    fontFamily: fonts.bold,
+    fontSize: 28,
+    color: "#FFF",
+  },
+  profileName: {
+    fontFamily: fonts.semiBold,
+    ...typography.lg,
+    color: "#1E1E1E",
+    marginBottom: 4,
+  },
+  profileEmail: {
+    fontFamily: fonts.regular,
+    ...typography.sm,
+    color: "#555555",
+  },
+  profileVersion: {
+    fontFamily: fonts.regular,
+    ...typography.xs,
+    color: "rgba(30,30,30,0.4)",
+    marginTop: 8,
   },
   sectionTitle: {
-    fontFamily: "PlusJakartaSans_700Bold",
-    ...typography.caption,
-    color: "#C0BDB8",
+    fontFamily: fonts.semiBold,
+    fontSize: 10,
+    color: "rgba(30,30,30,0.4)",
     textTransform: "uppercase",
     letterSpacing: 1.2,
+    marginBottom: 10,
+    marginTop: 8,
+    paddingHorizontal: 2,
   },
   card: {
-    backgroundColor: "#FFF",
+    backgroundColor: "#FFFFFF",
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
-    padding: 8,
-    marginBottom: 6,
+    padding: 4,
+    marginBottom: 16,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 16,
-  },
-  rowBordered: {
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(0,0,0,0.06)",
+    paddingHorizontal: 12,
+    paddingVertical: 14,
   },
   rowIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "#F5F4F2",
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F0EFEB",
     alignItems: "center",
     justifyContent: "center",
   },
   rowTitle: {
     flex: 1,
-    fontFamily: "PlusJakartaSans_700Bold",
+    fontFamily: fonts.semiBold,
     ...typography.sm,
-    color: "#1A1A1A",
+    color: "#1E1E1E",
   },
-  exportLabel: {
-    fontFamily: "PlusJakartaSans_700Bold",
+  rowAction: {
+    fontFamily: fonts.semiBold,
     ...typography.xs,
-    color: "#1A1A1A",
+    color: "#1E1E1E",
   },
-  accountCard: {
-    backgroundColor: "#FFF",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
-    padding: 16,
-    marginBottom: 6,
-  },
-  accountName: {
-    fontFamily: "PlusJakartaSans_600SemiBold",
-    ...typography.lg,
-    color: "#1A1A1A",
-    marginBottom: 4,
-  },
-  accountMeta: {
-    fontFamily: "PlusJakartaSans_500Medium",
-    ...typography.sm,
-    color: "#999",
-    marginBottom: 2,
-  },
-  accountBuild: {
-    fontFamily: "PlusJakartaSans_500Medium",
-    ...typography.xs,
-    color: "#C0BDB8",
-    marginTop: 10,
-  },
-  signOutWrap: {
-    marginTop: 14,
+  separator: {
+    height: 1,
+    backgroundColor: "#EAEAEA",
+    marginHorizontal: 12,
   },
   signOutButton: {
-    height: 44,
+    height: 48,
     borderRadius: 16,
-    backgroundColor: "#F5F4F2",
+    backgroundColor: "#FFFFFF",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
+    marginBottom: 24,
   },
   signOutText: {
-    fontFamily: "PlusJakartaSans_700Bold",
+    fontFamily: fonts.semiBold,
     ...typography.sm,
-    color: "#1A1A1A",
+    color: "#1E1E1E",
   },
   dangerZone: {
     borderWidth: 2,
     borderStyle: "dashed",
-    borderColor: "rgba(226,85,85,0.25)",
-    backgroundColor: "rgba(226,85,85,0.03)",
+    borderColor: "rgba(238,35,54,0.25)",
+    backgroundColor: "rgba(238,35,54,0.03)",
     borderRadius: 24,
     alignItems: "center",
     paddingHorizontal: 20,
@@ -380,39 +329,36 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: "rgba(226,85,85,0.1)",
+    backgroundColor: "rgba(238,35,54,0.1)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
   },
   dangerTitle: {
-    fontFamily: "PlusJakartaSans_600SemiBold",
+    fontFamily: fonts.semiBold,
     ...typography.base,
-    color: "#1A1A1A",
+    color: "#1E1E1E",
     marginBottom: 6,
   },
   dangerBody: {
     textAlign: "center",
-    fontFamily: "PlusJakartaSans_500Medium",
+    fontFamily: fonts.regular,
     ...typography.xs,
-    color: "#999",
+    color: "#555555",
     lineHeight: 20,
     marginBottom: 14,
   },
   deleteButton: {
     borderWidth: 1,
-    borderColor: "rgba(226,85,85,0.25)",
+    borderColor: "rgba(238,35,54,0.25)",
     backgroundColor: "#FFF",
     borderRadius: 999,
     paddingHorizontal: 18,
     paddingVertical: 12,
   },
   deleteText: {
-    fontFamily: "PlusJakartaSans_700Bold",
+    fontFamily: fonts.semiBold,
     ...typography.xs,
-    color: "#E25555",
-  },
-  bottomGap: {
-    height: 120,
+    color: "#EE2336",
   },
 });

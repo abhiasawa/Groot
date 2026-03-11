@@ -31,7 +31,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontFamily: "Sora_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
   },
   link: {
     marginTop: 15,
@@ -39,6 +39,6 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 14,
-    fontFamily: "Manrope_500Medium",
+    fontFamily: "PlusJakartaSans_500Medium",
   },
 });

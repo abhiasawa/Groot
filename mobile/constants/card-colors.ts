@@ -1,5 +1,5 @@
 /**
- * Card color palette — mymind-inspired soft pastels.
+ * Card color palette — warm journal aesthetic.
  * When backend provides `card_category`, we use it directly.
  * Otherwise, classifyContent() does lightweight keyword matching
  * to assign semantic colors. Falls back to ID-based hash.
@@ -25,6 +25,29 @@ export const CARD_COLORS = {
 } as const;
 
 export type CardCategory = keyof typeof CARD_COLORS;
+
+// ── Emotion colors (for analytics bar chart) ────────────────
+export const EMOTION_COLORS = {
+  happy: "#FFBB2C",
+  sad: "#764539",
+  calm: "#8AA230",
+  anxious: "#787163",
+} as const;
+
+export type EmotionType = keyof typeof EMOTION_COLORS;
+
+// ── Quick journal prompt card backgrounds ────────────────────
+export const PROMPT_COLORS = {
+  rose: "#F3D3CC",
+  lavender: "#E1D8FF",
+  stone: "#DDDBCE",
+} as const;
+
+// ── Tag pill accent colors ──────────────────────────────────
+export const TAG_COLORS = {
+  personal: "#EE2336",
+  family: "#803EF2",
+} as const;
 
 /** Simple hash of a string to a number */
 function hashCode(s: string): number {

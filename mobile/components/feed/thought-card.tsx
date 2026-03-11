@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   pillText: {
-    fontFamily: "Manrope_700Bold",
+    fontFamily: "PlusJakartaSans_700Bold",
     fontSize: 10,
     letterSpacing: 0.4,
     textTransform: "uppercase",
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   content: {
-    fontFamily: "Manrope_400Regular",
+    fontFamily: "PlusJakartaSans_400Regular",
     fontSize: 14,
     color: "#2A2A2A",
     lineHeight: 21,
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   meta: {
-    fontFamily: "Manrope_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 10,
     marginTop: 12,
     letterSpacing: 0.2,

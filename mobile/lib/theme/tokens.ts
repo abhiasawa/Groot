@@ -1,6 +1,6 @@
 /**
- * Noto theme tokens — light-mode only, white canvas design.
- * Replaces the previous "Living Earth" biophilic theme.
+ * Noto theme tokens — warm cream canvas, amber accent.
+ * Based on Journal Mobile App Figma template.
  */
 
 export interface ThemeColors {
@@ -24,21 +24,21 @@ export interface ThemeColors {
 }
 
 export const notoTheme: ThemeColors = {
-  background: "#FEFEFE",
-  foreground: "#1A1A1A",
+  background: "#F0EFEB",
+  foreground: "#1E1E1E",
   card: "#FFFFFF",
-  cardForeground: "#1A1A1A",
-  primary: "#1A1A1A",
+  cardForeground: "#1E1E1E",
+  primary: "#1E1E1E",
   primaryForeground: "#FFFFFF",
-  secondary: "#F5F4F2",
-  secondaryForeground: "#666666",
-  muted: "#F0EFED",
-  mutedForeground: "#999999",
-  accent: "#A5B4FC",
-  accentForeground: "#1A1A1A",
-  destructive: "#E25555",
-  border: "rgba(0, 0, 0, 0.06)",
+  secondary: "#F0EFEB",
+  secondaryForeground: "#555555",
+  muted: "#F0EFEB",
+  mutedForeground: "rgba(30,30,30,0.6)",
+  accent: "#FFBB2C",
+  accentForeground: "#1E1E1E",
+  destructive: "#EE2336",
+  border: "#EAEAEA",
   input: "rgba(0, 0, 0, 0.04)",
-  ring: "#1A1A1A",
-  shadowColor: "rgba(0, 0, 0, 0.08)",
+  ring: "#FFBB2C",
+  shadowColor: "rgba(0, 0, 0, 0.06)",
 };

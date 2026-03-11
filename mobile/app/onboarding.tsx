@@ -11,9 +11,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { X } from "lucide-react-native";
 
-import { NotoMascot } from "../components/ui/noto-mascot";
 import { apiFetch } from "../lib/api/client";
-import { typography } from "../constants/typography";
+import { fonts, typography } from "../constants/typography";
+import { AnimatedSun } from "../components/ui/animated-sun";
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -56,7 +56,7 @@ export default function OnboardingScreen() {
 
         {/* Mascot + welcome */}
         <View style={styles.center}>
-          <NotoMascot size={220} />
+          <AnimatedSun size={160} />
           <Text style={styles.title}>Welcome to Noto</Text>
           <Text style={styles.subtitle}>
             A calm place for your thoughts.{"\n"}Capture anything, find everything.
@@ -90,7 +90,7 @@ export default function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#FEFEFE" },
+  safe: { flex: 1, backgroundColor: "#F0EFEB" },
   root: { flex: 1, paddingHorizontal: 24 },
   topRow: {
     flexDirection: "row",
@@ -112,13 +112,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   title: {
-    fontFamily: "Sora_700Bold",
+    fontFamily: fonts.bold,
     ...typography["2xl"],
     color: "#111",
     marginTop: 24,
   },
   subtitle: {
-    fontFamily: "Manrope_400Regular",
+    fontFamily: fonts.regular,
     ...typography.sm,
     color: "#999",
     textAlign: "center",
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: "#F3F3F3",
     paddingHorizontal: 16,
-    fontFamily: "Manrope_500Medium",
+    fontFamily: fonts.medium,
     ...typography.sm,
     color: "#333",
   },
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   finishText: {
-    fontFamily: "Sora_600SemiBold",
+    fontFamily: fonts.semiBold,
     ...typography.sm,
     color: "#FFF",
   },

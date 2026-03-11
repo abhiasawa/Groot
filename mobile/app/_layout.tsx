@@ -1,11 +1,10 @@
 import {
-  Manrope_400Regular,
-  Manrope_500Medium,
-  Manrope_600SemiBold,
-  Manrope_700Bold,
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
   useFonts,
-} from "@expo-google-fonts/manrope";
-import { Sora_600SemiBold, Sora_700Bold } from "@expo-google-fonts/sora";
+} from "@expo-google-fonts/plus-jakarta-sans";
 import { QueryClient, useQueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
@@ -22,7 +21,7 @@ import { ThemeProvider } from "../lib/theme/provider";
 export { ErrorBoundary } from "expo-router";
 
 export const unstable_settings = {
-  initialRouteName: "index",
+  initialRouteName: "(tabs)",
 };
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -106,12 +105,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
-    Manrope_400Regular,
-    Manrope_500Medium,
-    Manrope_600SemiBold,
-    Manrope_700Bold,
-    Sora_600SemiBold,
-    Sora_700Bold,
+    PlusJakartaSans_400Regular,
+    PlusJakartaSans_500Medium,
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_700Bold,
   });
 
   useEffect(() => {
@@ -149,7 +146,7 @@ export default function RootLayout() {
             <AuthGate>
               <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="(auth)" />
-                <Stack.Screen name="index" />
+                <Stack.Screen name="(tabs)" />
                 <Stack.Screen
                   name="capture"
                   options={{
@@ -182,7 +179,7 @@ const fallbackStyles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#FEFEFE",
+    backgroundColor: "#F0EFEB",
   },
   orb: {
     width: 96,
@@ -190,22 +187,22 @@ const fallbackStyles = StyleSheet.create({
     borderRadius: 48,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#A5B4FC",
+    backgroundColor: "#FFBB2C",
     marginBottom: 20,
   },
   orbText: {
     color: "#FFF",
-    fontFamily: "Sora_700Bold",
     fontSize: 34,
+    fontWeight: "700",
   },
   title: {
-    color: "#1A1A1A",
-    fontFamily: "Sora_700Bold",
+    color: "#1E1E1E",
     fontSize: 28,
+    fontWeight: "700",
     marginBottom: 8,
   },
   text: {
-    color: "#999",
+    color: "#555555",
     fontSize: 14,
   },
 });

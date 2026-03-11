@@ -1,8 +1,15 @@
+export const fonts = {
+  regular: "PlusJakartaSans_400Regular",
+  medium: "PlusJakartaSans_500Medium",
+  semiBold: "PlusJakartaSans_600SemiBold",
+  bold: "PlusJakartaSans_700Bold",
+} as const;
+
 export const typography = {
   hero: {
-    fontSize: 36,
-    lineHeight: 42,
-    letterSpacing: -0.8,
+    fontSize: 64,
+    lineHeight: 72,
+    letterSpacing: -1.5,
   },
   title: {
     fontSize: 28,
@@ -10,18 +17,18 @@ export const typography = {
     letterSpacing: -0.5,
   },
   xl: {
-    fontSize: 22,
-    lineHeight: 30,
+    fontSize: 24,
+    lineHeight: 32,
     letterSpacing: -0.3,
   },
   lg: {
-    fontSize: 19,
-    lineHeight: 27,
+    fontSize: 18,
+    lineHeight: 26,
     letterSpacing: -0.2,
   },
   base: {
     fontSize: 16,
-    lineHeight: 23,
+    lineHeight: 26,
     letterSpacing: 0,
   },
   sm: {
@@ -30,8 +37,8 @@ export const typography = {
     letterSpacing: 0,
   },
   xs: {
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 13,
+    lineHeight: 18,
     letterSpacing: 0.1,
   },
   "2xl": {
@@ -47,7 +54,7 @@ export const typography = {
   caption: {
     fontSize: 11,
     lineHeight: 14,
-    letterSpacing: 0.45,
+    letterSpacing: 0.3,
   },
 } as const;
 

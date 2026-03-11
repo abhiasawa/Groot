@@ -18,8 +18,7 @@ import {
 } from "@react-native-google-signin/google-signin";
 
 import { useAuth } from "../../lib/auth/provider";
-import { typography } from "../../constants/typography";
-import { NotoMascot } from "../../components/ui/noto-mascot";
+import { fonts, typography } from "../../constants/typography";
 
 const API_BASE = (
   process.env.EXPO_PUBLIC_API_BASE_URL ?? "https://groot-three.vercel.app"
@@ -125,7 +124,9 @@ export default function LoginScreen() {
             entering={FadeInDown.duration(450)}
             style={styles.branding}
           >
-            <NotoMascot size={160} />
+            <View style={styles.logoCircle}>
+              <Text style={styles.logoText}>N</Text>
+            </View>
             <Text style={styles.title}>noto</Text>
             <Text style={styles.subtitle}>
               A calm place for your thoughts
@@ -205,7 +206,20 @@ function GoogleIcon({ size }: { size: number }) {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#FEFEFE",
+    backgroundColor: "#F0EFEB",
+  },
+  logoCircle: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: "#FFBB2C",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  logoText: {
+    fontFamily: fonts.bold,
+    fontSize: 40,
+    color: "#FFF",
   },
   container: {
     flex: 1,
@@ -219,7 +233,7 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   title: {
-    fontFamily: "Sora_700Bold",
+    fontFamily: fonts.bold,
     fontSize: 36,
     color: "#1A1A1A",
     letterSpacing: -1,
@@ -227,7 +241,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   subtitle: {
-    fontFamily: "Manrope_400Regular",
+    fontFamily: fonts.regular,
     ...typography.base,
     color: "#999",
   },
@@ -240,7 +254,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   welcomeText: {
-    fontFamily: "Manrope_400Regular",
+    fontFamily: fonts.regular,
     ...typography.sm,
     color: "#999",
     lineHeight: 22,
@@ -253,7 +267,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   errorText: {
-    fontFamily: "Manrope_400Regular",
+    fontFamily: fonts.regular,
     ...typography.xs,
     color: "#E25555",
     textAlign: "center",
@@ -279,12 +293,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   googleButtonText: {
-    fontFamily: "Sora_600SemiBold",
+    fontFamily: fonts.semiBold,
     ...typography.base,
     color: "#FFF",
   },
   footer: {
-    fontFamily: "Manrope_400Regular",
+    fontFamily: fonts.regular,
     ...typography.xs,
     color: "#C0BDB8",
     textAlign: "center",

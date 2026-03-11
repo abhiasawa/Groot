@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   text: {
-    fontFamily: "Manrope_600SemiBold",
+    fontFamily: "PlusJakartaSans_600SemiBold",
     fontSize: 12,
     letterSpacing: 0.1,
   },

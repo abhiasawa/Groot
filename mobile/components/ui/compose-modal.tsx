@@ -39,10 +39,9 @@ import {
   Check,
 } from "lucide-react-native";
 
-import { typography } from "../../constants/typography";
+import { fonts, typography } from "../../constants/typography";
 import { apiFetch } from "../../lib/api/client";
 import { VoiceWaveform } from "../feed/voice-waveform";
-import { NotoMascot } from "./noto-mascot";
 
 // ── Helpers ──
 
@@ -73,6 +72,7 @@ interface ComposeModalProps {
   visible: boolean;
   onClose: () => void;
   initialMode?: "text" | "voice" | "image" | null;
+  initialPrompt?: string;
 }
 
 const PROMPTS = [
@@ -89,7 +89,7 @@ function randomPrompt() {
 
 // ── Main Component ──
 
-export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProps) {
+export function ComposeModal({ visible, onClose, initialMode, initialPrompt }: ComposeModalProps) {
   const insets = useSafeAreaInsets();
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
@@ -106,6 +106,14 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
   // Recording dot blink
   const dotOpacity = useSharedValue(1);
   const dotStyle = useAnimatedStyle(() => ({ opacity: dotOpacity.value }));
+
+  // Pre-fill text from quick journal prompts
+  useEffect(() => {
+    if (visible && initialPrompt) {
+      setText(initialPrompt);
+      setTimeout(() => inputRef.current?.focus(), 350);
+    }
+  }, [visible, initialPrompt]);
 
   const triggeredModeRef = useRef<string | null>(null);
 
@@ -319,11 +327,11 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
             <Pressable onPress={() => {}}>
               <View style={s.handle} />
 
-              {/* Mascot + header */}
+              {/* Header */}
               <View style={s.header}>
-                <NotoMascot size={56} />
+                <Text style={s.headerTitle}>New Thought</Text>
                 <Pressable onPress={handleClose} hitSlop={12} style={s.closeButton}>
-                  <X size={18} color="#C0BDB8" />
+                  <X size={18} color="#999" />
                 </Pressable>
               </View>
 
@@ -377,7 +385,6 @@ export function ComposeModal({ visible, onClose, initialMode }: ComposeModalProp
               {/* Sending */}
               {sending && !sent && (
                 <View style={s.sendingWrap}>
-                  <NotoMascot size={80} />
                   <Text style={s.sendingText}>Saving your thought...</Text>
                 </View>
               )}
@@ -480,6 +487,11 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 16,
   },
+  headerTitle: {
+    fontFamily: fonts.semiBold,
+    fontSize: 18,
+    color: "#1E1E1E",
+  },
   closeButton: {
     width: 36,
     height: 36,
@@ -516,12 +528,12 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
   sentTitle: {
-    fontFamily: "Sora_700Bold",
+    fontFamily: fonts.bold,
     fontSize: 18,
     color: "#2A2A2A",
   },
   sentSubtitle: {
-    fontFamily: "Manrope_400Regular",
+    fontFamily: fonts.regular,
     fontSize: 13,
     color: "#49A76C",
     marginTop: 2,
@@ -573,7 +585,7 @@ const s = StyleSheet.create({
     backgroundColor: "#E25555",
   },
   recordingTime: {
-    fontFamily: "Sora_700Bold",
+    fontFamily: fonts.bold,
     fontSize: 32,
     color: "#1A1A1A",
     fontVariant: ["tabular-nums"],
@@ -600,7 +612,7 @@ const s = StyleSheet.create({
     gap: 12,
   },
   sendingText: {
-    fontFamily: "Manrope_500Medium",
+    fontFamily: fonts.medium,
     fontSize: 14,
     color: "#C0BDB8",
   },
@@ -615,7 +627,7 @@ const s = StyleSheet.create({
     minHeight: 100,
   },
   input: {
-    fontFamily: "Manrope_400Regular",
+    fontFamily: fonts.regular,
     fontSize: 16,
     color: "#1A1A1A",
     lineHeight: 24,
