@@ -1,18 +1,8 @@
 import type { Metadata } from "next";
-import { Inter, Instrument_Serif } from "next/font/google";
-import { ThemeProvider } from "@/contexts/theme-context";
-import "./globals.css";
-
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const instrumentSerif = Instrument_Serif({
-  weight: "400",
-  subsets: ["latin"],
-  variable: "--font-instrument-serif",
-});
 
 export const metadata: Metadata = {
-  title: "Groot - AI Second Brain",
-  description: "Your empathetic AI second brain on WhatsApp",
+  title: "Noto API",
+  description: "Backend services for the Noto mobile app",
 };
 
 export default function RootLayout({
@@ -21,21 +11,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${inter.variable} ${instrumentSerif.variable}`}
-      suppressHydrationWarning
-    >
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('groot-theme');var d=t==='dark'||((t===null||t==='system')&&matchMedia('(prefers-color-scheme:dark)').matches);document.documentElement.classList.toggle('dark',d)}catch(e){}`,
-          }}
-        />
-      </head>
-      <body className="antialiased">
-        <ThemeProvider>{children}</ThemeProvider>
-      </body>
+    <html lang="en">
+      <body>{children}</body>
     </html>
   );
 }

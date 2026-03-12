@@ -14,10 +14,7 @@ interface GoogleTokenPayload {
 }
 
 function getAllowedGoogleAudiences(): string[] {
-  return [
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-  ]
+  return [process.env.GOOGLE_CLIENT_ID]
     .flatMap((value) => (value ?? "").split(","))
     .map((value) => value.trim())
     .filter(Boolean);
