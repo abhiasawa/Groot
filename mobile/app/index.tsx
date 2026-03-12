@@ -1,114 +1,53 @@
-import React, { useState, useCallback, useMemo } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  TextInput,
-  Keyboard,
-  RefreshControl,
-  ScrollView,
-} from "react-native";
+import React, { useCallback } from "react";
+import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { useQueryClient } from "@tanstack/react-query";
-import { Camera, Plus, Search, X } from "lucide-react-native";
+import {
+  Camera,
+  ChevronRight,
+  Mic,
+  Settings,
+  SquarePen,
+} from "lucide-react-native";
 import Animated, {
-  FadeInDown,
   useSharedValue,
   useAnimatedStyle,
   withSpring,
   withSequence,
 } from "react-native-reanimated";
 
-import {
-  useMemories,
-  useCurrentUser,
-  type MemoriesParams,
-} from "../lib/api/queries";
-import { fonts, typography } from "../constants/typography";
-import { MasonryGrid } from "../components/feed/masonry-grid";
-import { SkeletonGrid } from "../components/feed/skeleton-grid";
+import { useCurrentUser } from "../lib/api/queries";
+import { fonts } from "../constants/typography";
 import { NotoMascot } from "../components/ui/noto-mascot";
-import { ComposeModal } from "../components/ui/compose-modal";
-import type { Memory } from "../../shared/types/api";
 
-export default function FeedScreen() {
+export default function CaptureHomeScreen() {
   const router = useRouter();
-  const queryClient = useQueryClient();
-  const [query, setQuery] = useState("");
-  const [searchFocused, setSearchFocused] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [composeVisible, setComposeVisible] = useState(false);
-  const [justCapturedId, setJustCapturedId] = useState<string | null>(null);
   const { data: userData } = useCurrentUser();
 
-  // FAB bounce animation
-  const fabBounce = useSharedValue(1);
-  const fabBounceStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: fabBounce.value }],
+  const heroBounce = useSharedValue(1);
+  const heroBounceStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: heroBounce.value }],
   }));
 
-  const handleFabPress = useCallback(() => {
-    fabBounce.value = withSequence(
-      withSpring(0.82, { damping: 8, stiffness: 400 }),
-      withSpring(1.08, { damping: 8, stiffness: 300 }),
-      withSpring(1, { damping: 10, stiffness: 250 }),
-    );
-    setTimeout(() => setComposeVisible(true), 180);
-  }, [fabBounce]);
+  const openCapture = useCallback(
+    (mode?: "voice" | "text" | "image") => {
+      // eslint-disable-next-line react-hooks/immutability
+      heroBounce.value = withSequence(
+        withSpring(0.82, { damping: 8, stiffness: 400 }),
+        withSpring(1.08, { damping: 8, stiffness: 300 }),
+        withSpring(1, { damping: 10, stiffness: 250 }),
+      );
 
-  const params: MemoriesParams = useMemo(
-    () => ({ q: query || undefined, limit: 100 }),
-    [query],
-  );
-
-  const { data, isLoading, refetch } = useMemories(params);
-  const memories = useMemo(() => data?.memories ?? [], [data?.memories]);
-
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    queryClient.invalidateQueries({ queryKey: ["memories"] });
-    refetch().finally(() => setRefreshing(false));
-  }, [refetch, queryClient]);
-
-  const cancelSearch = useCallback(() => {
-    setQuery("");
-    setSearchFocused(false);
-    Keyboard.dismiss();
-  }, []);
-
-  const handleCardPress = useCallback(
-    (m: Memory) => {
-      router.push({ pathname: "/card-detail", params: { id: m.id } });
-    },
-    [router],
-  );
-
-  const handleDelete = useCallback(
-    (memoryId: string) => {
-      import("../lib/api/client").then(({ apiFetch }) => {
-        apiFetch(`/api/memories/${memoryId}`, { method: "DELETE" }).catch(
-          () => {},
+      setTimeout(() => {
+        router.push(
+          mode ? { pathname: "/capture", params: { mode } } : "/capture",
         );
-      });
-      refetch();
+      }, 150);
     },
-    [refetch],
+    [heroBounce, router],
   );
 
-  const handleComposeClose = useCallback(() => {
-    setComposeVisible(false);
-    // Force invalidate and refetch to show new entry
-    queryClient.invalidateQueries({ queryKey: ["memories"] });
-    refetch().then((result) => {
-      const newMemories = result.data?.memories;
-      if (newMemories?.length) {
-        setJustCapturedId(newMemories[0].id);
-        setTimeout(() => setJustCapturedId(null), 1200);
-      }
-    });
-  }, [refetch, queryClient]);
+  const displayName = userData?.user?.display_name?.trim() || "You";
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -116,22 +55,12 @@ export default function FeedScreen() {
         <ScrollView
           contentContainerStyle={styles.scroll}
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor="#C0BDB8"
-              colors={["#818CF8"]}
-            />
-          }
         >
-          {/* Header */}
           <View style={styles.header}>
             <View>
               <Text style={styles.appName}>noto</Text>
               <Text style={styles.greeting}>
-                {memories.length} thought{memories.length !== 1 ? "s" : ""}
+                Capture first. Organize after.
               </Text>
             </View>
             <Pressable
@@ -139,30 +68,28 @@ export default function FeedScreen() {
               style={styles.avatarBtn}
               hitSlop={8}
             >
-              {userData?.user?.avatar_url ? (
-                <Animated.Image
-                  source={{ uri: userData.user.avatar_url }}
-                  style={styles.avatarImg}
-                />
-              ) : (
-                <Text style={styles.avatarInitial}>
-                  {(userData?.user?.display_name || "?")[0].toUpperCase()}
-                </Text>
-              )}
+              <Text style={styles.avatarInitial}>
+                {displayName[0]?.toUpperCase() ?? "?"}
+              </Text>
             </Pressable>
           </View>
 
-          <Animated.View style={fabBounceStyle}>
-            <Pressable onPress={handleFabPress} style={styles.heroCard}>
+          <Animated.View style={heroBounceStyle}>
+            <Pressable
+              onPress={() => openCapture("voice")}
+              style={styles.heroCard}
+            >
               <View style={styles.heroCopy}>
-                <Text style={styles.heroEyebrow}>Primary action</Text>
-                <Text style={styles.heroTitle}>Capture a new thought</Text>
+                <Text style={styles.heroEyebrow}>Page one</Text>
+                <Text style={styles.heroTitle}>
+                  Record what matters right now
+                </Text>
                 <Text style={styles.heroSubtitle}>
-                  Voice note, quick thought, or image first. Your journal comes
-                  after the capture.
+                  Start with a voice note, a quick thought, or an image. The
+                  journal stays on the next page for history and search.
                 </Text>
                 <View style={styles.heroButton}>
-                  <Plus size={15} color="#FFFFFF" strokeWidth={2.2} />
+                  <Mic size={15} color="#FFFFFF" strokeWidth={2.2} />
                   <Text style={styles.heroButtonText}>Open the cloud</Text>
                 </View>
               </View>
@@ -171,89 +98,83 @@ export default function FeedScreen() {
                 <NotoMascot size={170} compact />
                 <View style={styles.heroBadge}>
                   <Camera size={12} color="#1E1E1E" strokeWidth={2} />
-                  <Text style={styles.heroBadgeText}>
-                    Thoughts, notes, images
-                  </Text>
+                  <Text style={styles.heroBadgeText}>Voice, note, photo</Text>
                 </View>
               </View>
             </Pressable>
           </Animated.View>
 
-          {/* Search bar */}
-          <View
-            style={[styles.searchBar, searchFocused && styles.searchBarActive]}
-          >
-            <Search
-              size={16}
-              color={searchFocused ? "#FFF" : "#BBB"}
-              strokeWidth={2}
+          <View style={styles.actionRow}>
+            <ActionCard
+              icon={<SquarePen size={18} color="#1E1E1E" strokeWidth={2} />}
+              title="Write a note"
+              body="Drop a quick thought without opening the journal."
+              onPress={() => openCapture("text")}
             />
-            <TextInput
-              style={[
-                styles.searchInput,
-                searchFocused && styles.searchInputActive,
-              ]}
-              placeholder="Search your mind..."
-              placeholderTextColor={
-                searchFocused ? "rgba(255,255,255,0.5)" : "#CCC"
-              }
-              value={query}
-              onChangeText={setQuery}
-              onFocus={() => setSearchFocused(true)}
-              returnKeyType="search"
+            <ActionCard
+              icon={<Camera size={18} color="#1E1E1E" strokeWidth={2} />}
+              title="Add a photo"
+              body="Capture a memory from your camera roll or camera."
+              onPress={() => openCapture("image")}
             />
-            {searchFocused && (
-              <Pressable onPress={cancelSearch} hitSlop={8}>
-                <X size={16} color="rgba(255,255,255,0.6)" strokeWidth={2} />
-              </Pressable>
-            )}
           </View>
 
-          {/* Results count */}
-          {searchFocused && query.length > 0 && (
-            <Text style={styles.resultsCount}>
-              {memories.length} thought{memories.length !== 1 ? "s" : ""}
-            </Text>
-          )}
-
-          {!searchFocused && (
-            <Text style={styles.sectionLabel}>Recent thoughts</Text>
-          )}
-
-          {/* Content */}
-          {isLoading ? (
-            <SkeletonGrid />
-          ) : memories.length === 0 ? (
-            <Animated.View
-              entering={FadeInDown.duration(500)}
-              style={styles.emptyState}
+          <View style={styles.secondaryCard}>
+            <View style={styles.secondaryCopy}>
+              <Text style={styles.secondaryEyebrow}>Page two</Text>
+              <Text style={styles.secondaryTitle}>Journal and search</Text>
+              <Text style={styles.secondaryBody}>
+                Browse your past thoughts, search your history, and open any
+                entry in detail from a separate screen.
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => router.push("/journal")}
+              style={styles.secondaryButton}
             >
-              <NotoMascot size={220} />
-              <Text style={styles.emptyTitle}>
-                {query ? "No thoughts found" : "Your mind is clear"}
-              </Text>
-              <Text style={styles.emptySubtitle}>
-                {query
-                  ? "Try a different search"
-                  : "Tap the cloud to capture your first thought"}
-              </Text>
-            </Animated.View>
-          ) : (
-            <MasonryGrid
-              memories={memories}
-              onCardPress={handleCardPress}
-              onDelete={handleDelete}
-              justCapturedId={justCapturedId}
-            />
-          )}
+              <Text style={styles.secondaryButtonText}>Open journal</Text>
+              <ChevronRight size={16} color="#1E1E1E" strokeWidth={2.2} />
+            </Pressable>
+          </View>
 
-          <View style={styles.bottomGap} />
+          <Pressable
+            onPress={() => router.push("/settings")}
+            style={styles.settingsRow}
+          >
+            <View style={styles.settingsIcon}>
+              <Settings size={16} color="#6F6A63" strokeWidth={2} />
+            </View>
+            <View style={styles.settingsCopy}>
+              <Text style={styles.settingsTitle}>Settings</Text>
+              <Text style={styles.settingsBody}>
+                Account, export, and app controls.
+              </Text>
+            </View>
+            <ChevronRight size={16} color="#AAA39A" strokeWidth={2} />
+          </Pressable>
         </ScrollView>
-
-        {/* Compose modal */}
-        <ComposeModal visible={composeVisible} onClose={handleComposeClose} />
       </View>
     </SafeAreaView>
+  );
+}
+
+function ActionCard({
+  icon,
+  title,
+  body,
+  onPress,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  body: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable onPress={onPress} style={styles.actionCard}>
+      <View style={styles.actionIcon}>{icon}</View>
+      <Text style={styles.actionTitle}>{title}</Text>
+      <Text style={styles.actionBody}>{body}</Text>
+    </Pressable>
   );
 }
 
@@ -269,15 +190,14 @@ const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: 20,
     paddingTop: 14,
-    paddingBottom: 130,
+    paddingBottom: 48,
+    gap: 18,
   },
-
-  // Header
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 22,
+    marginBottom: 4,
   },
   appName: {
     fontFamily: fonts.bold,
@@ -288,84 +208,36 @@ const styles = StyleSheet.create({
   greeting: {
     fontFamily: fonts.regular,
     fontSize: 13,
-    color: "#C0BDB8",
+    color: "#A6A29B",
     marginTop: 2,
   },
   avatarBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: "#E8E6E3",
     alignItems: "center",
     justifyContent: "center",
     marginTop: 4,
-    overflow: "hidden",
-  },
-  avatarImg: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
   },
   avatarInitial: {
     fontFamily: fonts.bold,
     fontSize: 14,
-    color: "#999",
+    color: "#77706A",
   },
-
-  // Search
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F0EFED",
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 20,
-    gap: 10,
-  },
-  searchBarActive: {
-    backgroundColor: "#1A1A1A",
-  },
-  searchInput: {
-    flex: 1,
-    fontFamily: fonts.medium,
-    fontSize: 15,
-    color: "#333",
-    padding: 0,
-  },
-  searchInputActive: {
-    color: "#FFF",
-  },
-  resultsCount: {
-    fontFamily: fonts.bold,
-    fontSize: 10,
-    color: "#C0BDB8",
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    marginBottom: 14,
-  },
-  sectionLabel: {
-    fontFamily: fonts.bold,
-    fontSize: 10,
-    color: "#C0BDB8",
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    marginBottom: 14,
-  },
-
   heroCard: {
+    minHeight: 250,
     backgroundColor: "#FFFFFF",
     borderRadius: 28,
     borderWidth: 1,
     borderColor: "#EAEAEA",
-    paddingHorizontal: 20,
-    paddingVertical: 22,
-    marginBottom: 18,
+    paddingHorizontal: 22,
+    paddingVertical: 24,
     overflow: "hidden",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
     elevation: 4,
   },
   heroCopy: {
@@ -382,20 +254,20 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontFamily: fonts.bold,
-    fontSize: 29,
-    lineHeight: 31,
+    fontSize: 31,
+    lineHeight: 34,
     letterSpacing: -1.1,
     color: "#1A1A1A",
   },
   heroSubtitle: {
     fontFamily: fonts.regular,
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 21,
     color: "#6F6A63",
     marginTop: 10,
   },
   heroButton: {
-    marginTop: 16,
+    marginTop: 18,
     alignSelf: "flex-start",
     flexDirection: "row",
     alignItems: "center",
@@ -413,7 +285,7 @@ const styles = StyleSheet.create({
   heroMascotWrap: {
     position: "absolute",
     right: -10,
-    bottom: 8,
+    bottom: 10,
     alignItems: "center",
   },
   heroBadge: {
@@ -423,7 +295,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "rgba(255,255,255,0.92)",
+    backgroundColor: "rgba(255,255,255,0.94)",
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -433,28 +305,114 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#1E1E1E",
   },
-
-  // Empty state
-  emptyState: {
+  actionRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  actionCard: {
+    flex: 1,
+    backgroundColor: "#F7F4EF",
+    borderRadius: 22,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#EFE8DE",
+    minHeight: 152,
+  },
+  actionIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
-    paddingTop: 50,
+    justifyContent: "center",
+    marginBottom: 16,
   },
-  emptyTitle: {
-    fontFamily: fonts.bold,
-    ...typography.lg,
-    color: "#333",
-    marginTop: 20,
+  actionTitle: {
+    fontFamily: fonts.semiBold,
+    fontSize: 16,
+    color: "#1A1A1A",
   },
-  emptySubtitle: {
+  actionBody: {
     fontFamily: fonts.regular,
-    ...typography.sm,
-    color: "#999",
-    marginTop: 6,
-    textAlign: "center",
-    paddingHorizontal: 20,
+    fontSize: 13,
+    lineHeight: 19,
+    color: "#6F6A63",
+    marginTop: 8,
   },
-
-  bottomGap: {
-    height: 12,
+  secondaryCard: {
+    backgroundColor: "#FFF8E8",
+    borderRadius: 24,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: "#F2E2B0",
+    gap: 16,
+  },
+  secondaryCopy: {
+    gap: 6,
+  },
+  secondaryEyebrow: {
+    fontFamily: fonts.bold,
+    fontSize: 10,
+    letterSpacing: 1.1,
+    textTransform: "uppercase",
+    color: "#B38A20",
+  },
+  secondaryTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 22,
+    lineHeight: 24,
+    color: "#1A1A1A",
+  },
+  secondaryBody: {
+    fontFamily: fonts.regular,
+    fontSize: 14,
+    lineHeight: 21,
+    color: "#6F6A63",
+  },
+  secondaryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "rgba(255,255,255,0.72)",
+    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  secondaryButtonText: {
+    fontFamily: fonts.semiBold,
+    fontSize: 14,
+    color: "#1E1E1E",
+  },
+  settingsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: "#EAEAEA",
+    padding: 16,
+  },
+  settingsIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#F5F4F2",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  settingsCopy: {
+    flex: 1,
+  },
+  settingsTitle: {
+    fontFamily: fonts.semiBold,
+    fontSize: 15,
+    color: "#1A1A1A",
+  },
+  settingsBody: {
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    color: "#8B857D",
+    marginTop: 3,
   },
 });

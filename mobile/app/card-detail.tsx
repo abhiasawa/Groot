@@ -24,6 +24,7 @@ import Animated, {
 
 import { useMemories } from "../lib/api/queries";
 import { apiFetch } from "../lib/api/client";
+import { useMediaUrl } from "../lib/api/use-media-url";
 import { fonts, typography } from "../constants/typography";
 import { AudioPlayer } from "../components/detail/audio-player";
 import { notoTheme, shadows } from "../lib/theme/tokens";
@@ -89,6 +90,7 @@ export default function CardDetailScreen() {
   const label = categoryLabel(category);
   const isVoice = memory.message_type === "audio";
   const isImage = memory.message_type === "image";
+  const { data: resolvedMediaUrl } = useMediaUrl(memory.media_url);
   const displayText = memory.content || memory.media_description;
   const title = displayText
     ? displayText.split("\n")[0].slice(0, 60)
@@ -144,10 +146,10 @@ export default function CardDetailScreen() {
         </Animated.View>
 
         {/* Hero image */}
-        {isImage && memory.media_url && (
+        {isImage && resolvedMediaUrl && (
           <Animated.View entering={FadeInDown.duration(280).delay(140)}>
             <Image
-              source={{ uri: memory.media_url }}
+              source={{ uri: resolvedMediaUrl }}
               style={styles.heroImage}
               resizeMode="cover"
             />
@@ -155,9 +157,9 @@ export default function CardDetailScreen() {
         )}
 
         {/* Audio player */}
-        {isVoice && memory.media_url && (
+        {isVoice && resolvedMediaUrl && (
           <Animated.View entering={FadeInDown.duration(280).delay(140)}>
-            <AudioPlayer uri={memory.media_url} />
+            <AudioPlayer uri={resolvedMediaUrl} />
           </Animated.View>
         )}
 

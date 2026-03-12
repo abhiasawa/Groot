@@ -6,6 +6,7 @@ import * as Haptics from "expo-haptics";
 import { getCardColor } from "../../constants/card-colors";
 import { fonts } from "../../constants/typography";
 import { notoTheme } from "../../lib/theme/tokens";
+import { useMediaUrl } from "../../lib/api/use-media-url";
 import type { Memory } from "../../../shared/types/api";
 
 function relativeTime(dateStr: string): string {
@@ -44,7 +45,8 @@ export function ThoughtCard({ memory, onPress, onLongPress }: ThoughtCardProps) 
   const isImage = memory.message_type === "image";
   const displayText = memory.content || memory.media_description;
   const label = categoryLabel(category);
-  const hasImageUrl = isImage && memory.media_url;
+  const { data: resolvedImageUrl } = useMediaUrl(isImage ? memory.media_url : null);
+  const hasImageUrl = isImage && resolvedImageUrl;
 
   return (
     <Pressable
@@ -87,7 +89,7 @@ export function ThoughtCard({ memory, onPress, onLongPress }: ThoughtCardProps) 
         {/* Image thumbnail */}
         {hasImageUrl ? (
           <Image
-            source={{ uri: memory.media_url! }}
+            source={{ uri: resolvedImageUrl! }}
             style={styles.imageThumbnail}
             resizeMode="cover"
           />

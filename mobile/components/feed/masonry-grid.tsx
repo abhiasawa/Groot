@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useCallback } from "react";
+import React, { useEffect, useMemo, useCallback, useRef } from "react";
 import { View, StyleSheet, Dimensions, Alert } from "react-native";
 import Animated, {
   useSharedValue,
@@ -9,7 +9,6 @@ import Animated, {
   withSequence,
   Easing,
   FadeIn,
-  Layout,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 
@@ -49,9 +48,12 @@ function AnimatedCard({
   const progress = useSharedValue(0);
   const captureScale = useSharedValue(isJustCaptured ? 0 : 1);
   const captureGlow = useSharedValue(isJustCaptured ? 0 : 1);
+  const hasAnimated = useRef(false);
 
   useEffect(() => {
-    progress.value = 0;
+    // Only animate entrance once per card
+    if (hasAnimated.current) return;
+    hasAnimated.current = true;
     progress.value = withDelay(
       index * STAGGER_MS,
       withTiming(1, {
@@ -59,7 +61,7 @@ function AnimatedCard({
         easing: Easing.out(Easing.cubic),
       }),
     );
-  }, [memory.id]);
+  }, []);
 
   // Special fly-in for just-captured card
   useEffect(() => {
@@ -111,7 +113,7 @@ function AnimatedCard({
   });
 
   return (
-    <Animated.View style={animStyle} layout={Layout.springify().damping(18).stiffness(200)}>
+    <Animated.View style={animStyle}>
       <ThoughtCard memory={memory} onPress={onPress} onLongPress={handleLongPress} />
     </Animated.View>
   );

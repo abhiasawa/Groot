@@ -13,7 +13,7 @@ import { X } from "lucide-react-native";
 
 import { apiFetch } from "../lib/api/client";
 import { fonts, typography } from "../constants/typography";
-import { AnimatedSun } from "../components/ui/animated-sun";
+import { NotoMascot } from "../components/ui/noto-mascot";
 import { notoTheme } from "../lib/theme/tokens";
 
 export default function OnboardingScreen() {
@@ -57,7 +57,7 @@ export default function OnboardingScreen() {
 
         {/* Mascot + welcome */}
         <View style={styles.center}>
-          <AnimatedSun size={160} />
+          <NotoMascot size={160} />
           <Text style={styles.title}>Welcome to Noto</Text>
           <Text style={styles.subtitle}>
             A calm place for your thoughts.{"\n"}Capture anything, find everything.

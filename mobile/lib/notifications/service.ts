@@ -196,7 +196,7 @@ export async function syncScheduledNotifications(
       content: {
         title: `Tip: ${tip.title}`,
         body: tip.body,
-        data: { screen: "/(tabs)/journal", type: "feature_tip" },
+        data: { screen: "/", type: "feature_tip" },
         ...(Platform.OS === "android" && { channelId: CHANNEL_ID }),
       },
       trigger: {
@@ -212,15 +212,6 @@ export async function syncScheduledNotifications(
 /**
  * Map a preference key to the deep-link screen path.
  */
-function screenForKey(key: string): string {
-  switch (key) {
-    case "morning_checkin":
-      return "/(tabs)/mood";
-    case "evening_journal":
-      return "/(tabs)/journal";
-    case "weekly_report":
-      return "/(tabs)/journal";
-    default:
-      return "/(tabs)/journal";
-  }
+function screenForKey(_key: string): string {
+  return "/";
 }

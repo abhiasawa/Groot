@@ -86,6 +86,8 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Image message ──
+    // Just store the photo — no OCR/vision analysis.
+    // Voice notes provide the journal text, not image content extraction.
     if (message_type === "image") {
       if (!media_base64 || !mime_type) {
         return NextResponse.json({ error: "media_base64 and mime_type required for image" }, { status: 400 });
@@ -95,19 +97,8 @@ export async function POST(request: NextRequest) {
       // Upload to storage
       mediaStoragePath = await uploadMediaToStorage(userId, buffer, mime_type, "image");
 
-      // Vision analysis
-      const result = await processMediaFromBuffer(buffer, "image", mime_type);
-      if (result && (result.description || result.text)) {
-        const parts = [
-          result.description ? `[Image: ${result.description}]` : null,
-          result.text ? `[Text in image: ${result.text}]` : null,
-          caption ? `[User caption: ${caption}]` : null,
-        ].filter(Boolean);
-        textForGroot = parts.join("\n");
-        mediaDescription = result.description || result.text;
-      } else {
-        textForGroot = caption || "[User sent an image]";
-      }
+      textForGroot = caption || "[Photo added to journal]";
+      mediaDescription = caption || null;
     }
 
     if (!textForGroot) {

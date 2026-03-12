@@ -19,7 +19,7 @@ import {
 
 import { useAuth } from "../../lib/auth/provider";
 import { fonts, typography } from "../../constants/typography";
-import { AnimatedSun } from "../../components/ui/animated-sun";
+import { NotoMascot } from "../../components/ui/noto-mascot";
 import { notoTheme } from "../../lib/theme/tokens";
 
 const API_BASE = (
@@ -126,7 +126,7 @@ export default function LoginScreen() {
             entering={FadeInDown.duration(450)}
             style={styles.branding}
           >
-            <AnimatedSun size={96} />
+            <NotoMascot size={96} compact />
             <Text style={styles.title}>noto</Text>
             <Text style={styles.subtitle}>
               A calm place for your thoughts

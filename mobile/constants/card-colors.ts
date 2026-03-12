@@ -13,7 +13,9 @@ const PALETTE = [
   { bg: "#F0ECF9", meta: "#8B78B8" },  // Soft lavender    — media
   { bg: "#FEF3E2", meta: "#C88B4A" },  // Peach
   { bg: "#E5F6F6", meta: "#4A9E9E" },  // Teal mist
-  { bg: "#F5EEF8", meta: "#9B72B0" },  // Orchid
+  { bg: "#FFF8E8", meta: "#B8860B" },  // Amber gold
+  { bg: "#E8F5E9", meta: "#5C8A5C" },  // Moss green
+  { bg: "#FCE4EC", meta: "#C4536A" },  // Coral pink
 ] as const;
 
 export const CARD_COLORS = {
@@ -49,13 +51,18 @@ export const TAG_COLORS = {
   family: "#803EF2",
 } as const;
 
-/** Simple hash of a string to a number */
+/** Hash using characters spread across the UUID for better distribution */
 function hashCode(s: string): number {
+  // UUIDs have hex chars at varied positions — sample several for spread
   let h = 0;
   for (let i = 0; i < s.length; i++) {
-    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+    h = (h * 31 + s.charCodeAt(i)) >>> 0;
   }
-  return Math.abs(h);
+  // Mix bits for better distribution
+  h = ((h >>> 16) ^ h) * 0x45d9f3b;
+  h = ((h >>> 16) ^ h) * 0x45d9f3b;
+  h = (h >>> 16) ^ h;
+  return h >>> 0;
 }
 
 // ── Lightweight client-side classifier ──────────────────────
@@ -68,12 +75,16 @@ const REFLECTION_WORDS = /\b(realized|learned|grateful|thankful|appreciate|refle
 const EMOTION_WORDS = /\b(feel|feeling|happy|sad|angry|anxious|worried|excited|stressed|overwhelmed|frustrated|love|miss|afraid|nervous|grateful|proud|lonely|tired|scared|hurt|upset|joy|peace|calm)\b/i;
 
 function classifyContent(text: string, messageType: string): CardCategory | null {
-  if (messageType === "audio" || messageType === "image") return "media";
-  if (!text) return null;
-  if (TASK_WORDS.test(text)) return "task";
-  if (EMOTION_WORDS.test(text)) return "emotion";
-  if (REFLECTION_WORDS.test(text)) return "reflection";
-  if (IDEA_WORDS.test(text)) return "idea";
+  const isMedia = messageType === "audio" || messageType === "image";
+  // Try semantic classification on transcription/description text first
+  if (text) {
+    if (TASK_WORDS.test(text)) return "task";
+    if (EMOTION_WORDS.test(text)) return "emotion";
+    if (REFLECTION_WORDS.test(text)) return "reflection";
+    if (IDEA_WORDS.test(text)) return "idea";
+  }
+  // Only fall back to "media" when there's no semantic match
+  if (isMedia) return "media";
   return null;
 }
 

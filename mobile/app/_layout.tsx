@@ -21,7 +21,7 @@ import { ThemeProvider } from "../lib/theme/provider";
 export { ErrorBoundary } from "expo-router";
 
 export const unstable_settings = {
-  initialRouteName: "(tabs)",
+  initialRouteName: "index",
 };
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -146,7 +146,8 @@ export default function RootLayout() {
             <AuthGate>
               <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="(auth)" />
-                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="index" />
+                <Stack.Screen name="journal" />
                 <Stack.Screen
                   name="capture"
                   options={{
