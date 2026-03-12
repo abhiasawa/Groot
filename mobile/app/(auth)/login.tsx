@@ -26,7 +26,8 @@ const API_BASE = (
   process.env.EXPO_PUBLIC_API_BASE_URL ?? "https://groot-three.vercel.app"
 ).replace(/\/$/, "");
 
-const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ?? "";
+const GOOGLE_WEB_CLIENT_ID =
+  process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID?.trim() ?? "";
 
 GoogleSignin.configure({
   webClientId: GOOGLE_WEB_CLIENT_ID,
@@ -44,7 +45,9 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      await GoogleSignin.hasPlayServices({
+        showPlayServicesUpdateDialog: true,
+      });
       const response = await GoogleSignin.signIn();
 
       if (isSuccessResponse(response)) {
@@ -128,9 +131,7 @@ export default function LoginScreen() {
           >
             <NotoMascot size={96} compact />
             <Text style={styles.title}>noto</Text>
-            <Text style={styles.subtitle}>
-              A calm place for your thoughts
-            </Text>
+            <Text style={styles.subtitle}>A calm place for your thoughts</Text>
           </Animated.View>
 
           {/* Sign-in card */}
@@ -180,7 +181,14 @@ export default function LoginScreen() {
 
 function GoogleIcon({ size }: { size: number }) {
   return (
-    <View style={{ width: size, height: size, justifyContent: "center", alignItems: "center" }}>
+    <View
+      style={{
+        width: size,
+        height: size,
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+    >
       <Svg width={size} height={size} viewBox="0 0 24 24">
         <Path
           d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
