@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useTheme } from "@/contexts/theme-context";
 
 export default function LoginPage() {
   return (
@@ -52,6 +53,7 @@ const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
 function LoginForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { resolvedTheme } = useTheme();
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState<"phone" | "otp">("phone");
@@ -109,8 +111,9 @@ function LoginForm() {
         callback: handleGoogleCredential,
       });
       if (googleButtonRef.current) {
+        googleButtonRef.current.innerHTML = "";
         window.google.accounts.id.renderButton(googleButtonRef.current, {
-          theme: "outline",
+          theme: resolvedTheme === "dark" ? "filled_black" : "outline",
           size: "large",
           type: "standard",
           text: "continue_with",
@@ -133,8 +136,9 @@ function LoginForm() {
           callback: handleGoogleCredential,
         });
         if (googleButtonRef.current) {
+          googleButtonRef.current.innerHTML = "";
           window.google.accounts.id.renderButton(googleButtonRef.current, {
-            theme: "outline",
+            theme: resolvedTheme === "dark" ? "filled_black" : "outline",
             size: "large",
             type: "standard",
             text: "continue_with",
@@ -154,7 +158,7 @@ function LoginForm() {
       );
       if (existing) existing.remove();
     };
-  }, [handleGoogleCredential]);
+  }, [handleGoogleCredential, resolvedTheme]);
 
   // ── Step 1: Request OTP via WhatsApp ────────────
   async function handleRequestOtp(e: React.FormEvent) {
@@ -229,24 +233,37 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="w-full max-w-md p-8 rounded-2xl shadow-lg bg-card">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="text-5xl mb-3">🌱</div>
-          <h1 className="text-2xl font-semibold text-primary" style={{ letterSpacing: "-0.02em" }}>
+    <div className="flex min-h-screen items-center justify-center bg-background px-5 py-10">
+      <div className="w-full max-w-md rounded-[28px] border border-border bg-card p-8 shadow-[0_12px_40px_rgba(0,0,0,0.08)]">
+        <div className="mb-8 text-center">
+          <h1
+            className="text-3xl font-semibold text-primary"
+            style={{ letterSpacing: "-0.03em" }}
+          >
             The Garden
           </h1>
-          <p className="text-sm mt-1 text-muted-foreground">Your Groot dashboard</p>
+          <p className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-accent">
+            by Groot
+          </p>
         </div>
 
         {step === "otp" ? (
           <form onSubmit={handleVerifyOtp} className="space-y-4">
             <div className="flex items-center gap-2 mb-2">
-              <button type="button" onClick={() => { setStep("phone"); setOtp(""); setError(""); }} className="text-sm text-primary">
+              <button
+                type="button"
+                onClick={() => {
+                  setStep("phone");
+                  setOtp("");
+                  setError("");
+                }}
+                className="text-sm text-primary"
+              >
                 ← Back
               </button>
-              <p className="text-sm font-medium text-foreground">Check your WhatsApp</p>
+              <p className="text-sm font-medium text-foreground">
+                Check your WhatsApp
+              </p>
             </div>
 
             <p className="text-sm text-muted-foreground">
@@ -261,7 +278,9 @@ function LoginForm() {
                 pattern="[0-9]*"
                 autoComplete="one-time-code"
                 value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                onChange={(e) =>
+                  setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+                }
                 placeholder="000000"
                 maxLength={6}
                 required
@@ -274,14 +293,17 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading || otp.length < 6}
-              className="w-full py-3 rounded-lg text-white font-medium text-sm transition-colors disabled:opacity-50 bg-primary"
+              className="w-full rounded-[14px] bg-primary py-3 text-sm font-medium text-primary-foreground transition-colors disabled:opacity-50"
             >
               {loading ? "Verifying..." : "Verify & Sign In"}
             </button>
 
             <button
               type="button"
-              onClick={(e) => { e.preventDefault(); handleRequestOtp(e); }}
+              onClick={(e) => {
+                e.preventDefault();
+                handleRequestOtp(e);
+              }}
               className="w-full text-sm text-center py-2 text-primary"
             >
               Resend code
@@ -292,9 +314,15 @@ function LoginForm() {
             {/* ── Google Sign-In ── */}
             {GOOGLE_CLIENT_ID && (
               <div>
-                <div ref={googleButtonRef} className="flex justify-center" style={{ minHeight: 44 }} />
+                <div
+                  ref={googleButtonRef}
+                  className="flex justify-center"
+                  style={{ minHeight: 44 }}
+                />
                 {googleLoading && (
-                  <p className="text-xs text-center mt-2 text-muted-foreground">Signing in...</p>
+                  <p className="text-xs text-center mt-2 text-muted-foreground">
+                    Signing in...
+                  </p>
                 )}
               </div>
             )}
@@ -311,7 +339,10 @@ function LoginForm() {
             {/* ── WhatsApp OTP ── */}
             <form onSubmit={handleRequestOtp} className="space-y-4">
               <div>
-                <label htmlFor="phone" className="block text-sm font-medium mb-1 text-foreground">
+                <label
+                  htmlFor="phone"
+                  className="block text-sm font-medium mb-1 text-foreground"
+                >
                   WhatsApp number
                 </label>
                 <input
@@ -325,12 +356,14 @@ function LoginForm() {
                 />
               </div>
 
-              {error && !googleLoading && <p className="text-sm text-destructive">{error}</p>}
+              {error && !googleLoading && (
+                <p className="text-sm text-destructive">{error}</p>
+              )}
 
               <button
                 type="submit"
                 disabled={loading || !phone.trim()}
-                className="w-full py-3 rounded-lg text-white font-medium text-sm transition-colors disabled:opacity-50 bg-primary"
+                className="w-full rounded-[14px] bg-primary py-3 text-sm font-medium text-primary-foreground transition-colors disabled:opacity-50"
               >
                 {loading ? "Sending..." : "Send Code via WhatsApp"}
               </button>
@@ -338,9 +371,15 @@ function LoginForm() {
           </div>
         )}
 
-        <p className="text-center text-xs mt-6 text-muted-foreground">
-          Message Groot on WhatsApp first to create your account.
-        </p>
+        <details className="mt-6 rounded-2xl border border-border bg-secondary/70 p-4 text-sm text-muted-foreground">
+          <summary className="cursor-pointer list-none font-medium text-foreground">
+            How does this work?
+          </summary>
+          <p className="mt-2">
+            Existing users can sign in with Google or request a WhatsApp code.
+            New accounts are still provisioned through Groot first.
+          </p>
+        </details>
       </div>
     </div>
   );

@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 const PRIMARY_NAV_ITEMS = [
-  { href: "/garden", label: "Today", icon: Sun },
+  { href: "/garden", label: "Home", icon: Sun },
   { href: "/garden/garden", label: "Garden", icon: Sprout },
   { href: "/garden/mirror", label: "Mirror", icon: User },
   { href: "/garden/settings", label: "Settings", icon: Settings },
@@ -37,7 +37,14 @@ export default function Sidebar() {
       <div className="border-b border-border px-4 py-5">
         <a href="/garden" className="flex items-center gap-2">
           <Sprout className="h-5 w-5 text-primary" />
-          <span className="text-lg tracking-tight" style={{ fontFamily: "var(--font-instrument-serif), Georgia, serif" }}>The Garden</span>
+          <span
+            className="text-lg tracking-tight"
+            style={{
+              fontFamily: "var(--font-instrument-serif), Georgia, serif",
+            }}
+          >
+            The Garden
+          </span>
         </a>
       </div>
 

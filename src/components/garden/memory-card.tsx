@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import { motion } from "motion/react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { FileText, Mic, Camera, ChevronDown } from "lucide-react";
+import { FileText, Mic, Camera, ChevronDown, Trash2 } from "lucide-react";
 import MarkdownContent from "./markdown-content";
 
 interface MemoryCardProps {
@@ -17,13 +18,16 @@ interface MemoryCardProps {
   moodColor: string;
   isExpanded: boolean;
   onToggleExpand: (id: string) => void;
+  onDelete?: (id: string) => void;
+  isFresh?: boolean;
 }
 
-const TYPE_CONFIG: Record<string, { icon: React.ElementType; label: string }> = {
-  text: { icon: FileText, label: "Text" },
-  audio: { icon: Mic, label: "Voice" },
-  image: { icon: Camera, label: "Photo" },
-};
+const TYPE_CONFIG: Record<string, { icon: React.ElementType; label: string }> =
+  {
+    text: { icon: FileText, label: "Text" },
+    audio: { icon: Mic, label: "Voice" },
+    image: { icon: Camera, label: "Photo" },
+  };
 
 export default function MemoryCard({
   id,
@@ -34,9 +38,14 @@ export default function MemoryCard({
   moodColor,
   isExpanded,
   onToggleExpand,
+  onDelete,
+  isFresh = false,
 }: MemoryCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const time = new Date(createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  const time = new Date(createdAt).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
   const wordCount = content?.split(/\s+/).length ?? 0;
   const config = TYPE_CONFIG[messageType] ?? TYPE_CONFIG["text"]!;
   const Icon = config.icon;
@@ -56,7 +65,9 @@ export default function MemoryCard({
       <Card
         className={cn(
           "cursor-pointer transition-all duration-200 hover:shadow-md overflow-hidden",
-          isExpanded && "col-span-full"
+          isExpanded && "col-span-full",
+          isFresh &&
+            "ring-2 ring-accent/50 ring-offset-2 ring-offset-background",
         )}
         style={{ borderLeft: `3px solid ${moodColor}` }}
         onClick={() => onToggleExpand(id)}
@@ -67,13 +78,41 @@ export default function MemoryCard({
             <Icon className="h-3 w-3" />
             {config.label}
           </Badge>
-          <div className="h-2 w-2 rounded-full" style={{ backgroundColor: moodColor }} />
-          <span className="text-[11px] text-muted-foreground ml-auto">{time}</span>
+          <div
+            className="h-2 w-2 rounded-full"
+            style={{ backgroundColor: moodColor }}
+          />
+          {isFresh && (
+            <Badge className="border border-accent/25 bg-accent/15 text-accent-foreground">
+              New
+            </Badge>
+          )}
+          <span className="text-[11px] text-muted-foreground ml-auto">
+            {time}
+          </span>
+          {onDelete && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              className="text-muted-foreground hover:text-destructive"
+              onClick={(event) => {
+                event.stopPropagation();
+                onDelete(id);
+              }}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              <span className="sr-only">Delete memory</span>
+            </Button>
+          )}
         </div>
 
         {/* Content */}
         <div className="px-5 pb-2">
-          <MarkdownContent content={content} truncate={isExpanded ? undefined : 200} />
+          <MarkdownContent
+            content={content}
+            truncate={isExpanded ? undefined : 200}
+          />
 
           {mediaDescription && (
             <p className="text-xs mt-2 italic text-muted-foreground">
@@ -91,7 +130,12 @@ export default function MemoryCard({
           )}
           <span className="text-[11px] text-primary ml-auto flex items-center gap-1">
             {isExpanded ? "Show less" : "Read more"}
-            <ChevronDown className={cn("h-3 w-3 transition-transform", isExpanded && "rotate-180")} />
+            <ChevronDown
+              className={cn(
+                "h-3 w-3 transition-transform",
+                isExpanded && "rotate-180",
+              )}
+            />
           </span>
         </div>
       </Card>

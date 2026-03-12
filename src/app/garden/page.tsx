@@ -1,322 +1,564 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Search, BookOpen, BarChart3, Settings, Bell } from "lucide-react";
-import { cachedFetch } from "@/lib/garden/fetch-cache";
-import MarkdownContent from "@/components/garden/markdown-content";
-import { Card, CardContent } from "@/components/ui/card";
+import Link from "next/link";
+import {
+  type ChangeEvent,
+  type FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import {
+  BookOpen,
+  Camera,
+  ChevronRight,
+  ImagePlus,
+  LoaderCircle,
+  Plus,
+  Search,
+  Settings,
+  Sparkles,
+  X,
+} from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import MemoryCard from "@/components/garden/memory-card";
+import NotoMascotWeb from "@/components/garden/noto-mascot-web";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
-import { NumberTicker } from "@/components/magicui/number-ticker";
-import { SparklesText } from "@/components/magicui/sparkles-text";
-import { BentoGrid, BentoGridItem } from "@/components/aceternity/bento-grid";
-import { cn } from "@/lib/utils";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { cachedFetch, invalidateCache } from "@/lib/garden/fetch-cache";
 
-interface HomeData {
-  displayName: string;
-  createdAt: string;
-  memoriesCount: number;
-  pendingTasks: number;
-  upcomingReminders: number;
-  flashback: { content: string; created_at: string } | null;
-  recentMood: string | null;
-  peopleCount: number;
-  habitsCount: number;
+interface Memory {
+  id: string;
+  content: string | null;
+  media_description: string | null;
+  message_type: string;
+  card_category: string | null;
+  created_at: string;
 }
 
-const MOOD_TW: Record<string, string> = {
-  positive: "text-mood-good", good: "text-mood-good", great: "text-mood-great",
-  happy: "text-mood-great", calm: "text-mood-good", motivated: "text-mood-good",
-  neutral: "text-mood-okay", okay: "text-mood-okay", fine: "text-mood-okay",
-  low: "text-mood-low", tired: "text-mood-low", anxious: "text-mood-low",
-  stressed: "text-mood-low", bad: "text-mood-bad", sad: "text-mood-bad",
-};
+interface MemoriesResponse {
+  memories: Memory[];
+  total: number;
+}
 
-const MOOD_BG_TW: Record<string, string> = {
-  positive: "bg-mood-good", good: "bg-mood-good", great: "bg-mood-great",
-  happy: "bg-mood-great", calm: "bg-mood-good", motivated: "bg-mood-good",
-  neutral: "bg-mood-okay", okay: "bg-mood-okay", fine: "bg-mood-okay",
-  low: "bg-mood-low", tired: "bg-mood-low", anxious: "bg-mood-low",
-  stressed: "bg-mood-low", bad: "bg-mood-bad", sad: "bg-mood-bad",
+const CARD_COLORS: Record<string, string> = {
+  task: "var(--mood-good)",
+  reminder: "var(--mood-low)",
+  story: "var(--accent)",
+  reflection: "var(--accent)",
+  memory: "var(--foreground)",
 };
-
-const STAT_COLORS = ["text-primary", "text-accent", "text-muted-foreground"] as const;
 
 export default function GardenHome() {
-  const [data, setData] = useState<HomeData | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { user } = useCurrentUser();
+  const [memories, setMemories] = useState<Memory[]>([]);
+  const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
-  const [now] = useState(() => Date.now());
+  const [error, setError] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [composeText, setComposeText] = useState("");
+  const [composeImage, setComposeImage] = useState<File | null>(null);
+  const [composeImageName, setComposeImageName] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [freshMemoryId, setFreshMemoryId] = useState<string | null>(null);
 
-  const loadHomeData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const payload = await cachedFetch<HomeData>("/api/garden/home");
-      if (!isHomeData(payload)) {
-        throw new Error("Received unexpected home data shape");
-      }
-      setData(payload);
-    } catch (err) {
-      setData(null);
-      const message = err instanceof Error && err.message ? err.message : "Could not load your dashboard";
-      setError(message);
-    } finally {
-      setLoading(false);
+  const loadMemories = useCallback(async (search = "") => {
+    const params = new URLSearchParams({ limit: "100" });
+    if (search.trim()) {
+      params.set("q", search.trim());
     }
+
+    const response = await cachedFetch<MemoriesResponse>(
+      `/api/memories?${params.toString()}`,
+      search.trim() ? 0 : 30_000,
+    );
+    setMemories(response.memories ?? []);
+    return response.memories ?? [];
   }, []);
 
-  // Single consolidated API call — replaces 6 separate requests
   useEffect(() => {
-    void loadHomeData();
-  }, [loadHomeData]);
+    let cancelled = false;
+    const timeout = window.setTimeout(
+      async () => {
+        setLoading(true);
+        setError(null);
 
-  const today = new Date(now);
-  const todayFormatted = today.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
-  const memberDays = data?.createdAt ? Math.max(1, Math.floor((now - new Date(data.createdAt).getTime()) / (1000 * 60 * 60 * 24))) : 0;
+        try {
+          const nextMemories = await loadMemories(query);
+          if (!cancelled) {
+            setMemories(nextMemories);
+          }
+        } catch (err) {
+          if (!cancelled) {
+            setError(
+              err instanceof Error
+                ? err.message
+                : "Could not load your memories",
+            );
+            setMemories([]);
+          }
+        } finally {
+          if (!cancelled) {
+            setLoading(false);
+          }
+        }
+      },
+      query.trim() ? 250 : 0,
+    );
 
-  if (loading) return <LoadingSkeleton />;
-  if (!data) return <HomeLoadError message={error} onRetry={loadHomeData} />;
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+    };
+  }, [loadMemories, query]);
 
-  const displayName = data.displayName || "friend";
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const todayLabel = useMemo(
+    () =>
+      new Date().toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+      }),
+    [],
+  );
 
-  const moodKey = data.recentMood?.toLowerCase() ?? "";
-  const moodTwColor = MOOD_TW[moodKey] ?? "text-mood-okay";
-  const moodBgTwColor = MOOD_BG_TW[moodKey] ?? "bg-border";
-
-  const stats = [
-    { value: data.memoriesCount, label: "memories", href: "/garden/journal" },
-    { value: data.habitsCount, label: "habits tracked", href: "/garden/habits" },
-    { value: memberDays, label: "days together" },
-  ] as const;
-
+  const displayName = user?.display_name?.trim() || "You";
+  const thoughtCountLabel = `${memories.length} thought${
+    memories.length === 1 ? "" : "s"
+  }`;
   const quickLinks = [
-    { href: "/garden/journal", icon: <BookOpen className="size-5 text-primary" />, label: "Journal", description: "Your conversation memories" },
-    { href: "/garden/habits", icon: <BarChart3 className="size-5 text-mood-okay" />, label: "Habits", description: "Routines and streaks" },
-    { href: "/garden/settings", icon: <Settings className="size-5 text-muted-foreground" />, label: "Settings", description: "Notifications and profile" },
+    {
+      href: "/garden/journal",
+      label: "Journal",
+      description: "Browse everything you have captured.",
+      icon: BookOpen,
+    },
+    {
+      href: "/garden/garden",
+      label: "Garden",
+      description: "Open the wider mood and reflection space.",
+      icon: Sparkles,
+    },
+    {
+      href: "/garden/settings",
+      label: "Settings",
+      description: "Theme, account, and notification controls.",
+      icon: Settings,
+    },
   ] as const;
+
+  const handleDelete = useCallback(
+    async (id: string) => {
+      try {
+        const res = await fetch(`/api/memories/${id}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+        if (!res.ok) {
+          throw new Error("Failed to delete memory");
+        }
+
+        invalidateCache("/api/memories");
+        setMemories((current) => current.filter((memory) => memory.id !== id));
+        if (expandedId === id) {
+          setExpandedId(null);
+        }
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Failed to delete memory",
+        );
+      }
+    },
+    [expandedId],
+  );
+
+  const handleImageChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0] ?? null;
+      setComposeImage(file);
+      setComposeImageName(file?.name ?? "");
+    },
+    [],
+  );
+
+  const handleComposeSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      if (!composeText.trim() && !composeImage) {
+        setError("Add a thought or attach a photo first.");
+        return;
+      }
+
+      setSubmitting(true);
+      setError(null);
+
+      try {
+        const body = composeImage
+          ? {
+              message_type: "image",
+              caption: composeText.trim() || "Photo captured from web",
+              mime_type: composeImage.type || "image/jpeg",
+              media_base64: await fileToBase64(composeImage),
+            }
+          : {
+              message_type: "text",
+              content: composeText.trim(),
+            };
+
+        const res = await fetch("/api/mobile/compose", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const payload = (await res.json()) as { error?: string };
+
+        if (!res.ok || payload.error) {
+          throw new Error(payload.error ?? "Capture failed");
+        }
+
+        setComposeOpen(false);
+        setComposeText("");
+        setComposeImage(null);
+        setComposeImageName("");
+        invalidateCache("/api/memories");
+
+        const latestMemories = await loadMemories(query);
+        const latestId = latestMemories[0]?.id ?? null;
+        setFreshMemoryId(latestId);
+        if (latestId) {
+          window.setTimeout(() => setFreshMemoryId(null), 1800);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Capture failed");
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [composeImage, composeText, loadMemories, query],
+  );
 
   return (
-    <div className="space-y-10 max-w-3xl mx-auto">
-      {/* Greeting Hero */}
-      <header className="pt-4">
-        <p className="text-xs uppercase tracking-widest mb-3 text-muted-foreground">
-          {todayFormatted}
-        </p>
-        <h1 className="text-[clamp(1.75rem,5vw,2.25rem)] font-bold tracking-tight leading-tight text-foreground">
-          {greeting},{" "}
-          <SparklesText className="inline-block">{displayName}</SparklesText>
-        </h1>
-        {data.recentMood && (
-          <div className="flex items-center gap-2 mt-3">
-            <div className={cn("w-2.5 h-2.5 rounded-full", moodBgTwColor)} />
-            <p className="text-sm text-muted-foreground">
-              Feeling <span className={cn("font-semibold", moodTwColor)}>{data.recentMood}</span> lately
+    <>
+      <div className="mx-auto flex max-w-5xl flex-col gap-8">
+        <header className="flex items-start justify-between gap-4 pt-2">
+          <div>
+            <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+              {todayLabel}
+            </p>
+            <h1 className="mt-2 text-4xl font-semibold tracking-[-0.04em] text-foreground">
+              noto
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {thoughtCountLabel} in your mind, {displayName}.
             </p>
           </div>
-        )}
-        <Separator className="mt-5" />
-      </header>
 
-      {/* Search Bar */}
-      <form action="/garden/journal" method="get">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input
-            name="q"
-            type="text"
-            placeholder="Search your memories..."
-            className="pl-10"
-          />
-        </div>
-      </form>
+          <Link href="/garden/settings">
+            <Avatar size="lg" className="border border-border bg-secondary">
+              <AvatarFallback>
+                {displayName.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+          </Link>
+        </header>
 
-      {/* Life at a Glance */}
-      <section>
-        <SectionLabel text="Life at a Glance" />
-        <div className="grid grid-cols-3 gap-3">
-          {stats.map((s, i) => {
-            const colorClass = STAT_COLORS[i] ?? "text-muted-foreground";
-            return (
-              <div key={s.label}>
-                <StatCard value={s.value} label={s.label} href={"href" in s ? s.href : undefined} colorClass={colorClass} />
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Upcoming Reminders */}
-      {data.upcomingReminders > 0 && (
-        <section>
-          <SectionLabel text="Coming Up" />
-          <Card className="border-l-4 border-l-accent">
-            <CardContent>
-              <div className="flex items-center gap-3">
-                <span className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center">
-                  <Bell className="size-3 text-primary" />
-                </span>
-                <span className="text-sm text-foreground">
-                  {data.upcomingReminders} reminder{data.upcomingReminders !== 1 ? "s" : ""} coming up
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-      )}
-
-      {/* Flashback */}
-      {data.flashback && (
-        <section>
-          <SectionLabel text="30 Days Ago" />
-          <Card>
-            <CardContent>
-              <MarkdownContent content={data.flashback.content} truncate={250} />
-              <p className="text-[11px] mt-3 text-muted-foreground">
-                {new Date(data.flashback.created_at).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-              </p>
-            </CardContent>
-          </Card>
-        </section>
-      )}
-
-      {/* Journal Link — nudge to open journal for full entries */}
-      <section>
-        <a href="/garden/journal" className="block group">
-          <Card className="hover:shadow-md transition-shadow">
-            <CardContent className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <BookOpen className="size-5 text-primary" />
-                <div>
-                  <p className="text-sm font-semibold text-foreground group-hover:underline">
-                    {data.memoriesCount > 0
-                      ? `${data.memoriesCount} memories in your journal`
-                      : "Your journal is ready to grow"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {data.memoriesCount > 0
-                      ? "View your full conversation history"
-                      : "Start talking to Groot — your memories will appear here"}
-                  </p>
+        <section className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.7fr)]">
+          <button
+            type="button"
+            onClick={() => setComposeOpen(true)}
+            className="group relative overflow-hidden rounded-[32px] border border-border bg-card px-6 py-8 text-left shadow-sm transition hover:shadow-md"
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#ffbb2c22,transparent_55%)]" />
+            <div className="relative z-10 flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
+              <div className="max-w-md">
+                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                  Primary action
+                </p>
+                <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] text-foreground">
+                  Capture a new memory
+                </h2>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                  Record a thought, attach an image, or save something before it
+                  disappears. This is the main job of the home screen.
+                </p>
+                <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
+                  <Plus className="size-4" />
+                  Open the cloud
                 </div>
               </div>
-              <span className="text-xs text-primary">Open &rarr;</span>
-            </CardContent>
-          </Card>
-        </a>
-      </section>
 
-      {/* Quick Navigation */}
-      <section>
-        <SectionLabel text="Explore" />
-        <BentoGrid className="md:grid-cols-2 lg:grid-cols-2">
-          {quickLinks.map((link) => (
-            <a key={link.href} href={link.href} className="block">
-              <BentoGridItem
-                title={link.label}
-                description={link.description}
-                icon={link.icon}
+              <div className="flex justify-center md:justify-end">
+                <div className="relative">
+                  <NotoMascotWeb className="drop-shadow-[0_18px_40px_rgba(255,187,44,0.2)] transition duration-300 group-hover:scale-[1.03]" />
+                  <div className="absolute inset-x-0 bottom-0 flex items-center justify-center">
+                    <div className="rounded-full bg-card/90 px-4 py-2 text-sm font-medium text-foreground shadow-sm backdrop-blur">
+                      Thoughts, photos, memories
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </button>
+
+          <div className="grid gap-3">
+            {quickLinks.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="group rounded-[24px] border border-border bg-card px-5 py-4 shadow-sm transition hover:shadow-md"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-secondary p-2 text-foreground">
+                          <Icon className="size-4" />
+                        </span>
+                        <p className="text-base font-medium text-foreground">
+                          {item.label}
+                        </p>
+                      </div>
+                      <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                        {item.description}
+                      </p>
+                    </div>
+                    <ChevronRight className="mt-1 size-4 text-muted-foreground transition group-hover:translate-x-0.5" />
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search your mind..."
+              className="h-12 w-full rounded-2xl border border-border bg-card pl-11 pr-11 text-sm text-foreground outline-none transition focus:border-accent"
+            />
+            {query && (
+              <button
+                type="button"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground"
+                onClick={() => setQuery("")}
+              >
+                <X className="size-4" />
+                <span className="sr-only">Clear search</span>
+              </button>
+            )}
+          </div>
+
+          <Button
+            type="button"
+            className="h-12 rounded-2xl px-5"
+            onClick={() => setComposeOpen(true)}
+          >
+            <Camera className="size-4" />
+            Quick capture
+          </Button>
+        </div>
+
+        {error && (
+          <div className="rounded-2xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+            {error}
+          </div>
+        )}
+
+        {loading ? (
+          <LoadingSkeleton />
+        ) : memories.length === 0 ? (
+          <div className="rounded-[28px] border border-border bg-card px-8 py-14 text-center shadow-sm">
+            <h2 className="text-2xl font-semibold tracking-[-0.03em] text-foreground">
+              {query ? "No thoughts found" : "Your mind is clear"}
+            </h2>
+            <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
+              {query
+                ? "Try a different phrase or clear the search to see everything again."
+                : "Use Capture to save a thought or attach a photo, just like the mobile flow."}
+            </p>
+          </div>
+        ) : (
+          <section>
+            <p className="mb-4 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+              {query
+                ? `Search results · ${thoughtCountLabel}`
+                : "Recent thoughts"}
+            </p>
+            <div className="grid gap-4 md:grid-cols-2">
+              {memories.map((memory) => (
+                <MemoryCard
+                  key={memory.id}
+                  id={memory.id}
+                  content={
+                    memory.content ??
+                    memory.media_description ??
+                    "Untitled memory"
+                  }
+                  mediaDescription={memory.media_description ?? undefined}
+                  messageType={memory.message_type}
+                  createdAt={memory.created_at}
+                  moodColor={
+                    CARD_COLORS[memory.card_category ?? ""] ?? "var(--accent)"
+                  }
+                  isExpanded={expandedId === memory.id}
+                  onToggleExpand={(id) =>
+                    setExpandedId((current) => (current === id ? null : id))
+                  }
+                  onDelete={handleDelete}
+                  isFresh={freshMemoryId === memory.id}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        <div className="rounded-[28px] border border-border bg-secondary/60 px-5 py-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                Full journal and deeper views are still here
+              </p>
+              <p className="text-sm text-muted-foreground">
+                The web entry now matches mobile first, with the rest of The
+                Garden one tap away.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" asChild>
+                <Link href="/garden/journal">Journal</Link>
+              </Button>
+              <Button variant="ghost" asChild>
+                <Link href="/garden/settings">
+                  <Settings className="size-4" />
+                  Settings
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Dialog open={composeOpen} onOpenChange={setComposeOpen}>
+        <DialogContent className="max-w-xl rounded-[28px] border-border bg-card p-0">
+          <DialogHeader className="border-b border-border px-6 py-5">
+            <DialogTitle className="text-2xl tracking-[-0.03em]">
+              Capture a thought
+            </DialogTitle>
+            <DialogDescription>
+              Save a note or attach a photo into the same journal stream used on
+              mobile.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form className="space-y-5 px-6 py-6" onSubmit={handleComposeSubmit}>
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-foreground">
+                What is on your mind?
+              </span>
+              <textarea
+                value={composeText}
+                onChange={(event) => setComposeText(event.target.value)}
+                placeholder="Type a thought, reflection, reminder, or anything you want Groot to remember."
+                className="min-h-36 w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition focus:border-accent"
               />
-            </a>
-          ))}
-        </BentoGrid>
-      </section>
-    </div>
+            </label>
+
+            <label className="flex cursor-pointer items-center justify-between rounded-2xl border border-dashed border-border bg-background px-4 py-3">
+              <span className="flex items-center gap-2 text-sm text-foreground">
+                <ImagePlus className="size-4 text-accent" />
+                {composeImageName || "Attach a photo"}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                JPG, PNG, WEBP
+              </span>
+              <input
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={handleImageChange}
+              />
+            </label>
+
+            <div className="flex items-center justify-end gap-3">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setComposeOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={submitting}>
+                {submitting ? (
+                  <>
+                    <LoaderCircle className="size-4 animate-spin" />
+                    Saving
+                  </>
+                ) : (
+                  "Capture"
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   );
-}
-
-/* Sub-components */
-
-function isHomeData(value: unknown): value is HomeData {
-  if (!value || typeof value !== "object") return false;
-  const data = value as Partial<HomeData>;
-  return (
-    typeof data.displayName === "string" &&
-    typeof data.createdAt === "string" &&
-    typeof data.memoriesCount === "number" &&
-    typeof data.pendingTasks === "number" &&
-    typeof data.upcomingReminders === "number" &&
-    typeof data.peopleCount === "number" &&
-    typeof data.habitsCount === "number"
-  );
-}
-
-function SectionLabel({ text }: { text: string }) {
-  return (
-    <h2 className="text-xs uppercase tracking-widest mb-3 font-semibold text-muted-foreground">
-      {text}
-    </h2>
-  );
-}
-
-function StatCard({ value, label, href, colorClass }: { value: number; label: string; href?: string; colorClass: string }) {
-  const inner = (
-    <Card className="text-center hover:shadow-md transition-shadow">
-      <CardContent className="py-4 px-3">
-        <NumberTicker
-          value={value}
-          className={cn("text-2xl font-bold tracking-tight", colorClass)}
-        />
-        <p className="text-[11px] mt-1 uppercase tracking-wide text-muted-foreground">
-          {label}
-        </p>
-      </CardContent>
-    </Card>
-  );
-
-  if (href) {
-    return <a href={href} className="block hover:scale-[1.02] transition-transform">{inner}</a>;
-  }
-  return inner;
 }
 
 function LoadingSkeleton() {
   return (
-    <div className="space-y-8 max-w-3xl mx-auto">
-      <div className="pt-4">
-        <Skeleton className="h-3 w-40 mb-3" />
-        <Skeleton className="h-10 w-64" />
-      </div>
-      <Skeleton className="h-10 w-full rounded-md" />
-      <div className="grid grid-cols-3 gap-3">
-        {Array.from({ length: 3 }, (_, i) => (
-          <Skeleton key={i} className="h-20 rounded-xl" />
-        ))}
-      </div>
-      {Array.from({ length: 3 }, (_, i) => (
-        <Skeleton key={i} className="h-28 rounded-xl" />
+    <div className="grid gap-4 md:grid-cols-2">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div
+          key={index}
+          className="rounded-[28px] border border-border bg-card p-5"
+        >
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-5 w-16 rounded-full" />
+            <Skeleton className="ml-auto h-4 w-10" />
+          </div>
+          <Skeleton className="mt-4 h-4 w-full" />
+          <Skeleton className="mt-2 h-4 w-[82%]" />
+          <Skeleton className="mt-2 h-4 w-[68%]" />
+        </div>
       ))}
     </div>
   );
 }
 
-function HomeLoadError({
-  message,
-  onRetry,
-}: {
-  message: string | null;
-  onRetry: () => void;
-}) {
-  return (
-    <Card className="max-w-3xl mx-auto mt-6">
-      <CardContent className="space-y-4">
-        <h2 className="text-lg font-semibold text-foreground">Couldn&apos;t load your Garden home</h2>
-        <p className="text-sm text-muted-foreground">
-          {message ?? "Something went wrong while loading your dashboard."}
-        </p>
-        <div className="flex items-center gap-2">
-          <Button onClick={onRetry} size="sm">
-            Retry
-          </Button>
-          <a href="/garden/journal" className="text-sm text-primary underline">
-            Open Journal
-          </a>
-        </div>
-      </CardContent>
-    </Card>
-  );
+async function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result !== "string") {
+        reject(new Error("Could not read file"));
+        return;
+      }
+      const base64 = result.split(",")[1];
+      if (!base64) {
+        reject(new Error("Could not encode file"));
+        return;
+      }
+      resolve(base64);
+    };
+    reader.onerror = () => reject(new Error("Could not read file"));
+    reader.readAsDataURL(file);
+  });
 }

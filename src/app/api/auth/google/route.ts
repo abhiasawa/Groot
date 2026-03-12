@@ -6,11 +6,21 @@ import { logger } from "@/lib/logger";
 export const maxDuration = 15;
 
 interface GoogleTokenPayload {
-  sub: string;       // Google user ID
+  sub: string; // Google user ID
   email: string;
   email_verified: boolean;
   name?: string;
   picture?: string;
+}
+
+function getAllowedGoogleAudiences(): string[] {
+  return [
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+  ]
+    .flatMap((value) => (value ?? "").split(","))
+    .map((value) => value.trim())
+    .filter(Boolean);
 }
 
 /**
@@ -56,10 +66,15 @@ export async function POST(request: NextRequest) {
     // Only users added as test users in Google Cloud Console can sign in.
     // No additional allowed_users check needed.
     const ownerEmail = process.env.OWNER_EMAIL;
-    const isOwner = ownerEmail && googleUser.email.toLowerCase() === ownerEmail.toLowerCase();
+    const isOwner =
+      ownerEmail && googleUser.email.toLowerCase() === ownerEmail.toLowerCase();
 
     // ── Step 3: Find or create user ──
-    type DbUser = { id: string; display_name: string | null; email: string | null };
+    type DbUser = {
+      id: string;
+      display_name: string | null;
+      email: string | null;
+    };
     let resolvedUser: DbUser | null = null;
 
     // First try to find by google_id
@@ -116,7 +131,10 @@ export async function POST(request: NextRequest) {
       // If it failed (likely NOT NULL constraint on whatsapp_number), retry with placeholder
       if (createResult.error) {
         logger.warn(
-          { code: createResult.error.code, message: createResult.error.message },
+          {
+            code: createResult.error.code,
+            message: createResult.error.message,
+          },
           "First insert attempt failed, retrying with placeholder whatsapp_number",
         );
         createResult = await supabase
@@ -149,7 +167,10 @@ export async function POST(request: NextRequest) {
           "Failed to create user",
         );
         return NextResponse.json(
-          { error: "Failed to create account", details: createError?.message ?? "Unknown error" },
+          {
+            error: "Failed to create account",
+            details: createError?.message ?? "Unknown error",
+          },
           { status: 500 },
         );
       }
@@ -218,7 +239,10 @@ async function verifyGoogleToken(
 ): Promise<GoogleTokenPayload | null> {
   try {
     const tokenPreview = idToken.substring(0, 20) + "...";
-    logger.info({ tokenPreview, tokenLength: idToken.length }, "Verifying Google token");
+    logger.info(
+      { tokenPreview, tokenLength: idToken.length },
+      "Verifying Google token",
+    );
 
     const res = await fetch(
       `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`,
@@ -241,10 +265,13 @@ async function verifyGoogleToken(
 
     // Verify audience matches our client ID
     // The native Android SDK signs tokens with the Web client ID (webClientId)
-    const expectedClientId = process.env.GOOGLE_CLIENT_ID?.trim();
-    if (expectedClientId && payload.aud !== expectedClientId) {
+    const allowedAudiences = getAllowedGoogleAudiences();
+    if (
+      allowedAudiences.length > 0 &&
+      !allowedAudiences.includes(String(payload.aud))
+    ) {
       logger.warn(
-        { aud: payload.aud, expected: expectedClientId },
+        { aud: payload.aud, expected: allowedAudiences },
         "Google token audience mismatch",
       );
       return null;
@@ -253,7 +280,8 @@ async function verifyGoogleToken(
     return {
       sub: payload.sub as string,
       email: payload.email as string,
-      email_verified: payload.email_verified === "true" || payload.email_verified === true,
+      email_verified:
+        payload.email_verified === "true" || payload.email_verified === true,
       name: (payload.name as string) ?? undefined,
       picture: (payload.picture as string) ?? undefined,
     };

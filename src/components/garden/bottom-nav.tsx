@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { Sun, BookOpen, Settings } from "lucide-react";
 
 const NAV_ITEMS = [
-  { href: "/garden", label: "Today", icon: Sun },
+  { href: "/garden", label: "Home", icon: Sun },
   { href: "/garden/journal", label: "Journal", icon: BookOpen },
   { href: "/garden/settings", label: "Settings", icon: Settings },
 ] as const;
@@ -20,7 +20,9 @@ export default function BottomNav() {
     >
       <ul className="grid grid-cols-3">
         {NAV_ITEMS.map((item) => {
-          const isActive = pathname === item.href || (item.href !== "/garden" && pathname.startsWith(item.href));
+          const isActive =
+            pathname === item.href ||
+            (item.href !== "/garden" && pathname.startsWith(item.href));
           const Icon = item.icon;
           return (
             <li key={item.href}>

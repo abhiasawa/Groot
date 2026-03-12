@@ -16,29 +16,34 @@ export default function ThemeToggle() {
 
   return (
     <div className="space-y-3">
-      {OPTIONS.map((option) => {
-        const isSelected = theme === option.value;
-        const Icon = option.icon;
-        return (
-          <Button
-            key={option.value}
-            variant="outline"
-            className={cn(
-              "w-full justify-between px-4 py-3 h-auto",
-              isSelected && "border-primary bg-secondary"
-            )}
-            onClick={() => setTheme(option.value)}
-          >
-            <div className="flex items-center gap-3">
-              <Icon className="h-4 w-4" />
-              <span>{option.label}</span>
-            </div>
-            {isSelected && <Check className="h-4 w-4 text-primary" />}
-          </Button>
-        );
-      })}
+      <div className="grid grid-cols-3 gap-1 rounded-2xl border border-border bg-secondary p-1">
+        {OPTIONS.map((option) => {
+          const isSelected = theme === option.value;
+          const Icon = option.icon;
+          return (
+            <Button
+              key={option.value}
+              variant="ghost"
+              className={cn(
+                "h-11 rounded-xl border border-transparent px-3 text-sm shadow-none",
+                isSelected
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:bg-card/60 hover:text-foreground",
+              )}
+              onClick={() => setTheme(option.value)}
+            >
+              <span className="flex items-center justify-center gap-2">
+                <Icon className="h-4 w-4" />
+                <span>{option.label}</span>
+                {isSelected && <Check className="h-3.5 w-3.5 text-accent" />}
+              </span>
+            </Button>
+          );
+        })}
+      </div>
       <p className="text-xs text-muted-foreground">
-        Currently: {resolvedTheme} mode{theme === "system" ? " (following system)" : ""}
+        Currently: {resolvedTheme} mode
+        {theme === "system" ? " (following system)" : ""}
       </p>
     </div>
   );
