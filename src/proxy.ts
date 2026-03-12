@@ -51,9 +51,21 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // Auth guard for The Garden portal
+  if (pathname.startsWith("/garden")) {
+    const hasAuthCookie = request.cookies.has("groot-token");
+
+    if (!hasAuthCookie) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = "/login";
+      loginUrl.searchParams.set("next", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/api/:path*"],
+  matcher: ["/api/:path*", "/garden/:path*"],
 };

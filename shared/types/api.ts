@@ -139,6 +139,20 @@ export interface WeeklyTrend {
 
 // ── API response envelopes ───────────────────
 
+/** GET /api/garden/home */
+export interface HomeData {
+  displayName: string;
+  createdAt: string;
+  memoriesCount: number;
+  recentMemories: RecentMemory[];
+  pendingTasks: number;
+  upcomingReminders: number;
+  flashback: Flashback | null;
+  recentMood: string | null;
+  peopleCount: number;
+  habitsCount: number;
+}
+
 /** GET /api/memories */
 export interface MemoriesResponse {
   memories: Memory[];

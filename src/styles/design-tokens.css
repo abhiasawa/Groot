@@ -1,0 +1,132 @@
+:root {
+  /* ─── Colors: Living Earth Light ─── */
+  --color-bg: #FAF8F3;
+  --color-surface: #F0EDE6;
+  --color-primary: #6B8F71;
+  --color-primary-hover: #5A7A60;
+  --color-primary-light: #8BB094;
+  --color-primary-dark: #4A6B50;
+  --color-secondary: #8A8A86;
+  --color-accent: #D4A054;
+  --color-accent-light: #E8C07A;
+  --color-accent-dark: #B8863A;
+  --color-text: #2C2C2A;
+  --color-text-secondary: #8A8A86;
+  --color-fg-secondary: #5A5A58;
+  --color-danger: #C1484B;
+  --color-border: rgba(44, 44, 42, 0.08);
+  --color-border-strong: rgba(44, 44, 42, 0.16);
+  --color-card: #FFFFFF;
+  --color-paper: #FFFFFF;
+  --color-ink: #2C2C2A;
+
+  /* ─── Colors: Dark Mode ─── */
+  --color-dark-bg: #1A1C19;
+  --color-dark-surface: #222420;
+  --color-dark-primary: #8BC4A0;
+  --color-dark-primary-light: #A8D8B8;
+  --color-dark-secondary: rgba(255, 255, 255, 0.45);
+  --color-dark-accent: #E8C07A;
+  --color-dark-text: rgba(255, 255, 255, 0.87);
+  --color-dark-text-secondary: rgba(255, 255, 255, 0.45);
+  --color-dark-border: rgba(255, 255, 255, 0.06);
+  --color-dark-border-strong: rgba(255, 255, 255, 0.12);
+  --color-dark-card: #222420;
+  --color-dark-paper: #222420;
+
+  /* ─── Mood Colors (Living Earth) ─── */
+  --color-mood-great: #2A9D8F;
+  --color-mood-good: #6B8F71;
+  --color-mood-okay: #E9C46A;
+  --color-mood-low: #E76F51;
+  --color-mood-bad: #C1484B;
+  --color-mood-none: #D5D3CB;
+
+  /* ─── Garden-specific ─── */
+  --color-garden-flower: #D4A054;
+  --color-garden-leaf: #6B8F71;
+  --color-garden-soil: #8B7355;
+  --color-garden-water: #5B9BD5;
+  --color-garden-sun: #F4D06F;
+
+  /* ─── Typography ─── */
+  --font-display: var(--font-instrument-serif), Georgia, serif;
+  --font-heading: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, sans-serif;
+  --font-diary: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, sans-serif;
+  --font-body: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+
+  --leading-body: 1.5;
+  --tracking-heading: -0.01em;
+
+  /* ─── Shadows (Living Earth: soft, warm) ─── */
+  --shadow-sm: 0 1px 2px rgba(44, 44, 42, 0.04);
+  --shadow-card: 0 1px 3px rgba(44, 44, 42, 0.04);
+  --shadow-card-hover: 0 4px 12px rgba(44, 44, 42, 0.06);
+  --shadow-elevated: 0 4px 12px rgba(44, 44, 42, 0.06), 0 8px 24px rgba(44, 44, 42, 0.08);
+  --shadow-paper: none;
+
+  /* ─── No textures ─── */
+  --texture-leather: none;
+  --texture-paper: none;
+  --texture-canvas: none;
+  --texture-aged: none;
+  --texture-linen: none;
+
+  /* ─── Spacing (8px grid) ─── */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-md: 16px;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-lg: 24px;
+  --space-8: 2rem;
+  --space-xl: 32px;
+  --space-10: 2.5rem;
+  --space-2xl: 48px;
+  --space-12: 3rem;
+
+  /* ─── Layout ─── */
+  --max-width-text: 720px;
+  --card-padding: var(--space-5);
+  --touch-target: 44px;
+  --sidebar-width: 240px;
+  --bottom-nav-height: 56px;
+
+  /* ─── Radius (Living Earth: rounded, organic) ─── */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+}
+
+.dark {
+  --color-bg: var(--color-dark-bg);
+  --color-surface: var(--color-dark-surface);
+  --color-primary: var(--color-dark-primary);
+  --color-secondary: var(--color-dark-secondary);
+  --color-accent: var(--color-dark-accent);
+  --color-text: var(--color-dark-text);
+  --color-text-secondary: var(--color-dark-text-secondary);
+  --color-border: var(--color-dark-border);
+  --color-border-strong: var(--color-dark-border-strong);
+  --color-card: var(--color-dark-card);
+  --color-paper: var(--color-dark-paper);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-elevated: 0 4px 12px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.4);
+}
