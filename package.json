@@ -11,6 +11,8 @@
     "analyze:latency": "node scripts/analyze-whatsapp-latency.mjs"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.58",
+    "@ai-sdk/react": "^3.0.118",
     "@anthropic-ai/sdk": "^0.74.0",
     "@nivo/bar": "^0.99.0",
     "@nivo/calendar": "^0.99.0",
@@ -23,6 +25,7 @@
     "@upstash/qstash": "^2.9.0",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.36.2",
+    "ai": "^6.0.116",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { Heart } from "lucide-react";
+import Link from "next/link";
+import { Heart, Lightbulb, BarChart3, Sparkles } from "lucide-react";
 import { cachedFetch } from "@/lib/garden/fetch-cache";
 import PageHeader from "@/components/garden/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -114,6 +115,34 @@ export default function MoodPage() {
   return (
     <div className="space-y-8 max-w-3xl mx-auto">
       <PageHeader title="Mood" subtitle="How you've been feeling" />
+
+      {/* Sub-navigation */}
+      <div className="flex gap-1 rounded-lg bg-muted p-1">
+        {([
+          { href: "/garden/insights", label: "Reports", icon: Lightbulb },
+          { href: "/garden/mood", label: "Mood", icon: Heart },
+          { href: "/garden/habits", label: "Habits", icon: BarChart3 },
+          { href: "/garden/stories", label: "Stories", icon: Sparkles },
+        ] as const).map((item) => {
+          const isActive = item.href === "/garden/mood";
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-colors",
+                isActive
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">{item.label}</span>
+            </Link>
+          );
+        })}
+      </div>
 
       {dailyMoods.length === 0 ? (
         <Card className="text-center py-10">

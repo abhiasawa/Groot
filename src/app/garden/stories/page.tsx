@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { Sparkles, Flame, TrendingUp, Tag, BookHeart } from "lucide-react";
+import Link from "next/link";
+import { Sparkles, Flame, TrendingUp, Tag, BookHeart, Lightbulb, Heart, BarChart3 } from "lucide-react";
 import PageHeader from "@/components/garden/page-header";
 import { EmptyState } from "@/components/garden/empty-state";
 import MarkdownContent from "@/components/garden/markdown-content";
@@ -123,6 +124,34 @@ export default function StoriesPage() {
         title="My Stories"
         subtitle="Your storyworthy moments — the scenes that made each day different"
       />
+
+      {/* Sub-navigation */}
+      <div className="flex gap-1 rounded-lg bg-muted p-1">
+        {([
+          { href: "/garden/insights", label: "Reports", icon: Lightbulb },
+          { href: "/garden/mood", label: "Mood", icon: Heart },
+          { href: "/garden/habits", label: "Habits", icon: BarChart3 },
+          { href: "/garden/stories", label: "Stories", icon: Sparkles },
+        ] as const).map((item) => {
+          const isActive = item.href === "/garden/stories";
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-colors",
+                isActive
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">{item.label}</span>
+            </Link>
+          );
+        })}
+      </div>
 
       {/* ─── Stats Strip ─── */}
       {stats && (

@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Search, Settings, X } from "lucide-react-native";
+import { ArrowLeft, MessageCircle, Search, Settings, X } from "lucide-react-native";
 
 import { useMemories, type MemoriesParams } from "../lib/api/queries";
 import { fonts, typography } from "../constants/typography";
@@ -21,7 +21,7 @@ import { SkeletonGrid } from "../components/feed/skeleton-grid";
 import { NotoMascot } from "../components/ui/noto-mascot";
 import type { Memory } from "../../shared/types/api";
 
-export default function JournalScreen() {
+export function JournalScreen({ isHome = false }: { isHome?: boolean }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
@@ -84,12 +84,16 @@ export default function JournalScreen() {
           }
         >
           <View style={styles.topBar}>
-            <Pressable
-              onPress={() => router.back()}
-              style={styles.topIconButton}
-            >
-              <ArrowLeft size={18} color="#1A1A1A" strokeWidth={2.2} />
-            </Pressable>
+            {isHome ? (
+              <View style={styles.topIconSpacer} />
+            ) : (
+              <Pressable
+                onPress={() => router.back()}
+                style={styles.topIconButton}
+              >
+                <ArrowLeft size={18} color="#1A1A1A" strokeWidth={2.2} />
+              </Pressable>
+            )}
             <View style={styles.topCopy}>
               <Text style={styles.topTitle}>Journal</Text>
               <Text style={styles.topSubtitle}>
@@ -103,6 +107,43 @@ export default function JournalScreen() {
               <Settings size={18} color="#1A1A1A" strokeWidth={2.2} />
             </Pressable>
           </View>
+
+          {isHome ? (
+            <>
+              <Pressable
+                onPress={() => router.push("/chat")}
+                style={styles.chatHero}
+              >
+                <View style={styles.chatHeroIcon}>
+                  <MessageCircle size={22} color="#FFFFFF" strokeWidth={2} />
+                </View>
+                <View style={styles.chatHeroCopy}>
+                  <Text style={styles.chatHeroTitle}>Talk to Groot</Text>
+                  <Text style={styles.chatHeroSubtitle}>
+                    Ask anything, journal your thoughts, or just chat.
+                  </Text>
+                </View>
+              </Pressable>
+
+              <Pressable
+                onPress={() => router.push("/capture")}
+                style={styles.captureHero}
+              >
+                <View style={styles.captureHeroCopy}>
+                  <Text style={styles.captureHeroEyebrow}>New thought</Text>
+                  <Text style={styles.captureHeroTitle}>
+                    Tap the cloud to capture
+                  </Text>
+                  <Text style={styles.captureHeroSubtitle}>
+                    Record a note, voice thought, or photo memory from here.
+                  </Text>
+                </View>
+                <View style={styles.captureHeroMascot}>
+                  <NotoMascot size={108} compact />
+                </View>
+              </Pressable>
+            </>
+          ) : null}
 
           <View
             style={[styles.searchBar, searchFocused && styles.searchBarActive]}
@@ -164,7 +205,20 @@ export default function JournalScreen() {
               onDelete={handleDelete}
             />
           )}
+
+          <View style={styles.bottomGap} />
         </ScrollView>
+
+        <Pressable
+          onPress={() => router.push("/capture")}
+          style={styles.captureFab}
+          hitSlop={8}
+        >
+          <View style={styles.captureMascotWrap}>
+            <NotoMascot size={74} compact />
+          </View>
+          <Text style={styles.captureFabText}>Capture</Text>
+        </Pressable>
       </View>
     </SafeAreaView>
   );
@@ -198,6 +252,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  topIconSpacer: {
+    width: 38,
+    height: 38,
+  },
   topCopy: {
     flex: 1,
   },
@@ -223,6 +281,88 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     marginBottom: 16,
     gap: 10,
+  },
+  chatHero: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1E1E1E",
+    borderRadius: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    marginBottom: 12,
+    gap: 14,
+  },
+  chatHeroIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chatHeroCopy: {
+    flex: 1,
+  },
+  chatHeroTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 17,
+    color: "#FFFFFF",
+    letterSpacing: -0.3,
+  },
+  chatHeroSubtitle: {
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    color: "rgba(255,255,255,0.6)",
+    marginTop: 2,
+  },
+  captureHero: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F7F8FF",
+    borderRadius: 28,
+    paddingLeft: 20,
+    paddingRight: 14,
+    paddingVertical: 18,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: "#E3E8FF",
+    shadowColor: "#4338CA",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 5,
+  },
+  captureHeroCopy: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  captureHeroEyebrow: {
+    fontFamily: fonts.bold,
+    fontSize: 11,
+    color: "#6D72E6",
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
+    marginBottom: 8,
+  },
+  captureHeroTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 24,
+    lineHeight: 28,
+    color: "#1A1A1A",
+    letterSpacing: -0.8,
+  },
+  captureHeroSubtitle: {
+    fontFamily: fonts.regular,
+    fontSize: 13,
+    lineHeight: 19,
+    color: "#6E6A86",
+    marginTop: 8,
+  },
+  captureHeroMascot: {
+    width: 112,
+    height: 96,
+    alignItems: "center",
+    justifyContent: "center",
   },
   searchBarActive: {
     backgroundColor: "#1A1A1A",
@@ -273,4 +413,38 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingHorizontal: 20,
   },
+  bottomGap: {
+    height: 96,
+  },
+  captureFab: {
+    position: "absolute",
+    right: 18,
+    bottom: 22,
+    alignItems: "center",
+    gap: 6,
+  },
+  captureMascotWrap: {
+    width: 74,
+    height: 74,
+    borderRadius: 37,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#4338CA",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.14,
+    shadowRadius: 24,
+    elevation: 8,
+  },
+  captureFabText: {
+    fontFamily: fonts.semiBold,
+    fontSize: 11,
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
+    color: "#6F6A63",
+  },
 });
+
+export default function JournalRoute() {
+  return <JournalScreen />;
+}

@@ -3,8 +3,8 @@ import BottomNav from "@/components/garden/bottom-nav";
 import Prefetcher from "@/components/garden/prefetcher";
 
 export const metadata = {
-  title: "The Garden -- Groot Dashboard",
-  description: "Your AI second brain dashboard",
+  title: "Noto",
+  description: "Your AI companion dashboard",
 };
 
 export default function GardenLayout({

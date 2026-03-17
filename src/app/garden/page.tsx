@@ -94,16 +94,16 @@ export default function GardenHome() {
   const displayName = user?.display_name?.trim() || "You";
   const quickLinks = [
     {
+      href: "/garden/chat",
+      label: "Chat",
+      description: "Talk to Groot — your AI companion.",
+      icon: Sparkles,
+    },
+    {
       href: "/garden/journal",
       label: "Journal",
       description: "Search the full archive and revisit older entries.",
       icon: BookOpen,
-    },
-    {
-      href: "/garden/garden",
-      label: "Garden",
-      description: "Open the wider mood and reflection space.",
-      icon: Sparkles,
     },
     {
       href: "/garden/settings",

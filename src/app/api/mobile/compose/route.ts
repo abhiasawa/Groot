@@ -31,6 +31,39 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 
+  // Per-user rate limiting: 20 requests/min (stricter than global IP limit)
+  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+    try {
+      const { Ratelimit } = await import("@upstash/ratelimit");
+      const { Redis } = await import("@upstash/redis");
+      const redis = new Redis({
+        url: process.env.UPSTASH_REDIS_REST_URL,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN,
+      });
+      const ratelimit = new Ratelimit({
+        redis,
+        limiter: Ratelimit.slidingWindow(20, "1 m"),
+        prefix: "compose",
+        analytics: false,
+      });
+      const { success, limit, remaining } = await ratelimit.limit(userId);
+      if (!success) {
+        return NextResponse.json(
+          { error: "Too many messages — please slow down" },
+          {
+            status: 429,
+            headers: {
+              "X-RateLimit-Limit": limit.toString(),
+              "X-RateLimit-Remaining": remaining.toString(),
+            },
+          },
+        );
+      }
+    } catch {
+      // Rate limit failure should not block requests
+    }
+  }
+
   const supabase = getSupabaseAdmin();
 
   try {

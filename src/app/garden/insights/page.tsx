@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
-import { Lightbulb } from "lucide-react";
+import { Lightbulb, Heart, BarChart3, Sparkles } from "lucide-react";
 import { cachedFetch } from "@/lib/garden/fetch-cache";
 import PageHeader from "@/components/garden/page-header";
 import MarkdownContent from "@/components/garden/markdown-content";
@@ -10,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 interface Report {
   id: string;
@@ -71,9 +74,39 @@ export default function InsightsPage() {
     );
   }
 
+  const SUB_NAV = [
+    { href: "/garden/insights", label: "Reports", icon: Lightbulb },
+    { href: "/garden/mood", label: "Mood", icon: Heart },
+    { href: "/garden/habits", label: "Habits", icon: BarChart3 },
+    { href: "/garden/stories", label: "Stories", icon: Sparkles },
+  ] as const;
+
   return (
     <div className="space-y-8 max-w-3xl mx-auto">
       <PageHeader title="Insights" subtitle="Weekly reflections from your conversations" />
+
+      {/* Sub-navigation */}
+      <div className="flex gap-1 rounded-lg bg-muted p-1">
+        {SUB_NAV.map((item) => {
+          const isActive = item.href === "/garden/insights";
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-colors",
+                isActive
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">{item.label}</span>
+            </Link>
+          );
+        })}
+      </div>
 
       {reports.length === 0 ? (
         <Card className="py-10">

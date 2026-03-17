@@ -1,68 +1,51 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
-    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#FFBB2C" stop-opacity="0.15"/>
-      <stop offset="100%" stop-color="#FFFBF0" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="bodyGrad" cx="40%" cy="35%" r="60%">
-      <stop offset="0%" stop-color="#FFD666"/>
-      <stop offset="60%" stop-color="#FFBB2C"/>
-      <stop offset="100%" stop-color="#F5A623"/>
-    </radialGradient>
-    <radialGradient id="rayGrad" cx="50%" cy="0%" r="100%">
-      <stop offset="0%" stop-color="#FFCC44"/>
-      <stop offset="100%" stop-color="#FFBB2C"/>
-    </radialGradient>
+    <linearGradient id="cloudGrad" x1="0.3" y1="0" x2="0.7" y2="1">
+      <stop offset="0%" stop-color="#C7D2FE"/>
+      <stop offset="35%" stop-color="#A5B4FC"/>
+      <stop offset="75%" stop-color="#818CF8"/>
+      <stop offset="100%" stop-color="#6366F1"/>
+    </linearGradient>
+    <linearGradient id="highlight" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0%" stop-color="#E0E7FF" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#A5B4FC" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="14" stdDeviation="24" flood-color="#4338CA" flood-opacity="0.18"/>
+    </filter>
   </defs>
 
-  <!-- Background — warm cream -->
   <rect width="1024" height="1024" rx="224" fill="#FFFBF0"/>
 
-  <!-- Subtle warm glow behind sun -->
-  <circle cx="512" cy="480" r="400" fill="url(#glow)"/>
-
-  <!-- 8 Rays — rounded rectangles rotated around center -->
-  <!-- Ray dimensions: 62w x 130h, placed at distance from center -->
-  <g transform="translate(512, 480)">
-    <!-- Ray 0° (up) -->
-    <rect x="-31" y="-350" width="62" height="130" rx="31" fill="url(#rayGrad)"/>
-    <!-- Ray 45° -->
-    <rect x="-31" y="-350" width="62" height="130" rx="31" fill="url(#rayGrad)" transform="rotate(45)"/>
-    <!-- Ray 90° -->
-    <rect x="-31" y="-350" width="62" height="130" rx="31" fill="url(#rayGrad)" transform="rotate(90)"/>
-    <!-- Ray 135° -->
-    <rect x="-31" y="-350" width="62" height="130" rx="31" fill="url(#rayGrad)" transform="rotate(135)"/>
-    <!-- Ray 180° -->
-    <rect x="-31" y="-350" width="62" height="130" rx="31" fill="url(#rayGrad)" transform="rotate(180)"/>
-    <!-- Ray 225° -->
-    <rect x="-31" y="-350" width="62" height="130" rx="31" fill="url(#rayGrad)" transform="rotate(225)"/>
-    <!-- Ray 270° -->
-    <rect x="-31" y="-350" width="62" height="130" rx="31" fill="url(#rayGrad)" transform="rotate(270)"/>
-    <!-- Ray 315° -->
-    <rect x="-31" y="-350" width="62" height="130" rx="31" fill="url(#rayGrad)" transform="rotate(315)"/>
+  <g fill="url(#cloudGrad)" filter="url(#shadow)">
+    <ellipse cx="512" cy="618" rx="280" ry="110"/>
+    <ellipse cx="340" cy="548" rx="150" ry="140"/>
+    <ellipse cx="684" cy="548" rx="150" ry="140"/>
+    <ellipse cx="512" cy="458" rx="170" ry="160"/>
+    <ellipse cx="400" cy="478" rx="120" ry="120"/>
+    <ellipse cx="624" cy="478" rx="120" ry="120"/>
+    <ellipse cx="512" cy="558" rx="250" ry="130"/>
   </g>
 
-  <!-- Sun body — large circle with gradient -->
-  <circle cx="512" cy="480" r="210" fill="url(#bodyGrad)"/>
+  <g fill="url(#highlight)">
+    <ellipse cx="512" cy="435" rx="145" ry="90"/>
+    <ellipse cx="380" cy="460" rx="90" ry="65"/>
+    <ellipse cx="640" cy="460" rx="90" ry="65"/>
+  </g>
 
-  <!-- Subtle inner highlight -->
-  <circle cx="480" cy="440" r="160" fill="#FFD666" opacity="0.15"/>
+  <ellipse cx="370" cy="586" rx="45" ry="30" fill="#C4B5FD" opacity="0.32"/>
+  <ellipse cx="654" cy="586" rx="45" ry="30" fill="#C4B5FD" opacity="0.32"/>
 
-  <!-- Face — two dot eyes -->
-  <circle cx="462" cy="468" r="22" fill="#1E1E1E"/>
-  <circle cx="562" cy="468" r="22" fill="#1E1E1E"/>
+  <circle cx="440" cy="520" r="14" fill="#312E81"/>
+  <circle cx="584" cy="520" r="14" fill="#312E81"/>
+  <circle cx="444" cy="514" r="5" fill="#FFFFFF" opacity="0.82"/>
+  <circle cx="588" cy="514" r="5" fill="#FFFFFF" opacity="0.82"/>
 
-  <!-- Eye highlights -->
-  <circle cx="470" cy="460" r="8" fill="#FFFFFF" opacity="0.7"/>
-  <circle cx="570" cy="460" r="8" fill="#FFFFFF" opacity="0.7"/>
-
-  <!-- Smile — arc -->
-  <path d="M472 510 Q512 550 552 510" stroke="#1E1E1E" stroke-width="10" stroke-linecap="round" fill="none"/>
-
-  <!-- Cheek blush -->
-  <circle cx="430" cy="505" r="22" fill="#FF8815" opacity="0.2"/>
-  <circle cx="594" cy="505" r="22" fill="#FF8815" opacity="0.2"/>
-
-  <!-- App name text -->
-  <text x="512" y="750" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="80" font-weight="600" fill="#1E1E1E" letter-spacing="6">the garden</text>
+  <path
+    d="M 465 586 Q 512 616 559 586"
+    fill="none"
+    stroke="#312E81"
+    stroke-width="7"
+    stroke-linecap="round"
+  />
 </svg>

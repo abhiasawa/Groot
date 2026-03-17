@@ -16,6 +16,7 @@ import { View, Text, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthProvider, useAuth } from "../lib/auth/provider";
+import { NotoMascot } from "../components/ui/noto-mascot";
 import { ThemeProvider } from "../lib/theme/provider";
 
 export { ErrorBoundary } from "expo-router";
@@ -126,8 +127,8 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) {
     return (
       <View style={fallbackStyles.container}>
-        <View style={fallbackStyles.orb}>
-          <Text style={fallbackStyles.orbText}>N</Text>
+        <View style={fallbackStyles.mascotWrap}>
+          <NotoMascot size={118} compact />
         </View>
         <Text style={fallbackStyles.title}>noto</Text>
         <Text style={fallbackStyles.text}>Loading...</Text>
@@ -164,6 +165,7 @@ export default function RootLayout() {
                     gestureDirection: "vertical",
                   }}
                 />
+                <Stack.Screen name="chat" />
                 <Stack.Screen name="onboarding" />
                 <Stack.Screen name="settings" />
               </Stack>
@@ -180,21 +182,21 @@ const fallbackStyles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F0EFEB",
+    backgroundColor: "#FFFBF0",
   },
-  orb: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+  mascotWrap: {
+    width: 124,
+    height: 124,
+    borderRadius: 62,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFBB2C",
+    backgroundColor: "#FFFFFF",
     marginBottom: 20,
-  },
-  orbText: {
-    color: "#FFF",
-    fontSize: 34,
-    fontWeight: "700",
+    shadowColor: "#4338CA",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 8,
   },
   title: {
     color: "#1E1E1E",

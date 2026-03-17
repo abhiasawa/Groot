@@ -11,8 +11,8 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "Groot - AI Second Brain",
-  description: "Your empathetic AI second brain on WhatsApp",
+  title: "Noto — AI Companion",
+  description: "Your empathetic AI companion for journaling, reflection, and personal growth",
 };
 
 export default function RootLayout({
@@ -29,7 +29,7 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('groot-theme');var d=t==='dark'||((t===null||t==='system')&&matchMedia('(prefers-color-scheme:dark)').matches);document.documentElement.classList.toggle('dark',d)}catch(e){}`,
+            __html: `try{var t=localStorage.getItem('noto-theme')||localStorage.getItem('groot-theme');var d=t==='dark'||((t===null||t==='system')&&matchMedia('(prefers-color-scheme:dark)').matches);document.documentElement.classList.toggle('dark',d)}catch(e){}`,
           }}
         />
       </head>
