@@ -16,6 +16,7 @@ import * as SecureStore from "expo-secure-store";
 import { MessageBubble } from "../components/chat/message-bubble";
 import { ChatInput } from "../components/chat/chat-input";
 import { fonts, typography } from "../constants/typography";
+import { notoTheme, colors, spacing, radii, ICON_BUTTON_SIZE } from "../lib/theme/tokens";
 
 const API_BASE = (
   process.env.EXPO_PUBLIC_API_BASE_URL ?? "https://groot-three.vercel.app"
@@ -116,7 +117,7 @@ export default function ChatScreen() {
         signal: controller.signal,
       });
 
-      if (!res.ok || !res.body) {
+      if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "Request failed" }));
         setMessages((prev) =>
           prev.map((m) =>
@@ -129,32 +130,43 @@ export default function ChatScreen() {
         return;
       }
 
-      // Stream the response
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let accumulated = "";
+      // Try streaming first (works on newer RN / Hermes builds),
+      // fall back to reading the full response as text.
+      if (res.body && typeof res.body.getReader === "function") {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let accumulated = "";
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-        accumulated += decoder.decode(value, { stream: true });
-        const display = stripMetadata(accumulated);
+          accumulated += decoder.decode(value, { stream: true });
+          const display = stripMetadata(accumulated);
 
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId ? { ...m, content: display } : m,
+            ),
+          );
+        }
+
+        const final = stripMetadata(accumulated);
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId ? { ...m, content: final } : m,
+          ),
+        );
+      } else {
+        // Non-streaming fallback — read full response at once
+        const fullText = await res.text();
+        const display = stripMetadata(fullText);
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId ? { ...m, content: display } : m,
           ),
         );
       }
-
-      // Final cleanup
-      const final = stripMetadata(accumulated);
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantId ? { ...m, content: final } : m,
-        ),
-      );
     } catch (error) {
       if ((error as Error).name !== "AbortError") {
         setMessages((prev) =>
@@ -190,9 +202,11 @@ export default function ChatScreen() {
           <Pressable
             onPress={() => router.back()}
             style={styles.backButton}
-            hitSlop={8}
+            hitSlop={spacing.sm}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
           >
-            <ArrowLeft size={18} color="#1A1A1A" strokeWidth={2.2} />
+            <ArrowLeft size={18} color={notoTheme.foreground} strokeWidth={2.2} />
           </Pressable>
           <View style={styles.headerCopy}>
             <Text style={styles.headerTitle}>Groot</Text>
@@ -240,7 +254,7 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#FEFEFE",
+    backgroundColor: colors.pageBg,
   },
   root: {
     flex: 1,
@@ -248,17 +262,17 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: "#EAEAEA",
+    borderBottomColor: notoTheme.border,
   },
   backButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: "#F5F4F2",
+    width: ICON_BUTTON_SIZE,
+    height: ICON_BUTTON_SIZE,
+    borderRadius: ICON_BUTTON_SIZE / 2,
+    backgroundColor: colors.iconButtonBg,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -268,18 +282,18 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontFamily: fonts.bold,
     fontSize: 18,
-    color: "#1A1A1A",
+    color: notoTheme.foreground,
     letterSpacing: -0.3,
   },
   headerSubtitle: {
     fontFamily: fonts.regular,
     fontSize: 12,
-    color: "#8F887E",
+    color: colors.textSubdued,
     marginTop: 1,
   },
   messageList: {
-    paddingTop: 16,
-    paddingBottom: 8,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
   },
   empty: {
     flex: 1,
@@ -290,17 +304,17 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontFamily: fonts.bold,
     ...typography.xl,
-    color: "#1E1E1E",
+    color: notoTheme.foreground,
     textAlign: "center",
   },
   emptySubtitle: {
     fontFamily: fonts.regular,
     ...typography.sm,
-    color: "#8F887E",
+    color: colors.textSubdued,
     textAlign: "center",
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   inputWrap: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: notoTheme.card,
   },
 });

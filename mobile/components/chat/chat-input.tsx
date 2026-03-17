@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { Send } from "lucide-react-native";
 import { fonts } from "../../constants/typography";
+import { notoTheme, colors, spacing, radii, ICON_BUTTON_SIZE } from "../../lib/theme/tokens";
 
 interface ChatInputProps {
   value: string;
@@ -32,12 +33,14 @@ export function ChatInput({ value, onChange, onSend, disabled }: ChatInputProps)
         value={value}
         onChangeText={onChange}
         placeholder="Message Groot..."
-        placeholderTextColor="#B6B0A6"
+        placeholderTextColor={colors.placeholder}
         multiline
         maxLength={2000}
         editable={!disabled}
         returnKeyType="default"
         blurOnSubmit={false}
+        accessibilityLabel="Message input"
+        accessibilityHint="Type a message to send to Groot"
       />
       <Pressable
         onPress={handleSend}
@@ -46,9 +49,12 @@ export function ChatInput({ value, onChange, onSend, disabled }: ChatInputProps)
           styles.sendButton,
           (!value.trim() || disabled) && styles.sendButtonDisabled,
         ]}
-        hitSlop={8}
+        hitSlop={spacing.sm}
+        accessibilityLabel="Send message"
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !value.trim() || disabled }}
       >
-        <Send size={18} color="#FFFFFF" strokeWidth={2.2} />
+        <Send size={18} color={notoTheme.primaryForeground} strokeWidth={2.2} />
       </Pressable>
     </View>
   );
@@ -58,30 +64,30 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "flex-end",
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: "#EAEAEA",
-    backgroundColor: "#FFFFFF",
+    borderTopColor: notoTheme.border,
+    backgroundColor: notoTheme.card,
   },
   input: {
     flex: 1,
     fontFamily: fonts.regular,
     fontSize: 15,
-    color: "#1E1E1E",
-    backgroundColor: "#F0EFEB",
-    borderRadius: 20,
-    paddingHorizontal: 16,
+    color: notoTheme.foreground,
+    backgroundColor: notoTheme.secondary,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.lg,
     paddingTop: 10,
     paddingBottom: 10,
     maxHeight: 120,
   },
   sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#1E1E1E",
+    width: ICON_BUTTON_SIZE,
+    height: ICON_BUTTON_SIZE,
+    borderRadius: ICON_BUTTON_SIZE / 2,
+    backgroundColor: notoTheme.primary,
     alignItems: "center",
     justifyContent: "center",
   },

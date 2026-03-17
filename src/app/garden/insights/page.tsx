@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
 import { Lightbulb, Heart, BarChart3, Sparkles } from "lucide-react";
 import { cachedFetch } from "@/lib/garden/fetch-cache";

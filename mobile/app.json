@@ -18,6 +18,7 @@
       "bundleIdentifier": "com.groot.thegarden"
     },
     "android": {
+      "minSdkVersion": 26,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#FFFBF0"

@@ -90,6 +90,8 @@ export function JournalScreen({ isHome = false }: { isHome?: boolean }) {
               <Pressable
                 onPress={() => router.back()}
                 style={styles.topIconButton}
+                accessibilityLabel="Go back"
+                accessibilityRole="button"
               >
                 <ArrowLeft size={18} color="#1A1A1A" strokeWidth={2.2} />
               </Pressable>
@@ -103,6 +105,8 @@ export function JournalScreen({ isHome = false }: { isHome?: boolean }) {
             <Pressable
               onPress={() => router.push("/settings")}
               style={styles.topIconButton}
+              accessibilityLabel="Settings"
+              accessibilityRole="button"
             >
               <Settings size={18} color="#1A1A1A" strokeWidth={2.2} />
             </Pressable>
@@ -113,6 +117,8 @@ export function JournalScreen({ isHome = false }: { isHome?: boolean }) {
               <Pressable
                 onPress={() => router.push("/chat")}
                 style={styles.chatHero}
+                accessibilityLabel="Talk to Groot"
+                accessibilityRole="button"
               >
                 <View style={styles.chatHeroIcon}>
                   <MessageCircle size={22} color="#FFFFFF" strokeWidth={2} />
@@ -128,6 +134,8 @@ export function JournalScreen({ isHome = false }: { isHome?: boolean }) {
               <Pressable
                 onPress={() => router.push("/capture")}
                 style={styles.captureHero}
+                accessibilityLabel="Capture a new thought"
+                accessibilityRole="button"
               >
                 <View style={styles.captureHeroCopy}>
                   <Text style={styles.captureHeroEyebrow}>New thought</Text>
@@ -168,7 +176,12 @@ export function JournalScreen({ isHome = false }: { isHome?: boolean }) {
               returnKeyType="search"
             />
             {searchFocused && (
-              <Pressable onPress={cancelSearch} hitSlop={8}>
+              <Pressable
+                onPress={cancelSearch}
+                hitSlop={12}
+                accessibilityLabel="Clear search"
+                accessibilityRole="button"
+              >
                 <X size={16} color="rgba(255,255,255,0.7)" strokeWidth={2} />
               </Pressable>
             )}
@@ -213,6 +226,8 @@ export function JournalScreen({ isHome = false }: { isHome?: boolean }) {
           onPress={() => router.push("/capture")}
           style={styles.captureFab}
           hitSlop={8}
+          accessibilityLabel="Capture a new thought"
+          accessibilityRole="button"
         >
           <View style={styles.captureMascotWrap}>
             <NotoMascot size={74} compact />
@@ -245,16 +260,16 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   topIconButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: "#F5F4F2",
     alignItems: "center",
     justifyContent: "center",
   },
   topIconSpacer: {
-    width: 38,
-    height: 38,
+    width: 44,
+    height: 44,
   },
   topCopy: {
     flex: 1,
