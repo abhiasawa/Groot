@@ -33,6 +33,11 @@ export interface LLMResponse {
       category?: string;
       dueDate?: string;
     }>;
+    /** Actions the user wants to take on existing tasks (list, complete, delete) */
+    taskActions?: Array<{
+      action: "list" | "complete" | "delete";
+      match?: string;
+    }>;
     /** Email address shared by the user — used to link messaging account to app login */
     detectedEmail?: string;
     /** True when the user is asking Groot to resend their last image/photo */
