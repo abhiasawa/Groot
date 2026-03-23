@@ -1,6 +1,7 @@
 import { getRecentMessages } from "@/lib/memory/short-term";
 import { searchMemories } from "@/lib/memory/supermemory-client";
 import { getUserProfileSummary } from "@/lib/memory/profile-builder";
+import { getPendingTasksForContext } from "@/lib/tasks/context";
 import { logger } from "@/lib/logger";
 import type { LLMMessage } from "@/lib/providers/types";
 
@@ -52,15 +53,42 @@ export async function buildContext(
     profileMs: Date.now() - tProfile,
   }));
 
+  // Conditionally kick off task fetch in parallel with other sources
+  const taskKeywords = /\b(task|tasks|todo|to-do|to do|list|pending|overdue|done|complete|finish|mark|what do i need|what's on my|my list)\b/i;
+  const taskPromise = taskKeywords.test(currentMessage)
+    ? getPendingTasksForContext(userId).catch((error) => {
+        logger.warn({ error }, "Task context fetch failed, continuing without tasks");
+        return [];
+      })
+    : Promise.resolve([]);
+
   // Fetch all context sources in parallel (lean defaults keep WhatsApp replies fast)
-  const [{ recentMessages, recentMs }, { relevantMemories, memoryMs }, { profileSummary, profileMs }] = await Promise.all([
+  const [{ recentMessages, recentMs }, { relevantMemories, memoryMs }, { profileSummary, profileMs }, pendingTasks] = await Promise.all([
     recentPromise,
     memoryPromise,
     profilePromise,
+    taskPromise,
   ]);
 
   // Build conversation messages for the LLM
   const messages: LLMMessage[] = [];
+
+  // Add pending tasks as context when available
+  if (pendingTasks.length > 0) {
+    const taskList = pendingTasks.map((t) => {
+      const parts = [`• ${t.content}`];
+      if (t.category && t.category !== "todo") parts.push(`[${t.category}]`);
+      if (t.due_date) {
+        const d = new Date(t.due_date);
+        parts.push(`(due ${d.toLocaleDateString("en-US", { month: "short", day: "numeric" })})`);
+      }
+      return parts.join(" ");
+    }).join("\n");
+    messages.push({
+      role: "system",
+      content: `The user's current pending tasks:\n${taskList}`,
+    });
+  }
 
   // Add relevant long-term memories as context
   if (relevantMemories.length > 0) {

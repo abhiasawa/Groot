@@ -17,6 +17,7 @@ export interface GrootResponse {
   detectedTasks: Array<{ content: string; category?: string; dueDate?: string }>;
   detectedCommitments: string[];
   fulfilledCommitments: string[];
+  taskActions: Array<{ action: "list" | "complete" | "delete"; match?: string }>;
   lastImageRequest: boolean;
   timings: {
     contextMs: number;
@@ -226,6 +227,7 @@ export async function generateGrootResponse(
     detectedTasks: metadata?.detectedTasks ?? [],
     detectedCommitments,
     fulfilledCommitments,
+    taskActions: metadata?.taskActions ?? [],
     lastImageRequest: metadata?.lastImageRequest ?? false,
     timings: {
       contextMs: t1 - t0,
