@@ -86,12 +86,13 @@ const REFLECTION_PATTERNS = [
 export function classifyIntent(text: string): ClassifiedMessage {
   const trimmed = text.trim();
 
-  // 1. URLs — treat as casual chat (link capture disabled)
+  // 1. URLs — route to link capture
   const urlMatch = trimmed.match(URL_REGEX);
   if (urlMatch) {
     return {
-      intent: "casual_chat",
-      confidence: 0.5,
+      intent: "link_share",
+      confidence: 0.9,
+      extractedData: { url: urlMatch[0] },
     };
   }
 

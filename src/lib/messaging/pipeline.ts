@@ -5,6 +5,7 @@ import { addMemory } from "@/lib/memory/supermemory-client";
 import { processMediaFromBuffer } from "@/lib/media/media-handler";
 import { uploadMediaToStorage } from "@/lib/media/storage";
 import { generateGrootResponse, getErrorResponse } from "@/lib/ai/groot-engine";
+import { extractUrls, processLink } from "@/lib/capture/link-processor";
 import { createReminder } from "@/lib/reminders/scheduler";
 import {
   markUserResponded,
@@ -204,6 +205,16 @@ export async function processMessage(
           text,
           grootResponse.memoryTags.length > 0 ? grootResponse.memoryTags : ["daily-life"],
         ),
+      );
+    }
+
+    // Link capture: summarize + store URLs in Supermemory (fire-and-forget)
+    const urls = extractUrls(text);
+    for (const url of urls.slice(0, 3)) {
+      postOps.push(
+        processLink(url, user.id).catch((err) => {
+          logger.warn({ err, userId: user.id, url }, "Link processing failed");
+        }),
       );
     }
 

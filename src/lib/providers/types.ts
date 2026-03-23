@@ -39,6 +39,10 @@ export interface LLMResponse {
     lastImageRequest?: boolean;
     /** AI-classified card category for the user's message */
     cardCategory?: "task" | "idea" | "reflection" | "emotion" | "media" | null;
+    /** Commitments the user made (e.g. "I'm going to start running") */
+    detectedCommitments?: string[];
+    /** Previously-detected commitments the user has now fulfilled */
+    fulfilledCommitments?: string[];
   };
   usage?: {
     inputTokens: number;

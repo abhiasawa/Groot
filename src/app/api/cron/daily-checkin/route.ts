@@ -4,6 +4,8 @@ import { getActiveHabits, getStreakInfo } from "@/lib/habits/tracker";
 import { getLastEveningReply } from "@/lib/memory/short-term";
 import { recordProactiveMessage } from "@/lib/journal/prompt-generator";
 import { sendMessage, getUserPlatform } from "@/lib/messaging/dispatcher";
+import { validateCronAuth } from "@/lib/cron/auth";
+import { getUnsurfacedInsights, markInsightsSurfaced } from "@/lib/patterns/insights-reader";
 import { logger } from "@/lib/logger";
 
 /**
@@ -11,21 +13,14 @@ import { logger } from "@/lib/logger";
  * Protected by CRON_SECRET Bearer token.
  *
  * De-escalation levels:
- * 0: Full check-in with habits + "yesterday you said..." callback
+ * 0: Full check-in with habits + "yesterday you said..." callback + insights
  * 1: Shorter check-in with habits
  * 2: Minimal "I'm here" message
  * 3+: Skip (or send preference prompt)
  */
 export async function GET(request: NextRequest) {
-  if (!process.env.CRON_SECRET) {
-    logger.error("CRON_SECRET is missing");
-    return NextResponse.json({ error: "Cron not configured" }, { status: 500 });
-  }
-
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = validateCronAuth(request);
+  if (authError) return authError;
 
   try {
     const users = await getEligibleUsers("morning_checkin");
@@ -53,9 +48,14 @@ export async function GET(request: NextRequest) {
           continue;
         }
 
-        // Level 0-1: Build the morning message
-        const greeting = await buildMorningMessage(user.id, name, level as 0 | 1);
+        // Level 0-1: Build the morning message with insights
+        const { message: greeting, insightIds } = await buildMorningMessage(user.id, name, level as 0 | 1);
         await sendMessage(platform, platformId, greeting);
+
+        // Mark surfaced insights
+        if (insightIds.length > 0) {
+          markInsightsSurfaced(insightIds, "morning").catch(() => {});
+        }
 
         // Log to proactive_history
         recordProactiveMessage(user.id, "morning_checkin", greeting).catch(() => {});
@@ -78,15 +78,17 @@ async function buildMorningMessage(
   userId: string,
   name: string,
   level: 0 | 1,
-): Promise<string> {
-  const [eveningReply, habits] = await Promise.all([
+): Promise<{ message: string; insightIds: string[] }> {
+  const [eveningReply, habits, insights] = await Promise.all([
     level === 0 ? getLastEveningReply(userId) : Promise.resolve(null),
     getActiveHabits(userId),
+    level === 0 ? getUnsurfacedInsights(userId, 2) : Promise.resolve([]),
   ]);
 
   const parts: string[] = [];
+  const insightIds: string[] = [];
 
-  // Opening — reference yesterday's reflection if they replied
+  // Opening — reference yesterday's reflection first (most personal)
   if (eveningReply) {
     const truncatedReply = truncate(eveningReply.reply, 50);
     parts.push(`Morning, *${name}*. Yesterday you said: _"${truncatedReply}"_`);
@@ -96,10 +98,34 @@ async function buildMorningMessage(
     parts.push(`Morning, ${name}.`);
   }
 
-  // Habit streaks
-  if (habits.length > 0) {
+  // Capture streak (daily_capture habit) — append as secondary detail
+  const captureHabit = habits.find((h) => h.name === "daily_capture");
+  if (captureHabit) {
+    const streak = await getStreakInfo(userId, captureHabit.id);
+    if (streak.current_streak > 0) {
+      parts.push(`_Day ${streak.current_streak} of capturing your thoughts._`);
+    }
+  }
+
+  // Surface pattern insights (mood shifts, topic changes, stale commitments)
+  if (insights.length > 0) {
+    for (const insight of insights) {
+      if (insight.insight_type === "mood_shift") {
+        parts.push(`_${insight.description}_`);
+      } else if (insight.insight_type === "commitment_stale") {
+        parts.push(`_${insight.title}_`);
+      } else if (insight.insight_type === "topic_shift") {
+        parts.push(`_${insight.description}_`);
+      }
+      insightIds.push(insight.id);
+    }
+  }
+
+  // Habit streaks (excluding daily_capture which is shown in header)
+  const displayHabits = habits.filter((h) => h.name !== "daily_capture");
+  if (displayHabits.length > 0) {
     const habitLines: string[] = [];
-    for (const habit of habits.slice(0, 5)) {
+    for (const habit of displayHabits.slice(0, 5)) {
       const streak = await getStreakInfo(userId, habit.id);
       const unit = habit.target_unit ? ` (${habit.target_unit})` : "";
       habitLines.push(
@@ -113,7 +139,7 @@ async function buildMorningMessage(
     }
   }
 
-  return parts.join("\n\n");
+  return { message: parts.join("\n\n"), insightIds };
 }
 
 function truncate(text: string, maxLen: number): string {
