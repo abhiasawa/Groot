@@ -24,9 +24,51 @@ export async function GET(request: NextRequest) {
     .eq("user_id", userId)
     .order("is_completed", { ascending: true })
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(100);
 
   return NextResponse.json({ tasks: data ?? [] }, { headers: { "Cache-Control": "private, max-age=15, stale-while-revalidate=30" } });
+}
+
+/**
+ * POST /api/tasks — Create a new task manually.
+ */
+export async function POST(request: NextRequest) {
+  let userId: string;
+  try {
+    const user = await getAuthenticatedPortalUser(request);
+    userId = user.id;
+  } catch (error) {
+    if (error instanceof PortalAuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
+
+  const body = await request.json();
+  const { content, category, due_date } = body;
+
+  if (!content || typeof content !== "string" || content.trim().length === 0) {
+    return NextResponse.json({ error: "content is required" }, { status: 400 });
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from("tasks")
+    .insert({
+      user_id: userId,
+      content: content.trim(),
+      category: category ?? "todo",
+      due_date: due_date ?? null,
+      is_completed: false,
+    })
+    .select("id, content, category, is_completed, due_date, created_at")
+    .single();
+
+  if (error) {
+    return NextResponse.json({ error: "Failed to create task" }, { status: 500 });
+  }
+
+  return NextResponse.json({ task: data }, { status: 201 });
 }
 
 /**
@@ -105,6 +147,42 @@ export async function PUT(request: NextRequest) {
 
   if (error) {
     return NextResponse.json({ error: "Failed to update task" }, { status: 500 });
+  }
+
+  return NextResponse.json({ ok: true });
+}
+
+/**
+ * DELETE /api/tasks — Delete a task.
+ */
+export async function DELETE(request: NextRequest) {
+  let userId: string;
+  try {
+    const user = await getAuthenticatedPortalUser(request);
+    userId = user.id;
+  } catch (error) {
+    if (error instanceof PortalAuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const taskId = searchParams.get("taskId");
+
+  if (!taskId) {
+    return NextResponse.json({ error: "taskId is required" }, { status: 400 });
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from("tasks")
+    .delete()
+    .eq("id", taskId)
+    .eq("user_id", userId);
+
+  if (error) {
+    return NextResponse.json({ error: "Failed to delete task" }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });
