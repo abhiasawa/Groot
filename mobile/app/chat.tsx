@@ -35,7 +35,7 @@ function stripMetadata(text: string): string {
   return idx === -1 ? text : text.slice(0, idx).trim();
 }
 
-export default function ChatScreen() {
+export function ChatScreen({ isTab = false }: { isTab?: boolean } = {}) {
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -199,15 +199,17 @@ export default function ChatScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            style={styles.backButton}
-            hitSlop={spacing.sm}
-            accessibilityLabel="Go back"
-            accessibilityRole="button"
-          >
-            <ArrowLeft size={18} color={notoTheme.foreground} strokeWidth={2.2} />
-          </Pressable>
+          {!isTab && (
+            <Pressable
+              onPress={() => router.back()}
+              style={styles.backButton}
+              hitSlop={spacing.sm}
+              accessibilityLabel="Go back"
+              accessibilityRole="button"
+            >
+              <ArrowLeft size={18} color={notoTheme.foreground} strokeWidth={2.2} />
+            </Pressable>
+          )}
           <View style={styles.headerCopy}>
             <Text style={styles.headerTitle}>Groot</Text>
             <Text style={styles.headerSubtitle}>Your AI companion</Text>
@@ -249,6 +251,10 @@ export default function ChatScreen() {
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
+}
+
+export default function ChatRoute() {
+  return <ChatScreen />;
 }
 
 const styles = StyleSheet.create({

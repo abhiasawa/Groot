@@ -7,6 +7,7 @@
     { "path": "/api/cron/reminders",           "schedule": "*/15 * * * *" },
     { "path": "/api/cron/weekly-report",       "schedule": "0 4 * * 0"   },
     { "path": "/api/cron/backfill-tags",       "schedule": "0 5 * * *"   },
-    { "path": "/api/cron/backfill-profiles",   "schedule": "0 6 * * *"   }
+    { "path": "/api/cron/backfill-profiles",   "schedule": "0 6 * * *"   },
+    { "path": "/api/cron/analyze-patterns",  "schedule": "30 1 * * *"  }
   ]
 }

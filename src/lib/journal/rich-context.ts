@@ -163,7 +163,7 @@ async function getLast7DaysMoods(
   return result.sort((a, b) => a.date.localeCompare(b.date));
 }
 
-function computeMoodTrend(
+export function computeMoodTrend(
   moodData: Array<{ date: string; mood: string; score: number }>,
 ): DayContext["currentMoodTrend"] {
   if (moodData.length < 3) return "unknown";

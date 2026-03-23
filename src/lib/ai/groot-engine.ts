@@ -2,6 +2,7 @@ import { getLLMProvider } from "@/lib/providers/llm";
 import { getGrootSystemPrompt } from "./persona";
 import { buildContext } from "./context-builder";
 import { upsertProfileFacts } from "@/lib/memory/profile-builder";
+import { createHabit } from "@/lib/habits/tracker";
 import { logger } from "@/lib/logger";
 import type { ProfileFact } from "@/lib/memory/profile-builder";
 
@@ -14,6 +15,8 @@ export interface GrootResponse {
   profileUpdates: ProfileFact[];
   detectedDates: Array<{ date: string; event: string }>;
   detectedTasks: Array<{ content: string; category?: string; dueDate?: string }>;
+  detectedCommitments: string[];
+  fulfilledCommitments: string[];
   lastImageRequest: boolean;
   timings: {
     contextMs: number;
@@ -148,6 +151,47 @@ export async function generateGrootResponse(
     }
   }
 
+  // Upsert detected commitments (fire-and-forget)
+  const detectedCommitments = metadata?.detectedCommitments ?? [];
+  if (detectedCommitments.length > 0) {
+    const supabaseCommit = (await import("@/lib/supabase/server")).getSupabaseAdmin();
+    for (const text of detectedCommitments.slice(0, 5)) {
+      const normalized = text.toLowerCase().trim();
+      if (normalized.length < 5) continue;
+      Promise.resolve(
+        supabaseCommit
+          .from("commitments")
+          .upsert(
+            { user_id: userId, commitment_text: normalized, detected_at: new Date().toISOString(), last_referenced_at: new Date().toISOString() },
+            { onConflict: "user_id,commitment_text" },
+          ),
+      ).catch((err: unknown) => logger.warn({ err, userId }, "Commitment upsert failed"));
+    }
+  }
+
+  // Mark fulfilled commitments as completed (fire-and-forget)
+  const fulfilledCommitments = metadata?.fulfilledCommitments ?? [];
+  if (fulfilledCommitments.length > 0) {
+    const supabaseFulfill = (await import("@/lib/supabase/server")).getSupabaseAdmin();
+    for (const text of fulfilledCommitments) {
+      const normalized = text.toLowerCase().trim();
+      Promise.resolve(
+        supabaseFulfill
+          .from("commitments")
+          .update({ status: "completed", last_referenced_at: new Date().toISOString() })
+          .eq("user_id", userId)
+          .eq("commitment_text", normalized)
+          .eq("status", "active"),
+      ).catch((err: unknown) => logger.warn({ err, userId }, "Commitment fulfillment update failed"));
+    }
+  }
+
+  // Auto-create daily_capture habit (idempotent, fire-and-forget)
+  createHabit(userId, "daily_capture", {
+    description: "Daily thought capture streak",
+    category: "journaling",
+  }).catch(() => {});
+
   const t3 = Date.now();
   logger.info(
     {
@@ -157,6 +201,8 @@ export async function generateGrootResponse(
       tags: metadata?.memoryTags,
       dates: metadata?.detectedDates?.length ?? 0,
       tasks: metadata?.detectedTasks?.length ?? 0,
+      commitments: detectedCommitments.length,
+      fulfilled: fulfilledCommitments.length,
       people: detectedPeople.length,
       detectedEmail: detectedEmail ?? null,
       profileUpdates: profileUpdates.length,
@@ -178,6 +224,8 @@ export async function generateGrootResponse(
     profileUpdates,
     detectedDates: metadata?.detectedDates ?? [],
     detectedTasks: metadata?.detectedTasks ?? [],
+    detectedCommitments,
+    fulfilledCommitments,
     lastImageRequest: metadata?.lastImageRequest ?? false,
     timings: {
       contextMs: t1 - t0,

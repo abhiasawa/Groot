@@ -5,6 +5,8 @@ import { getUserProfileSummary } from "@/lib/memory/profile-builder";
 import { hasMessagedToday } from "@/lib/memory/short-term";
 import { recordProactiveMessage } from "@/lib/journal/prompt-generator";
 import { sendMessage, getUserPlatform } from "@/lib/messaging/dispatcher";
+import { validateCronAuth } from "@/lib/cron/auth";
+import { getUnsurfacedInsights, markInsightsSurfaced } from "@/lib/patterns/insights-reader";
 import { logger } from "@/lib/logger";
 
 /**
@@ -28,15 +30,8 @@ const MIDDAY_PROMPTS = [
  * Protected by CRON_SECRET Bearer token.
  */
 export async function GET(request: NextRequest) {
-  if (!process.env.CRON_SECRET) {
-    logger.error("CRON_SECRET is missing");
-    return NextResponse.json({ error: "Cron not configured" }, { status: 500 });
-  }
-
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = validateCronAuth(request);
+  if (authError) return authError;
 
   try {
     const users = await getEligibleUsers("midday_nudge");
@@ -54,9 +49,12 @@ export async function GET(request: NextRequest) {
 
         const { platform, platformId } = getUserPlatform(user);
         const name = user.display_name ?? "there";
-        const nudge = await buildContextualNudge(user.id, name);
+        const { nudge, insightIds } = await buildContextualNudge(user.id, name);
 
         await sendMessage(platform, platformId, nudge);
+        if (insightIds.length > 0) {
+          markInsightsSurfaced(insightIds, "midday").catch(() => {});
+        }
         recordProactiveMessage(user.id, "midday_nudge", nudge).catch(() => {});
         sent++;
       } catch (error) {
@@ -75,39 +73,55 @@ export async function GET(request: NextRequest) {
 async function buildContextualNudge(
   userId: string,
   name: string,
-): Promise<string> {
-  // Try habit-based nudge first (most actionable)
+): Promise<{ nudge: string; insightIds: string[] }> {
+  const insightIds: string[] = [];
+
+  // Try commitment-stale insight first (most impactful)
+  const insights = await getUnsurfacedInsights(userId, 1);
+  const commitmentInsight = insights.find((i) => i.insight_type === "commitment_stale");
+  if (commitmentInsight) {
+    const data = commitmentInsight.data as { commitmentText?: string; daysAgo?: number };
+    insightIds.push(commitmentInsight.id);
+    return {
+      nudge: `Hey ${name} — remember when you said you'd *${data.commitmentText}*? That was ${data.daysAgo} days ago.`,
+      insightIds,
+    };
+  }
+
+  // Try habit-based nudge (most actionable)
   const habits = await getActiveHabits(userId);
   if (habits.length > 0) {
-    // Find a habit they haven't checked in today
     const todayStr = new Date().toLocaleDateString("en-CA", {
       timeZone: "Asia/Kolkata",
     });
 
     for (const habit of habits) {
+      if (habit.name === "daily_capture") continue;
       const streak = await getStreakInfo(userId, habit.id);
       if (streak.last_checkin_date !== todayStr && streak.current_streak > 0) {
-        return `Hey ${name} — day ${streak.current_streak + 1} of *${habit.name}*. Don't forget to log it.`;
+        return {
+          nudge: `Hey ${name} — day ${streak.current_streak + 1} of *${habit.name}*. Don't forget to log it.`,
+          insightIds,
+        };
       }
     }
   }
 
-  // Try profile-based nudge (if we know something about them)
+  // Try profile-based nudge
   const profile = await getUserProfileSummary(userId);
   if (profile) {
-    // Look for a current project or work-related fact
     const projectMatch = profile.match(/current[_ ]project:\s*(.+)/i);
     if (projectMatch?.[1]) {
-      return `Hey ${name} — how's *${projectMatch[1].trim()}* going?`;
+      return { nudge: `Hey ${name} — how's *${projectMatch[1].trim()}* going?`, insightIds };
     }
 
     const occupationMatch = profile.match(/occupation:\s*(.+)/i);
     if (occupationMatch?.[1]) {
-      return `Hey ${name} — how's the day going so far?`;
+      return { nudge: `Hey ${name} — how's the day going so far?`, insightIds };
     }
   }
 
   // Fallback: random Storyworthy prompt
   const prompt = MIDDAY_PROMPTS[Math.floor(Math.random() * MIDDAY_PROMPTS.length)]!;
-  return `Hey ${name} — ${prompt.toLowerCase()}`;
+  return { nudge: `Hey ${name} — ${prompt.toLowerCase()}`, insightIds };
 }

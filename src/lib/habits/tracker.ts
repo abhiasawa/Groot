@@ -29,7 +29,7 @@ export interface StreakInfo {
   last_checkin_date: string | null;
 }
 
-const MILESTONE_DAYS = [3, 7, 14, 21, 30, 50, 100];
+export const MILESTONE_DAYS = [3, 7, 14, 21, 30, 50, 100];
 
 /**
  * Create a new habit for a user (idempotent — safe to call multiple times).

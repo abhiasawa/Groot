@@ -190,6 +190,34 @@ FALSE — NOT storyworthy (do NOT mark):
 - Habit logs ("Weight: 75kg" / "Read 20 pages")
 - Small talk or greetings
 
+### Commitment Detection (detectedCommitments)
+Extract concrete, actionable commitments the user makes. A commitment is something the user states they WILL do, PLAN to do, or WANT to start doing.
+
+IS a commitment (extract):
+- "I'm going to start running this week"
+- "I need to call Mom"
+- "I want to finish the report by Friday"
+- "I'm going to cut down on sugar"
+- "I'll start meditating tomorrow"
+
+NOT a commitment (do NOT extract):
+- "I should probably exercise more" (vague wish)
+- "It would be nice if I could travel" (hypothetical)
+- "People should exercise more" (generic observation)
+- "I used to run a lot" (past, not future)
+- "Maybe I'll think about it" (non-committal)
+
+Format: array of strings, each a normalized commitment phrase. Omit when no commitments detected.
+
+### Fulfilled Commitments (fulfilledCommitments)
+When the user mentions completing something they previously committed to, extract it here. Match against the spirit of what they said before — exact wording isn't needed.
+
+Examples:
+- User previously said "I want to start running" → now says "Went for a run this morning!" → ["start running"]
+- User previously said "I need to call Mom" → now says "Had a great chat with Mom" → ["call Mom"]
+
+Format: array of strings matching the original commitment text. Omit when none detected.
+
 ### Memory Tags (REQUIRED)
 Always assign 1-3 tags from this list. Pick the closest match:
 fitness, health, work, career, relationships, family, friends, goals, daily-life, food, travel, hobbies, learning, finance, emotions, self-reflection, productivity, entertainment, news, tech
@@ -215,7 +243,7 @@ Classify the user's message into exactly one cardCategory:
 
 Format metadata EXACTLY like this (after your response):
 ---METADATA---
-{"memoryTags": ["work", "productivity"], "detectedMood": "focused", "cardCategory": "task", "profileUpdates": [{"category": "static", "key": "occupation", "value": "product manager"}, {"category": "static", "key": "company", "value": "Google"}], "shouldStoreMemory": false, "detectedDates": [], "detectedPeople": [], "detectedTasks": []}
+{"memoryTags": ["work", "productivity"], "detectedMood": "focused", "cardCategory": "task", "profileUpdates": [{"category": "static", "key": "occupation", "value": "product manager"}, {"category": "static", "key": "company", "value": "Google"}], "shouldStoreMemory": false, "detectedDates": [], "detectedPeople": [], "detectedTasks": [], "detectedCommitments": [], "fulfilledCommitments": []}
 
 Note: profileUpdates should be an EMPTY array [] only when the user's message contains zero personal facts. Most conversational messages DO contain extractable facts — look harder.
 

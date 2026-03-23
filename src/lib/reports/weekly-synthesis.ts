@@ -1,6 +1,8 @@
 import { getSupabaseAdmin } from "@/lib/supabase/server";
 import { getLLMProvider } from "@/lib/providers/llm";
 import { getUserProfileSummary } from "@/lib/memory/profile-builder";
+import { getUnsurfacedInsights, markInsightsSurfaced } from "@/lib/patterns/insights-reader";
+import { USER_TIMEZONE } from "@/lib/utils/timezone";
 import { logger } from "@/lib/logger";
 
 /**
@@ -28,6 +30,8 @@ interface WeeklyData {
   moodTrend: string[];
   moodScores: number[];
   topMemories: string[];
+  insightSummaries: string[];
+  insightIds: string[];
 }
 
 /** Structured report for mobile display */
@@ -62,27 +66,27 @@ export async function generateWeeklyReport(
   try {
     const provider = getLLMProvider();
 
-    // Generate structured 3-moments report
+    const avgMood = weekData.moodScores.length > 0
+      ? (weekData.moodScores.reduce((a, b) => a + b, 0) / weekData.moodScores.length).toFixed(1)
+      : null;
+
+    // Generate narrative weekly report
     const response = await provider.generateResponse(
-      `You are Groot, generating a "Your Week in 3 Moments" report for ${name}.
+      `You are Groot, writing a personal weekly narrative for ${name}.
 Use WhatsApp formatting (*bold*, _italic_). Max 15 lines total.
-Output EXACTLY this structure — no extra sections:
 
-*Your Week in 3 Moments*
+Structure:
+1. A *chapter title* — a short evocative title for their week (3-5 words, based on the dominant theme)
+2. 2-3 short paragraphs telling the story of their week — what happened, what patterns you noticed, what shifted. Write like a thoughtful friend reflecting back, not a report generator. Be specific to their data.
+3. End with one *reflective question* for next week — grounded in what you observed.
+4. A stats footer line in italic.
 
-1. *Highlight* — [the standout positive moment or achievement from their week, based on their messages/memories. Be specific to their actual data.]
-
-2. *Pattern* — [a recurring theme, behavior, or emotional trend you noticed across multiple entries this week. Be insightful, not generic.]
-
-3. *Question* — [a thoughtful reflective question for the coming week, grounded in what you observed. Something that invites growth.]
-
-_${weekData.messageCount} messages · ${weekData.memoriesCount} memories${weekData.moodScores.length > 0 ? ` · Mood avg: ${(weekData.moodScores.reduce((a, b) => a + b, 0) / weekData.moodScores.length).toFixed(1)}/5` : ""}_
-
-Use ONLY the data provided. Don't invent facts. Be warm, concise, and personal.`,
+${weekData.insightSummaries.length > 0 ? `\nPattern insights from this week:\n${weekData.insightSummaries.map((s) => `• ${s}`).join("\n")}\nWeave these naturally into the narrative — don't list them separately.\n` : ""}
+Use ONLY the data provided. Don't invent facts. Be warm, specific, and personal.`,
       [
         {
           role: "user",
-          content: `Generate the "Your Week in 3 Moments" report:
+          content: `Write the weekly narrative:
 
 User: ${name}
 Profile: ${profileSummary || "Still getting to know them"}
@@ -91,10 +95,11 @@ Week: ${weekStart} to ${weekEnd}
 Stats:
 - Messages exchanged: ${weekData.messageCount}
 - Memories stored: ${weekData.memoriesCount}
-- Mood scores this week: ${weekData.moodScores.length > 0 ? weekData.moodScores.join(", ") : "none recorded"}
+- Mood scores this week: ${weekData.moodScores.length > 0 ? weekData.moodScores.join(", ") : "none recorded"}${avgMood ? ` (avg: ${avgMood}/5)` : ""}
+- Top topics: ${weekData.keyTopics.length > 0 ? weekData.keyTopics.join(", ") : "varied"}
 ${weekData.habitCheckins.map((h) => `- ${h.habitName}: ${h.checkinCount} check-ins, ${h.currentStreak}-day streak${h.values.length > 0 ? `, avg: ${(h.values.reduce((a, b) => a + b, 0) / h.values.length).toFixed(1)}` : ""}`).join("\n")}
 
-Recent memories (for context):
+Recent thoughts (for context):
 ${weekData.topMemories.slice(0, 5).map((m) => `• ${m}`).join("\n") || "No memories this week"}
 
 Also output a JSON block at the very end (after the report), wrapped in \`\`\`json ... \`\`\`:
@@ -113,6 +118,11 @@ Also output a JSON block at the very end (after the report), wrapped in \`\`\`js
 
     // Store the report
     await storeWeeklyReport(userId, weekStart, weekEnd, response.text, weekData, structured);
+
+    // Mark insights as surfaced
+    if (weekData.insightIds.length > 0) {
+      markInsightsSurfaced(weekData.insightIds, "weekly_report").catch(() => {});
+    }
 
     // Return clean WhatsApp text (strip JSON block)
     return response.text.replace(/```json[\s\S]*?```/g, "").trim();
@@ -185,7 +195,7 @@ async function gatherWeeklyData(userId: string): Promise<WeeklyData> {
     .from("messages")
     .select("content")
     .eq("user_id", userId)
-    .eq("direction", "incoming")
+    .eq("direction", "inbound")
     .gte("created_at", weekAgo)
     .order("created_at", { ascending: false })
     .limit(10);
@@ -194,16 +204,58 @@ async function gatherWeeklyData(userId: string): Promise<WeeklyData> {
     .map((m) => (m.content as string).slice(0, 200))
     .filter((c) => c.length > 10);
 
-  // Gather mood data
-  const { data: moods } = await supabase
-    .from("mood_entries")
-    .select("score")
-    .eq("user_id", userId)
-    .gte("recorded_at", weekAgo);
+  // Gather mood data from message metadata (detectedMood)
+  const MOOD_SCORE: Record<string, number> = {
+    great: 5, happy: 5, excited: 5, energetic: 5,
+    good: 4, positive: 4, motivated: 4, calm: 4, grateful: 4,
+    okay: 3, neutral: 3, fine: 3, busy: 3,
+    low: 2, tired: 2, anxious: 2, stressed: 2, overwhelmed: 2,
+    bad: 1, sad: 1, angry: 1, frustrated: 1, upset: 1,
+  };
 
-  const moodScores = (moods ?? [])
-    .map((m) => m.score as number)
-    .filter((s) => s >= 1 && s <= 5);
+  const { data: moodMsgs } = await supabase
+    .from("messages")
+    .select("metadata")
+    .eq("user_id", userId)
+    .eq("direction", "inbound")
+    .gte("created_at", weekAgo)
+    .not("metadata->detectedMood", "is", null);
+
+  const moodScores = (moodMsgs ?? [])
+    .map((m) => {
+      const meta = m.metadata as Record<string, unknown> | null;
+      const mood = (meta?.detectedMood as string) ?? "";
+      return MOOD_SCORE[mood] ?? 0;
+    })
+    .filter((s) => s > 0);
+
+  // Gather key topics from message metadata (memoryTags)
+  const { data: tagMsgs } = await supabase
+    .from("messages")
+    .select("metadata")
+    .eq("user_id", userId)
+    .eq("direction", "inbound")
+    .gte("created_at", weekAgo);
+
+  const tagCounts = new Map<string, number>();
+  for (const msg of tagMsgs ?? []) {
+    const meta = msg.metadata as Record<string, unknown> | null;
+    const tags = meta?.memoryTags as string[] | undefined;
+    if (!tags) continue;
+    for (const tag of tags) {
+      if (tag === "daily-life") continue;
+      tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
+    }
+  }
+  const keyTopics = [...tagCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([tag]) => tag);
+
+  // Gather unsurfaced pattern insights
+  const insights = await getUnsurfacedInsights(userId, 5);
+  const insightSummaries = insights.map((i) => i.description);
+  const insightIds = insights.map((i) => i.id);
 
   // Gather habit data
   const { data: habits } = await supabase
@@ -241,10 +293,12 @@ async function gatherWeeklyData(userId: string): Promise<WeeklyData> {
     messageCount: messageCount ?? 0,
     memoriesCount: memoriesCount ?? 0,
     habitCheckins,
-    keyTopics: [],
+    keyTopics,
     moodTrend: [],
     moodScores,
     topMemories,
+    insightSummaries,
+    insightIds,
   };
 }
 

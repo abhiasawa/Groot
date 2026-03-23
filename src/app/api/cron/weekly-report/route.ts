@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getEligibleUsers } from "@/lib/proactive/scheduler";
 import { generateWeeklyReport } from "@/lib/reports/weekly-synthesis";
 import { sendMessage, getUserPlatform } from "@/lib/messaging/dispatcher";
+import { validateCronAuth } from "@/lib/cron/auth";
 import { logger } from "@/lib/logger";
 
 /**
@@ -9,15 +10,8 @@ import { logger } from "@/lib/logger";
  * Protected by CRON_SECRET Bearer token.
  */
 export async function GET(request: NextRequest) {
-  if (!process.env.CRON_SECRET) {
-    logger.error("CRON_SECRET is missing");
-    return NextResponse.json({ error: "Cron not configured" }, { status: 500 });
-  }
-
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const authError = validateCronAuth(request);
+  if (authError) return authError;
 
   try {
     const users = await getEligibleUsers("weekly_report");

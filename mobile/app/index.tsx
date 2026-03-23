@@ -1,5 +1,5 @@
-import { JournalScreen } from "./journal";
+import { Redirect } from "expo-router";
 
 export default function HomeScreen() {
-  return <JournalScreen isHome />;
+  return <Redirect href="/(tabs)" />;
 }

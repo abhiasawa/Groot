@@ -21,7 +21,13 @@ import { SkeletonGrid } from "../components/feed/skeleton-grid";
 import { NotoMascot } from "../components/ui/noto-mascot";
 import type { Memory } from "../../shared/types/api";
 
-export function JournalScreen({ isHome = false }: { isHome?: boolean }) {
+export function JournalScreen({
+  isHome = false,
+  showCaptureFab = true,
+}: {
+  isHome?: boolean;
+  showCaptureFab?: boolean;
+}) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
@@ -222,18 +228,20 @@ export function JournalScreen({ isHome = false }: { isHome?: boolean }) {
           <View style={styles.bottomGap} />
         </ScrollView>
 
-        <Pressable
-          onPress={() => router.push("/capture")}
-          style={styles.captureFab}
-          hitSlop={8}
-          accessibilityLabel="Capture a new thought"
-          accessibilityRole="button"
-        >
-          <View style={styles.captureMascotWrap}>
-            <NotoMascot size={74} compact />
-          </View>
-          <Text style={styles.captureFabText}>Capture</Text>
-        </Pressable>
+        {showCaptureFab && (
+          <Pressable
+            onPress={() => router.push("/capture")}
+            style={styles.captureFab}
+            hitSlop={8}
+            accessibilityLabel="Capture a new thought"
+            accessibilityRole="button"
+          >
+            <View style={styles.captureMascotWrap}>
+              <NotoMascot size={74} compact />
+            </View>
+            <Text style={styles.captureFabText}>Capture</Text>
+          </Pressable>
+        )}
       </View>
     </SafeAreaView>
   );

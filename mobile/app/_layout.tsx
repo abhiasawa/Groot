@@ -22,7 +22,7 @@ import { ThemeProvider } from "../lib/theme/provider";
 export { ErrorBoundary } from "expo-router";
 
 export const unstable_settings = {
-  initialRouteName: "index",
+  initialRouteName: "(tabs)",
 };
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -89,7 +89,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     if (!token && !inAuthGroup) {
       router.replace("/(auth)/login");
     } else if (token && inAuthGroup) {
-      router.replace("/");
+      router.replace("/(tabs)");
     }
   }, [token, loading, segments, router]);
 
@@ -147,6 +147,7 @@ export default function RootLayout() {
             <AuthGate>
               <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="(auth)" />
+                <Stack.Screen name="(tabs)" />
                 <Stack.Screen name="index" />
                 <Stack.Screen name="journal" />
                 <Stack.Screen
@@ -166,6 +167,7 @@ export default function RootLayout() {
                   }}
                 />
                 <Stack.Screen name="chat" />
+                <Stack.Screen name="mood" />
                 <Stack.Screen name="onboarding" />
                 <Stack.Screen name="settings" />
               </Stack>
