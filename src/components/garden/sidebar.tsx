@@ -7,6 +7,7 @@ import {
   MessageCircle,
   BookOpen,
   Lightbulb,
+  CheckSquare,
   User,
   Settings,
   Sprout,
@@ -15,6 +16,7 @@ import {
 const NAV_ITEMS = [
   { href: "/garden/chat", label: "Chat", icon: MessageCircle },
   { href: "/garden/journal", label: "Journal", icon: BookOpen },
+  { href: "/garden/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/garden/insights", label: "Insights", icon: Lightbulb, matchAlso: ["/garden/mood", "/garden/habits", "/garden/stories"] },
   { href: "/garden/mirror", label: "Profile", icon: User },
   { href: "/garden/settings", label: "Settings", icon: Settings },
