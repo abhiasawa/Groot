@@ -16,17 +16,19 @@ import * as Sharing from "expo-sharing";
 import Constants from "expo-constants";
 import {
   ArrowLeft,
+  ChevronRight,
   Code2,
   Download,
   LogOut,
   ShieldCheck,
+  Smile,
 } from "lucide-react-native";
 
 import { fonts, typography } from "../constants/typography";
 import { ApiError, apiFetch } from "../lib/api/client";
 import { useCurrentUser } from "../lib/api/queries";
 import { useAuth } from "../lib/auth/provider";
-import { notoTheme } from "../lib/theme/tokens";
+import { notoTheme, colors } from "../lib/theme/tokens";
 
 function buildMarkdownExport(payload: Record<string, unknown>) {
   const user = (payload.user as Record<string, unknown> | null) ?? null;
@@ -163,6 +165,19 @@ export function SettingsContent({ isTab = false }: { isTab?: boolean } = {}) {
               <Text style={styles.signOutText}>Sign out</Text>
             </View>
           </Pressable>
+        </View>
+
+        <SectionTitle title="Insights" />
+        <View style={styles.card}>
+          <SettingsRow
+            icon={<Smile size={16} color={notoTheme.foreground} strokeWidth={1.8} />}
+            title="Mood Trends"
+            trailing={
+              <ChevronRight size={16} color={colors.textFaded} strokeWidth={1.8} />
+            }
+            onPress={() => router.push("/mood")}
+            bordered={false}
+          />
         </View>
 
         <SectionTitle title="Export" />

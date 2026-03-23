@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, MessageCircle, Search, Settings, X } from "lucide-react-native";
+import { ArrowLeft, Search, Settings, X } from "lucide-react-native";
 
 import { useMemories, type MemoriesParams } from "../lib/api/queries";
 import { fonts, typography } from "../constants/typography";
@@ -118,47 +118,6 @@ export function JournalScreen({
             </Pressable>
           </View>
 
-          {isHome ? (
-            <>
-              <Pressable
-                onPress={() => router.push("/chat")}
-                style={styles.chatHero}
-                accessibilityLabel="Talk to Groot"
-                accessibilityRole="button"
-              >
-                <View style={styles.chatHeroIcon}>
-                  <MessageCircle size={22} color="#FFFFFF" strokeWidth={2} />
-                </View>
-                <View style={styles.chatHeroCopy}>
-                  <Text style={styles.chatHeroTitle}>Talk to Groot</Text>
-                  <Text style={styles.chatHeroSubtitle}>
-                    Ask anything, journal your thoughts, or just chat.
-                  </Text>
-                </View>
-              </Pressable>
-
-              <Pressable
-                onPress={() => router.push("/capture")}
-                style={styles.captureHero}
-                accessibilityLabel="Capture a new thought"
-                accessibilityRole="button"
-              >
-                <View style={styles.captureHeroCopy}>
-                  <Text style={styles.captureHeroEyebrow}>New thought</Text>
-                  <Text style={styles.captureHeroTitle}>
-                    Tap the cloud to capture
-                  </Text>
-                  <Text style={styles.captureHeroSubtitle}>
-                    Record a note, voice thought, or photo memory from here.
-                  </Text>
-                </View>
-                <View style={styles.captureHeroMascot}>
-                  <NotoMascot size={108} compact />
-                </View>
-              </Pressable>
-            </>
-          ) : null}
-
           <View
             style={[styles.searchBar, searchFocused && styles.searchBarActive]}
           >
@@ -214,7 +173,7 @@ export function JournalScreen({
               <Text style={styles.emptySubtitle}>
                 {query
                   ? "Try a different phrase or clear the search."
-                  : "Capture something on the first page, then it will appear here."}
+                  : "Tap the Noto cloud below to capture your first thought."}
               </Text>
             </View>
           ) : (
@@ -304,88 +263,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     marginBottom: 16,
     gap: 10,
-  },
-  chatHero: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#1E1E1E",
-    borderRadius: 20,
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-    marginBottom: 12,
-    gap: 14,
-  },
-  chatHeroIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  chatHeroCopy: {
-    flex: 1,
-  },
-  chatHeroTitle: {
-    fontFamily: fonts.bold,
-    fontSize: 17,
-    color: "#FFFFFF",
-    letterSpacing: -0.3,
-  },
-  chatHeroSubtitle: {
-    fontFamily: fonts.regular,
-    fontSize: 13,
-    color: "rgba(255,255,255,0.6)",
-    marginTop: 2,
-  },
-  captureHero: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#F7F8FF",
-    borderRadius: 28,
-    paddingLeft: 20,
-    paddingRight: 14,
-    paddingVertical: 18,
-    marginBottom: 18,
-    borderWidth: 1,
-    borderColor: "#E3E8FF",
-    shadowColor: "#4338CA",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    elevation: 5,
-  },
-  captureHeroCopy: {
-    flex: 1,
-    paddingRight: 12,
-  },
-  captureHeroEyebrow: {
-    fontFamily: fonts.bold,
-    fontSize: 11,
-    color: "#6D72E6",
-    textTransform: "uppercase",
-    letterSpacing: 1.2,
-    marginBottom: 8,
-  },
-  captureHeroTitle: {
-    fontFamily: fonts.bold,
-    fontSize: 24,
-    lineHeight: 28,
-    color: "#1A1A1A",
-    letterSpacing: -0.8,
-  },
-  captureHeroSubtitle: {
-    fontFamily: fonts.regular,
-    fontSize: 13,
-    lineHeight: 19,
-    color: "#6E6A86",
-    marginTop: 8,
-  },
-  captureHeroMascot: {
-    width: 112,
-    height: 96,
-    alignItems: "center",
-    justifyContent: "center",
   },
   searchBarActive: {
     backgroundColor: "#1A1A1A",

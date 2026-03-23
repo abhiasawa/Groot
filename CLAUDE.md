@@ -88,7 +88,7 @@ npx tsc --noEmit     # Type check
 - **APK output:** `mobile/android/app/build/outputs/apk/release/app-release.apk`
 - **Install:** `adb uninstall com.groot.thegarden && adb install <path-to-apk>`
 - **After changing `app.json` plugins:** Must run `npx expo prebuild --platform android --clean` before Gradle build
-- **Tabs:** Journal, Mood, Tasks, Settings (4 tabs + hidden FAB spacer)
+- **Tabs:** Journal, Tasks (2 tabs + center FAB for capture)
 
 ## Conventions
 

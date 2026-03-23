@@ -5,6 +5,7 @@ import type {
   MemoriesResponse,
   CalendarDotsResponse,
   MeResponse,
+  TasksResponse,
 } from "../../../shared/types/api";
 
 // ── Query key factory ────────────────────────
@@ -13,6 +14,7 @@ export const qk = {
   memories: (params?: MemoriesParams) => ["memories", params] as const,
   calendarDots: (yearMonth: string) => ["calendarDots", yearMonth] as const,
   currentUser: ["currentUser"] as const,
+  tasks: ["tasks"] as const,
 };
 
 // ── Param types ──────────────────────────────
@@ -64,6 +66,42 @@ export function useCurrentUser() {
     queryFn: () => apiFetch<MeResponse>("/api/me"),
     staleTime: 300_000,
   });
+}
+
+// ── Tasks ────────────────────────────────────
+
+/** GET /api/tasks */
+export function useTasks() {
+  return useQuery<TasksResponse>({
+    queryKey: qk.tasks,
+    queryFn: () => apiFetch<TasksResponse>("/api/tasks"),
+    staleTime: 15_000,
+  });
+}
+
+/** PATCH /api/tasks — toggle completion */
+export async function toggleTask(taskId: string, is_completed: boolean) {
+  return apiFetch("/api/tasks", {
+    method: "PATCH",
+    body: JSON.stringify({ taskId, is_completed }),
+  });
+}
+
+/** POST /api/tasks — create a task */
+export async function createTask(
+  content: string,
+  category?: string,
+  due_date?: string,
+) {
+  return apiFetch("/api/tasks", {
+    method: "POST",
+    body: JSON.stringify({ content, category, due_date }),
+  });
+}
+
+/** DELETE /api/tasks — delete a task */
+export async function deleteTask(taskId: string) {
+  return apiFetch(`/api/tasks?taskId=${taskId}`, { method: "DELETE" });
 }
 
 // ── Habit types ─────────────────────────────

@@ -6,7 +6,6 @@ import {
   Modal,
   Pressable,
   StyleSheet,
-  ScrollView,
   TextInput,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -83,7 +82,6 @@ export function ComposeModal({
   const [recording, setRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [transcribing, setTranscribing] = useState(false);
-  const [transcript, setTranscript] = useState("");
   const [textDraft, setTextDraft] = useState(editContent ?? "");
   const [submittingText, setSubmittingText] = useState(false);
   const [imageUri, setImageUri] = useState<string | null>(null);
@@ -114,13 +112,10 @@ export function ComposeModal({
       recordingRef.current.stopAndUnloadAsync().catch(() => {});
       recordingRef.current = null;
     }
-    // eslint-disable-next-line react-hooks/immutability
     ringScale.value = 1;
-    // eslint-disable-next-line react-hooks/immutability
     ringOpacity.value = 0;
     setSent(false);
     setTranscribing(false);
-    setTranscript("");
     setTextDraft(editContent ?? "");
     setMode(initialMode ?? "voice");
     setSubmittingText(false);
@@ -168,9 +163,7 @@ export function ComposeModal({
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
       // Pulse rings
-      // eslint-disable-next-line react-hooks/immutability
       ringOpacity.value = withTiming(0.25, { duration: 600 });
-      // eslint-disable-next-line react-hooks/immutability
       ringScale.value = withRepeat(
         withSequence(
           withTiming(1.12, {
@@ -217,9 +210,7 @@ export function ComposeModal({
     if (!recordingRef.current) return;
 
     setRecording(false);
-    // eslint-disable-next-line react-hooks/immutability
     ringOpacity.value = withTiming(0, { duration: 200 });
-    // eslint-disable-next-line react-hooks/immutability
     ringScale.value = withTiming(1, { duration: 200 });
     if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -247,29 +238,23 @@ export function ComposeModal({
       const capturedImageUri = imageUri;
       const capturedImageMime = imageMime;
 
-      // Quick transcription preview — fire off to transcribe-chunk endpoint
+      // Transcribe in background — we don't display the result but backend uses it
       apiFetch<{ text: string }>("/api/mobile/transcribe-chunk", {
         method: "POST",
         body: JSON.stringify({
           audio_base64: audioBase64,
           mime_type: "audio/m4a",
         }),
-      })
-        .then((res) => {
-          if (res.text?.trim()) {
-            setTranscript(res.text.trim());
-          }
-        })
-        .catch(() => {})
-        .finally(() => {
-          // Show success after a moment whether or not transcription worked
-          setTimeout(() => {
-            setSent(true);
-            setTranscribing(false);
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            setTimeout(() => handleClose(), 1200);
-          }, 500);
-        });
+      }).catch(() => {});
+
+      // Show success briefly, then close
+      setTimeout(() => {
+        setSent(true);
+        setTranscribing(false);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        queryClient.invalidateQueries({ queryKey: ["memories"] });
+        setTimeout(() => handleClose(), 800);
+      }, 500);
 
       // Fire-and-forget: upload audio + image in background
       (async () => {
@@ -347,7 +332,7 @@ export function ComposeModal({
       queryClient.invalidateQueries({ queryKey: ["memories"] });
       setSent(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setTimeout(() => handleClose(), 1000);
+      setTimeout(() => handleClose(), 800);
     } catch {
       setSubmittingText(false);
     }
@@ -388,21 +373,12 @@ export function ComposeModal({
             style={s.centerContent}
           >
             <NotoMascot size={220} />
-            {transcript ? (
-              <ScrollView
-                style={s.successTranscript}
-                showsVerticalScrollIndicator={false}
-              >
-                <Text style={s.successTranscriptText}>{transcript}</Text>
-              </ScrollView>
-            ) : (
-              <Animated.Text
-                entering={FadeInDown.duration(300).delay(100)}
-                style={s.capturedTitle}
-              >
-                Thought captured
-              </Animated.Text>
-            )}
+            <Animated.Text
+              entering={FadeInDown.duration(300).delay(100)}
+              style={s.capturedTitle}
+            >
+              Thought captured
+            </Animated.Text>
           </Animated.View>
         )}
 
@@ -760,16 +736,6 @@ const s = StyleSheet.create({
     fontSize: 15,
     color: "#C0BDB8",
     marginTop: 16,
-  },
-
-  // Success transcript
-  successTranscript: { maxHeight: 200, marginTop: 16, paddingHorizontal: 32 },
-  successTranscriptText: {
-    fontFamily: fonts.regular,
-    fontSize: 16,
-    color: "#1A1A1A",
-    lineHeight: 26,
-    textAlign: "center",
   },
 
   // Image thumbnail

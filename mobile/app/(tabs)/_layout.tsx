@@ -1,12 +1,8 @@
 import React from "react";
 import { View, Pressable, StyleSheet, Text } from "react-native";
 import { Tabs, useRouter } from "expo-router";
-import {
-  BookOpen,
-  MessageCircle,
-  Flame,
-  Settings as SettingsIcon,
-} from "lucide-react-native";
+import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import { BookOpen, CheckSquare } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { NotoMascot } from "../../components/ui/noto-mascot";
@@ -15,29 +11,10 @@ import { notoTheme, colors } from "../../lib/theme/tokens";
 
 const TAB_ITEMS = [
   { name: "index", label: "Journal", Icon: BookOpen },
-  { name: "chat", label: "Chat", Icon: MessageCircle },
-  { name: "habits", label: "Habits", Icon: Flame },
-  { name: "settings", label: "Settings", Icon: SettingsIcon },
+  { name: "tasks", label: "Tasks", Icon: CheckSquare },
 ] as const;
 
-interface TabBarRoute {
-  key: string;
-  name: string;
-}
-
-interface TabBarProps {
-  state: { routes: TabBarRoute[]; index: number };
-  navigation: {
-    emit: (event: {
-      type: string;
-      target: string;
-      canPreventDefault: boolean;
-    }) => { defaultPrevented: boolean };
-    navigate: (name: string) => void;
-  };
-}
-
-function CustomTabBar({ state, navigation }: TabBarProps) {
+function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -80,8 +57,8 @@ function CustomTabBar({ state, navigation }: TabBarProps) {
 
           return (
             <React.Fragment key={route.key}>
-              {/* Spacer for FAB between chat (index 1) and habits (index 2) */}
-              {index === 2 && <View style={styles.fabSpacer} />}
+              {/* Spacer for FAB between Journal (index 0) and Tasks (index 1) */}
+              {index === 1 && <View style={styles.fabSpacer} />}
               <Pressable
                 onPress={onPress}
                 style={styles.tabItem}
@@ -119,13 +96,11 @@ function CustomTabBar({ state, navigation }: TabBarProps) {
 export default function TabsLayout() {
   return (
     <Tabs
-      tabBar={(props: TabBarProps) => <CustomTabBar {...props} />}
+      tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{ headerShown: false }}
     >
       <Tabs.Screen name="index" />
-      <Tabs.Screen name="chat" />
-      <Tabs.Screen name="habits" />
-      <Tabs.Screen name="settings" />
+      <Tabs.Screen name="tasks" />
     </Tabs>
   );
 }

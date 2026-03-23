@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState } from "react";
+import React, { useMemo, useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -44,6 +44,7 @@ export default function CardDetailScreen() {
     if (!data?.memories || !id) return null;
     return data.memories.find((m: Memory) => m.id === id) ?? null;
   }, [data?.memories, id]);
+  const { data: resolvedMediaUrl } = useMediaUrl(memory?.media_url);
 
   const handleDelete = useCallback(() => {
     if (!memory) return;
@@ -62,6 +63,10 @@ export default function CardDetailScreen() {
   }, [memory, refetch, router]);
 
   const [isBookmarked, setIsBookmarked] = useState(() => memory?.bookmarked ?? false);
+
+  useEffect(() => {
+    setIsBookmarked(memory?.bookmarked ?? false);
+  }, [memory?.bookmarked]);
 
   const handleBookmark = useCallback(() => {
     if (!memory) return;
@@ -90,7 +95,6 @@ export default function CardDetailScreen() {
   const label = categoryLabel(category);
   const isVoice = memory.message_type === "audio";
   const isImage = memory.message_type === "image";
-  const { data: resolvedMediaUrl } = useMediaUrl(memory.media_url);
   const displayText = memory.content || memory.media_description;
   const title = displayText
     ? displayText.split("\n")[0].slice(0, 60)

@@ -166,7 +166,6 @@ export default function RootLayout() {
                     gestureDirection: "vertical",
                   }}
                 />
-                <Stack.Screen name="chat" />
                 <Stack.Screen name="mood" />
                 <Stack.Screen name="onboarding" />
                 <Stack.Screen name="settings" />

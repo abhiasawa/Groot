@@ -16,11 +16,11 @@ const CHANNEL_ID = "groot-reminders";
 export const FEATURE_TIPS = [
   {
     title: "Voice notes",
-    body: "Tap the mic in the chat to record a voice note. Groot will transcribe and respond to it.",
+    body: "Tap the cloud to record a voice note. Groot will transcribe and save it to your journal.",
   },
   {
     title: "Camera capture",
-    body: "Tap the camera icon to snap a photo and send it to Groot for analysis or journaling.",
+    body: "Tap the cloud, then switch to Photo mode to snap and save a photo memory.",
   },
   {
     title: "Evening reflection",
@@ -36,7 +36,7 @@ export const FEATURE_TIPS = [
   },
   {
     title: "Mood tracking",
-    body: "Log your mood in the Pulse tab. Over time, Groot spots patterns and gives you insights.",
+    body: "Groot tracks your mood as you journal. Check trends in Settings.",
   },
   {
     title: "Task management",
@@ -51,8 +51,8 @@ export const FEATURE_TIPS = [
     body: "You can switch between light, dark, or system theme in Settings > Appearance.",
   },
   {
-    title: "Message history",
-    body: "Open the chat to scroll through your full conversation history with Groot.",
+    title: "Journal search",
+    body: "Use the search bar in Journal to find any thought you have captured.",
   },
 ];
 
