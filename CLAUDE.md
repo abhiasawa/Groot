@@ -38,7 +38,7 @@ WhatsApp webhook validates signature, deduplicates, returns 200 immediately. Pro
 ```
 src/
   app/api/webhook/            # WhatsApp + Telegram webhooks
-  app/api/cron/               # Scheduled jobs (check-ins, reports, reminders)
+  app/api/cron/               # Scheduled jobs (check-ins, reports, reminders, pattern analysis)
   app/garden/                 # The Garden web portal
   lib/ai/                     # Groot persona, context builder, intent classifier
   lib/providers/              # AI provider abstraction (LLM, Vision, TTS, Transcription)
@@ -47,8 +47,13 @@ src/
   lib/habits/                 # Habit tracking logic
   lib/capture/                # Link summarization
   lib/reminders/              # Smart reminder system
+  lib/patterns/               # SQL-based behavioral analysis (mood, silence, topics, streaks)
+  lib/reports/                # Weekly narrative synthesis
+  lib/cron/                   # Shared cron auth validation
+  lib/utils/                  # Timezone helpers
   types/                      # TypeScript type definitions
 supabase/migrations/          # Database schema (version-controlled)
+tests/                        # Unit tests
 ```
 
 ## Environment Variables
