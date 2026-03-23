@@ -7,6 +7,7 @@ import { uploadMediaToStorage } from "@/lib/media/storage";
 import { generateGrootResponse, getErrorResponse } from "@/lib/ai/groot-engine";
 import { extractUrls, processLink } from "@/lib/capture/link-processor";
 import { createReminder } from "@/lib/reminders/scheduler";
+import { executeTaskActions } from "@/lib/tasks/actions";
 import {
   markUserResponded,
   updateProactivePreference,
@@ -190,6 +191,7 @@ export async function processMessage(
       }),
       createRemindersFromDetectedDates(user.id, grootResponse.detectedDates),
       createTasksFromDetectedTasks(user.id, grootResponse.detectedTasks),
+      executeTaskActions(user.id, grootResponse.taskActions),
       enrichInboundMessageMetadata(user.id, parsed.messageId, {
         memoryTags: grootResponse.memoryTags.length > 0 ? grootResponse.memoryTags : ["daily-life"],
         detectedMood: grootResponse.detectedMood ?? null,
@@ -395,6 +397,7 @@ async function handleMedia(
           }),
           createRemindersFromDetectedDates(userId, grootResponse.detectedDates),
           createTasksFromDetectedTasks(userId, grootResponse.detectedTasks),
+          executeTaskActions(userId, grootResponse.taskActions),
           enrichInboundMessageMetadata(userId, parsed.messageId, {
             memoryTags: grootResponse.memoryTags.length > 0 ? grootResponse.memoryTags : ["daily-life"],
             detectedMood: grootResponse.detectedMood ?? null,
@@ -432,6 +435,7 @@ async function handleMedia(
             source: "image",
           }),
           createTasksFromDetectedTasks(userId, grootResponse.detectedTasks),
+          executeTaskActions(userId, grootResponse.taskActions),
           enrichInboundMessageMetadata(userId, parsed.messageId, {
             memoryTags: grootResponse.memoryTags.length > 0 ? grootResponse.memoryTags : ["daily-life"],
             detectedMood: grootResponse.detectedMood ?? null,

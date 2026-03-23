@@ -9,6 +9,7 @@ import { extractMetadataBlock } from "@/lib/ai/metadata-parser";
 import { storeOutboundMessage } from "@/lib/memory/short-term";
 import { addMemory } from "@/lib/memory/supermemory-client";
 import { upsertProfileFacts } from "@/lib/memory/profile-builder";
+import { executeTaskActions } from "@/lib/tasks/actions";
 import { logger } from "@/lib/logger";
 import type { ProfileFact } from "@/lib/memory/profile-builder";
 
@@ -209,12 +210,21 @@ export async function POST(request: NextRequest) {
           }
         }
 
+        // Task actions (complete/delete via chat)
+        const taskActions = metadata?.taskActions ?? [];
+        if (taskActions.length > 0) {
+          await executeTaskActions(userId, taskActions).catch((err) => {
+            logger.warn({ error: err, userId }, "Chat task actions failed");
+          });
+        }
+
         logger.info(
           {
             userId,
             mood: metadata?.detectedMood,
             profileUpdates: profileUpdates.length,
             tasks: metadata?.detectedTasks?.length ?? 0,
+            taskActions: taskActions.length,
             storyworthy: metadata?.shouldStoreMemory ?? false,
           },
           "Chat post-processing complete",
