@@ -65,3 +65,61 @@ export function useCurrentUser() {
     staleTime: 300_000,
   });
 }
+
+// ── Habit types ─────────────────────────────
+
+interface HabitWithStats {
+  id: string;
+  name: string;
+  category: string;
+  target_value: number | null;
+  target_unit: string | null;
+  frequency: string | null;
+  current_streak: number;
+  longest_streak: number;
+  last_checkin_date: string | null;
+  recentCheckins?: string[];
+}
+
+interface HabitsResponse {
+  habits: HabitWithStats[];
+}
+
+/** GET /api/habits */
+export function useHabits(includeCheckins = false) {
+  const path = includeCheckins ? "/api/habits?include=checkins" : "/api/habits";
+  return useQuery<HabitsResponse>({
+    queryKey: ["habits", { includeCheckins }],
+    queryFn: () => apiFetch<HabitsResponse>(path),
+    staleTime: 30_000,
+  });
+}
+
+// ── Mood types ──────────────────────────────
+
+interface DailyMood {
+  date: string;
+  mood: string;
+  score: number;
+}
+
+interface WeeklyTrend {
+  weekStart: string;
+  avgScore: number;
+}
+
+interface MoodResponse {
+  dailyMoods: DailyMood[];
+  weeklyTrend: WeeklyTrend[];
+  recentMood: string | null;
+}
+
+/** GET /api/mood */
+export function useMoodData(year?: number) {
+  const y = year ?? new Date().getFullYear();
+  return useQuery<MoodResponse>({
+    queryKey: ["mood", y],
+    queryFn: () => apiFetch<MoodResponse>(`/api/mood?year=${y}`),
+    staleTime: 60_000,
+  });
+}

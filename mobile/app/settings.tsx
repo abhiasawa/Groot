@@ -52,7 +52,7 @@ function buildMarkdownExport(payload: Record<string, unknown>) {
   ].join("\n");
 }
 
-export default function SettingsScreen() {
+export function SettingsContent({ isTab = false }: { isTab?: boolean } = {}) {
   const { signOut } = useAuth();
   const router = useRouter();
   const { data: meData, isLoading, refetch } = useCurrentUser();
@@ -138,9 +138,11 @@ export default function SettingsScreen() {
         }
       >
         <View style={styles.topBar}>
-          <Pressable onPress={() => router.back()} style={styles.topIconButton}>
-            <ArrowLeft size={18} color={notoTheme.foreground} />
-          </Pressable>
+          {!isTab && (
+            <Pressable onPress={() => router.back()} style={styles.topIconButton}>
+              <ArrowLeft size={18} color={notoTheme.foreground} />
+            </Pressable>
+          )}
           <Text style={styles.topTitle}>Settings</Text>
         </View>
 
@@ -208,6 +210,10 @@ export default function SettingsScreen() {
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+export default function SettingsScreen() {
+  return <SettingsContent />;
 }
 
 function SectionTitle({ title }: { title: string }) {
